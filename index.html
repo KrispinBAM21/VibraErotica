@@ -1080,7 +1080,72 @@ panelTicket=async function(c,epoch,initialDraft){let draft=ticketConfig(initialD
  const ids={tvTitle:'title',tvFooter:'footer',tvWidth:'width',tvLayout:'layout',tvFont:'font',tvFontSize:'fontSize',tvTitleSize:'titleSize',tvMargin:'margin',tvQrUrl:'qrUrl'};for(const[id,key]of Object.entries(ids))document.getElementById(id).value=draft[key];
  async function paint(){const serial=++previewSerial;try{const qr=await ticketQr(draft);if(serial!==previewSerial||epoch!==panelEpoch)return;document.getElementById('tvPreview').innerHTML=ticketSvg(ticketSample(),draft,qr);document.getElementById('tvStatus').textContent='Cambios de diseño sin guardar.'}catch(e){if(epoch===panelEpoch)document.getElementById('tvStatus').textContent=e.message}}
  for(const[id,key]of Object.entries(ids))document.getElementById(id).oninput=e=>{draft=ticketConfig({...draft,[key]:e.target.value});paint()};c.querySelectorAll('[data-ticket-color]').forEach(el=>el.oninput=()=>{draft[el.dataset.ticketColor]=el.value;paint()});c.querySelectorAll('[data-ticket-show]').forEach(el=>el.onchange=()=>{draft[el.dataset.ticketShow]=el.checked;paint()});c.querySelectorAll('[data-ticket-preset]').forEach(el=>el.onclick=()=>{Object.assign(draft,TICKET_PRESETS[Number(el.dataset.ticketPreset)]);c.querySelectorAll('[data-ticket-color]').forEach(x=>x.value=draft[x.dataset.ticketColor]);paint()});c.querySelectorAll('[data-ticket-icon]').forEach(el=>el.onclick=()=>{draft.icon=el.dataset.ticketIcon;c.querySelectorAll('[data-ticket-icon]').forEach(x=>x.classList.toggle('selected',x===el));paint()});document.getElementById('tvIconSearch').oninput=e=>{const term=e.target.value.toLowerCase();c.querySelectorAll('[data-ticket-icon]').forEach(x=>x.hidden=!(x.dataset.ticketIcon+' '+x.title).toLowerCase().includes(term))};document.getElementById('tvImage').onchange=async e=>{try{if(e.target.files[0])draft.image=await panelReadImage(e.target.files[0]);paint()}catch(error){toast(error.message,'error')}};document.getElementById('tvImageRemove').onclick=()=>{draft.image='';paint()};document.getElementById('tvSave').onclick=e=>panelRun(e.currentTarget,async()=>{if(draft.showQR&&(!draft.qrUrl||!/^https:\/\//i.test(draft.qrUrl)))throw Error('Configura un enlace HTTPS para el QR o desactívalo.');await panelCall('ticket_save',draft);state.config.ticket=deepClone(draft);saveLocal();document.getElementById('tvStatus').textContent='Diseño guardado para todos los dispositivos.'},'Diseño guardado.');document.getElementById('tvPdf').onclick=e=>panelRun(e.currentTarget,async()=>ticketDownload(await panelBuildTicket(ticketSample(),draft),'ticket-muestra.pdf'));document.getElementById('tvJpg').onclick=e=>panelRun(e.currentTarget,async()=>downloadTicketImages(ticketSample(),draft));document.getElementById('tvPrint').onclick=()=>ticketPrint(ticketSample(),draft);document.getElementById('tvReset').onclick=()=>{if(confirm('¿Restablecer el diseño? Pulsa Guardar para aplicarlo.')){panelTicket(c,epoch,deepClone(TICKET_DEFAULT))}};installTicketOptions(c,()=>draft,paint);await paint();};
-function ticketPrint(order,d){const win=window.open('','_blank');if(!win)return toast('Permite ventanas emergentes para imprimir.','error');win.document.write('<!doctype html><html lang="es"><head><title>Ticket</title><style>@page{margin:0;size:'+ (d.width==='a4'?'A4':d.width+'mm auto')+'}body{margin:0}svg{width:100%;height:auto;display:block}</style></head><body><p>Preparando impresión…</p></body></html>');win.document.close();ticketQr(d).then(qr=>{win.document.body.innerHTML=ticketSvg(order,d,qr);const images=[...win.document.images];return Promise.all(images.map(img=>img.complete?Promise.resolve():new Promise(resolve=>{img.onload=img.onerror=resolve}))).then(()=>{win.focus();win.print()})}).catch(e=>{win.document.body.textContent=e.message})}
+function ticketPrint(order,d){const win=window.open('','_blank');if(!win)return toast('Permite ventanas emergentes para imprimir.','error');win.document.write('<!doctype html><html lang="es"><head><title>Ticket</title><style>@page{margin:0;size:'+ (d.width==='a4'?'A4':d.width+'mm auto')+'}body{margin:0}svg{width:100%;height:auto;display:block}</style></head><body><p>Preparando impresión…</p>
+<!-- VibraErotica: autorización de panel por roles reales de Supabase -->
+<script id="vibra-admin-role-fix">
+(function(){
+  'use strict';
+  let verifiedUserId=null;
+  let verifying=null;
+  syncAdminVisibility=function(){
+    const btn=document.getElementById('adminBtn');
+    if(!btn)return;
+    const allowed=!!verifiedUserId&&adminSession?.user?.id===verifiedUserId&&
+      customerSession?.user?.id===verifiedUserId&&panelAccess?.owner===true;
+    btn.hidden=!allowed;
+    btn.style.display=allowed?'':'none';
+    btn.dataset.authorized=allowed?'true':'false';
+    btn.setAttribute('aria-hidden',String(!allowed));
+    btn.tabIndex=allowed?0:-1;
+  };
+  panelVerify=async function(){
+    if(verifying)return verifying;
+    verifying=(async()=>{
+      verifiedUserId=null;
+      panelAccess={owner:false,master:false,modules:[]};
+      syncAdminVisibility();
+      if(!supabaseClient)return false;
+      const {data:auth,error:authError}=await supabaseClient.auth.getUser();
+      const user=auth?.user;
+      if(authError||!user){adminSession=null;return false;}
+      const {data:sesh}=await supabaseClient.auth.getSession();
+      if(!sesh?.session||sesh.session.user?.id!==user.id)return false;
+      customerSession=sesh.session;
+      adminSession=sesh.session;
+      // La fila solo puede leerse con RLS para el propio usuario.
+      const {data:role,error:roleError}=await supabaseClient
+        .from('staff_roles').select('role').eq('user_id',user.id).maybeSingle();
+      if(roleError){console.warn('No se pudo consultar staff_roles:',roleError.message);return false;}
+      if(role?.role!=='admin')return false;
+      // No se concede acceso basándose en caché local o metadatos editables.
+      verifiedUserId=user.id;
+      panelAccess={owner:true,master:false,modules:adminTabs.map(([id])=>id)};
+      syncAdminVisibility();
+      return true;
+    })();
+    try{return await verifying}finally{verifying=null;syncAdminVisibility()}
+  };
+  const button=document.getElementById('adminBtn');
+  if(button){
+    button.onclick=async()=>{
+      if(!await panelVerify()){
+        toast('No fue posible verificar el permiso de administrador en Supabase.','error');
+        return;
+      }
+      renderAdmin();openModal('adminModal');
+    };
+  }
+  let attempts=0;
+  const bootstrap=async()=>{
+    if(!supabaseClient&&attempts++<8){setTimeout(bootstrap,900);return}
+    if(supabaseClient)await panelVerify();
+  };
+  setTimeout(bootstrap,400);
+  window.addEventListener('pageshow',()=>{if(supabaseClient)panelVerify()});
+  document.addEventListener('visibilitychange',()=>{if(!document.hidden&&supabaseClient)panelVerify()});
+})();
+</script>
+</body></html>');win.document.close();ticketQr(d).then(qr=>{win.document.body.innerHTML=ticketSvg(order,d,qr);const images=[...win.document.images];return Promise.all(images.map(img=>img.complete?Promise.resolve():new Promise(resolve=>{img.onload=img.onerror=resolve}))).then(()=>{win.focus();win.print()})}).catch(e=>{win.document.body.textContent=e.message})}
 const ticketOriginalPost=renderPostConfirm;renderPostConfirm=function(order){ticketOriginalPost(order);const stack=document.querySelector('#summaryBody .stack')||document.getElementById('summaryBody');const row=document.createElement('div');row.className='toolbar';row.innerHTML=panelButton('orderJpeg','Descargar ticket JPEG',UI.download,'secondary')+panelButton('orderPrint','Imprimir ticket',UI.receipt,'secondary');stack.append(row);document.getElementById('orderJpeg').onclick=e=>panelRun(e.currentTarget,async()=>ticketDownload((await ticketRaster(order,ticketConfig(state.config.ticket),'image/jpeg')).url,'pedido-'+order.folio+'.jpg'));document.getElementById('orderPrint').onclick=()=>ticketPrint(order,ticketConfig(state.config.ticket))};
 const moreProducts=renderProductsAdmin;renderProductsAdmin=function(c){moreProducts(c);const picker=document.getElementById('iconPicker');if(picker&&!document.getElementById('productIconSearch')){picker.insertAdjacentHTML('beforebegin',panelField('productIconSearch','Buscar icono','','search'));document.getElementById('productIconSearch').oninput=e=>{const term=e.target.value.toLowerCase();picker.querySelectorAll('[data-icon]').forEach(el=>el.hidden=!(el.dataset.icon+' '+(EXTRA_LABELS[el.dataset.icon]||'')).toLowerCase().includes(term))}}};
 
@@ -4523,6 +4588,71 @@ window.addEventListener('pageshow',()=>{setTimeout(reconcileSession,0)});
 document.addEventListener('visibilitychange',()=>{if(!document.hidden)reconcileSession()});
 setTimeout(reconcileSession,250);
 setTimeout(reconcileSession,1500);
+})();
+</script>
+
+<!-- VibraErotica: autorización de panel por roles reales de Supabase -->
+<script id="vibra-admin-role-fix">
+(function(){
+  'use strict';
+  let verifiedUserId=null;
+  let verifying=null;
+  syncAdminVisibility=function(){
+    const btn=document.getElementById('adminBtn');
+    if(!btn)return;
+    const allowed=!!verifiedUserId&&adminSession?.user?.id===verifiedUserId&&
+      customerSession?.user?.id===verifiedUserId&&panelAccess?.owner===true;
+    btn.hidden=!allowed;
+    btn.style.display=allowed?'':'none';
+    btn.dataset.authorized=allowed?'true':'false';
+    btn.setAttribute('aria-hidden',String(!allowed));
+    btn.tabIndex=allowed?0:-1;
+  };
+  panelVerify=async function(){
+    if(verifying)return verifying;
+    verifying=(async()=>{
+      verifiedUserId=null;
+      panelAccess={owner:false,master:false,modules:[]};
+      syncAdminVisibility();
+      if(!supabaseClient)return false;
+      const {data:auth,error:authError}=await supabaseClient.auth.getUser();
+      const user=auth?.user;
+      if(authError||!user){adminSession=null;return false;}
+      const {data:sesh}=await supabaseClient.auth.getSession();
+      if(!sesh?.session||sesh.session.user?.id!==user.id)return false;
+      customerSession=sesh.session;
+      adminSession=sesh.session;
+      // La fila solo puede leerse con RLS para el propio usuario.
+      const {data:role,error:roleError}=await supabaseClient
+        .from('staff_roles').select('role').eq('user_id',user.id).maybeSingle();
+      if(roleError){console.warn('No se pudo consultar staff_roles:',roleError.message);return false;}
+      if(role?.role!=='admin')return false;
+      // No se concede acceso basándose en caché local o metadatos editables.
+      verifiedUserId=user.id;
+      panelAccess={owner:true,master:false,modules:adminTabs.map(([id])=>id)};
+      syncAdminVisibility();
+      return true;
+    })();
+    try{return await verifying}finally{verifying=null;syncAdminVisibility()}
+  };
+  const button=document.getElementById('adminBtn');
+  if(button){
+    button.onclick=async()=>{
+      if(!await panelVerify()){
+        toast('No fue posible verificar el permiso de administrador en Supabase.','error');
+        return;
+      }
+      renderAdmin();openModal('adminModal');
+    };
+  }
+  let attempts=0;
+  const bootstrap=async()=>{
+    if(!supabaseClient&&attempts++<8){setTimeout(bootstrap,900);return}
+    if(supabaseClient)await panelVerify();
+  };
+  setTimeout(bootstrap,400);
+  window.addEventListener('pageshow',()=>{if(supabaseClient)panelVerify()});
+  document.addEventListener('visibilitychange',()=>{if(!document.hidden&&supabaseClient)panelVerify()});
 })();
 </script>
 </body>
