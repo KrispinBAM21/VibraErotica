@@ -4591,34 +4591,5 @@ setTimeout(reconcileSession,1500);
 })();
 </script>
 
-
-<style id="vibra-safe-recovery-styles">
-/* Ajustes no destructivos. Nunca ocultan el catálogo principal. */
-[data-v12-view="best"],[data-v12-menu="best"]{display:none!important}
-.vibra-v7-note{border:1px solid #b32d72;padding:12px 16px;border-radius:12px;margin:14px 0;background:rgba(179,45,114,.08)}
-</style>
-<script id="vibra-safe-recovery-script">
-(()=>{
-'use strict';
-// Extensión visual aislada: no modifica las funciones originales.
-const iconLabels=[['♥','Corazón'],['♡','Corazón fino'],['✿','Flor'],['✧','Brillo'],['♛','Elegancia'],['🎀','Lencería'],['💋','Labios'],['🕯️','Ambiente'],['🛏️','Habitación'],['💆','Masajes'],['🔞','Solo adultos'],['🌹','Rosa']];
-function tidy(){
- document.querySelectorAll('[data-v12-view="best"],[data-v12-menu="best"]').forEach(el=>el.hidden=true);
- const btns=document.querySelectorAll('button');
- btns.forEach(el=>{
-   if(el.childElementCount===0 && el.textContent.trim()==='Mis pedidos')el.textContent='Mis reservaciones';
- });
- const root=document.getElementById('adminContent');
- if(root && root.querySelector('#ticketFooterEnabledV9') && !root.querySelector('[data-vibra-icon-note]')){
-   const p=document.createElement('p');p.dataset.vibraIconNote='1';p.className='small muted';p.textContent='Iconos de referencia para una futura plantilla erótica: '+iconLabels.map(x=>x[0]+' '+x[1]).join(' · ');
-   root.querySelector('#ticketFooterEnabledV9').closest('.section-card')?.append(p);
- }
-}
-let scheduled=false;
-const run=()=>{if(scheduled)return;scheduled=true;requestAnimationFrame(()=>{scheduled=false;tidy()})};
-new MutationObserver(run).observe(document.body,{childList:true,subtree:true});
-run();
-})();
-</script>
 </body>
 </html>
