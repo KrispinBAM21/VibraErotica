@@ -4904,5 +4904,51 @@ window.addEventListener('focus',()=>{if(block()&&db())load().catch(console.warn)
 })();
 
 </script>
+<style id="v11-additions">
+/* Mejora de diseño sin reemplazar controles previos */
+#v9Admin.v11-compact{max-width:1200px;margin-inline:auto}
+#v9Admin.v11-compact .v9fields{display:grid;grid-template-columns:repeat(auto-fit,minmax(165px,1fr));gap:12px}
+#v9Admin.v11-compact h3{margin-top:24px;margin-bottom:10px}
+#v9Admin.v11-compact input,#v9Admin.v11-compact select{min-height:41px}
+#v9Section .v9panel{border-radius:20px;box-shadow:0 16px 44px #0002}
+#v11SaveStatus{padding:8px 10px;border-left:3px solid #f72585}
+
+</style>
+<script id="v11-additions">
+(()=>{
+  'use strict';
+  const $=s=>document.querySelector(s);
+  const note=(s)=>{const e=$('#v11SaveStatus');if(e)e.textContent=s;};
+  let lastUser='',lastFetched=0,cache=null,loading=false;
+  function sb(){return typeof supabaseClient!=='undefined'?supabaseClient:null;}
+  async function admin(){const s=sb();if(!s)return false;const a=await s.auth.getUser();if(!a.data?.user)return false;const r=await s.from('staff_roles').select('role').eq('user_id',a.data.user.id).maybeSingle();return ['admin','manager'].includes(r.data?.role);}
+  async function fetchSettings(){if(loading||!sb())return;const now=Date.now();if(cache&&now-lastFetched<20000)return;loading=true;
+    try{if(!await admin())return;const r=await sb().from('site_integrations_v11').select('carto_api_key,carto_style').eq('id',1).maybeSingle();if(r.error)throw r.error;cache=r.data||{carto_api_key:'',carto_style:'voyager'};lastFetched=now;fill();}
+    catch(e){note('No se pudo recuperar CARTO: '+e.message)}finally{loading=false;}
+  }
+  function fill(){const key=$('#cartoApiKey'),style=$('#cartoStyle');if(key&&cache){if(document.activeElement!==key)key.value=cache.carto_api_key||'';if(document.activeElement!==style)style.value=cache.carto_style||'voyager';}}
+  async function saveCarto(){const key=$('#cartoApiKey'),style=$('#cartoStyle');if(!key||!style)return;const val=key.value.trim();if(!val){note('Escribe la API key de CARTO.');return;}if(!await admin()){note('Solo administración puede cambiar CARTO.');return;}
+    note('Guardando CARTO en Supabase…');const row={id:1,carto_api_key:val,carto_style:style.value,updated_at:new Date().toISOString()};
+    const r=await sb().from('site_integrations_v11').upsert(row,{onConflict:'id'});
+    if(r.error){note('No se guardó: '+r.error.message);return;}
+    cache=row;lastFetched=Date.now();
+    if(typeof state!=='undefined'&&state.config){state.config.map={provider:'carto',apiKey:val,style:style.value,attribution:'OpenStreetMap contributors, CARTO'};}
+    try{if(typeof saveLocal==='function')saveLocal();else if(typeof save==='function')save();}catch{}
+    note('CARTO guardado en Supabase. Permanecerá al actualizar el HTML.');
+  }
+  document.addEventListener('click',event=>{
+    const b=event.target.closest('#saveMapConfig');if(b){event.preventDefault();event.stopImmediatePropagation();saveCarto().catch(e=>note(e.message));}
+  },true);
+  const observer=new MutationObserver(()=>{
+    const btn=$('#saveMapConfig');if(btn&&!$('#v11SaveStatus')){const line=document.createElement('p');line.id='v11SaveStatus';line.className='small muted';line.style.marginTop='12px';line.textContent='La clave se guarda en Supabase, no solo en este navegador.';btn.insertAdjacentElement('afterend',line);fetchSettings();}
+    const v9=$('#v9Admin');if(v9&&!v9.dataset.v11Compact){v9.dataset.v11Compact='1';v9.classList.add('v11-compact');}
+    document.querySelectorAll('[data-admin-tab="deliveries"],[data-admin-tab="routes"]').forEach(x=>{if(x.textContent.includes('entrega'))x.textContent=x.textContent.replace(/Rutas y entregas/gi,'Rutas de servicios').replace(/Entregas y seguimiento/gi,'Desplazamientos de servicios');});
+  });
+  observer.observe(document.documentElement,{childList:true,subtree:true});
+  document.addEventListener('visibilitychange',()=>{if(!document.hidden){lastFetched=0;fetchSettings();}});
+  setTimeout(fetchSettings,2000);
+})();
+
+</script>
 </body>
 </html>
