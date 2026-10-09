@@ -4,8 +4,8 @@
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <title>VibraErótica · Productos, servicios y reservaciones</title>
-  <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" integrity="sha256-p4NxAoJBhIIN+hmNHrzRCf9tD/miZyo9V+zM2u0S+W9I=" crossorigin="" />
-  <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js" integrity="sha256-20nQCchB9co0qIjJZRGuk2/Z9VM+kNiyxNV1lvTlZBo=" crossorigin=""></script>
+  <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" crossorigin="" />
+  <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js" crossorigin=""></script>
   <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
   <script src="./config.js"></script>
   <style>
@@ -145,8 +145,8 @@
         </div>
         <div class="top-actions">
           <span class="muted" id="sessionMail">Sin sesión</span>
-          <button class="ghost" id="signOutBtn">Salir</button>
-          <button class="pill admin-toggle" id="openAdminBtn"><span class="gear"><svg class="vi-icon" aria-hidden="true"><use href="#vi-gear"></use></svg></span>Administración</button>
+          <button class="pill" id="openAccountBtn"><svg class="vi-icon" aria-hidden="true"><use href="#vi-heart"></use></svg> Mi cuenta</button><button class="ghost" id="signOutBtn" style="display:none">Salir</button>
+          <button class="pill admin-toggle" id="openAdminBtn" style="display:none"><span class="gear"><svg class="vi-icon" aria-hidden="true"><use href="#vi-gear"></use></svg></span>Administración</button>
         </div>
       </div>
       <nav class="nav-tabs">
@@ -207,6 +207,38 @@
             <h3 id="profileBusinessName">VibraErótica</h3>
             <p class="muted" id="profileDescription">Aquí aparecerá la descripción pública del negocio.</p>
             <div class="chips" id="socialLinks"></div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+
+  <div class="modal" id="accountModal" role="dialog" aria-modal="true" aria-label="Acceso a VibraErótica">
+    <div class="drawer" style="grid-template-columns:1fr;max-width:620px;inset:5vh 16px;margin:auto;max-height:90vh;">
+      <div class="drawer-body">
+        <div class="drawer-top"><h2>Mi cuenta</h2><button class="ghost" id="closeAccountBtn">Cerrar</button></div>
+        <div class="stack" style="margin-top:20px">
+          <div class="module-card">
+            <h3 id="accountTitle">Iniciar sesión</h3>
+            <p class="small">Accede como cliente o administrador con tu cuenta de Supabase.</p>
+            <div class="field" id="accountNameField" style="display:none;margin-bottom:12px"><label>Nombre completo</label><input id="accountName" autocomplete="name"></div>
+            <div class="field"><label>Correo electrónico</label><input id="accountEmail" type="email" autocomplete="email"></div>
+            <div class="field" id="accountPasswordField" style="margin-top:12px"><label>Contraseña</label><input id="accountPassword" type="password" autocomplete="current-password" minlength="8"></div>
+            <div class="actions" style="margin-top:16px">
+              <button class="primary" id="accountSubmitBtn">Entrar</button>
+              <button class="ghost" id="accountGoogleBtn">Continuar con Google</button>
+            </div>
+            <div class="actions" style="margin-top:12px">
+              <button class="ghost" id="accountToggleBtn">Crear cuenta</button>
+              <button class="ghost" id="accountResetBtn">Olvidé mi contraseña</button>
+            </div>
+            <p class="small" id="accountMessage" role="status"></p>
+          </div>
+          <div class="module-card" id="accountLoggedBox" style="display:none">
+            <h3>Sesión activa</h3><p id="accountLoggedEmail"></p>
+            <p class="small" id="accountRoleLabel"></p>
+            <button class="ghost" id="accountLogoutBtn">Cerrar sesión</button>
           </div>
         </div>
       </div>
@@ -649,7 +681,7 @@
       if(bgBtn){ state.pattern=bgBtn.dataset.pattern; applyState(); hydrateFormValues(); }
     });
 
-    $('#openAdminBtn').addEventListener('click', ()=>{$('#adminModal').classList.add('show');setTimeout(refreshAdminMap,120);});
+    $('#openAdminBtn').addEventListener('click', ()=>{if(!cloudAdmin)return;$('#adminModal').classList.add('show');setTimeout(refreshAdminMap,120);});
     $('#closeAdminBtn').addEventListener('click', ()=>$('#adminModal').classList.remove('show'));
     $('#brandLogo').addEventListener('click', ()=>$('#profileModal').classList.add('show'));
     $('#closeProfileBtn').addEventListener('click', ()=>$('#profileModal').classList.remove('show'));
@@ -803,15 +835,20 @@
       if(publicMarker)publicMarker.setLatLng(p);
     }
     async function initCloud(){
-      if(!supabaseClient){$('#cloudStatus').textContent='Supabase sin configurar: edita config.js. El mapa CARTO puede funcionar solo con su clave.';refreshMaps();return;}
+      if(!supabaseClient){$('#cloudStatus').textContent='Supabase sin configurar: revisa config.js';$('#sessionMail').textContent='Sin sesión';$('#openAdminBtn').style.display='none';refreshMaps();return;}
       const {data:{user}}=await supabaseClient.auth.getUser();
-      cloudUser=user;
+      cloudUser=user; cloudAdmin=false;
       if(user){
         const {data:role,error:rerr}=await supabaseClient.from('staff_roles').select('role').eq('user_id',user.id).maybeSingle();
         cloudAdmin=!rerr && !!role && ['admin','owner','propietario'].includes(role.role);
       }
-      $('#loginBox').style.display=cloudAdmin?'none':'block';
-      $('#openAdminBtn').style.display='inline-flex';
+      $('#loginBox').style.display='none';
+      $('#openAdminBtn').style.display=cloudAdmin?'inline-flex':'none';
+      $('#signOutBtn').style.display=user?'inline-flex':'none';
+      $('#accountLoggedBox').style.display=user?'block':'none';
+      $('#accountLoggedEmail').textContent=user?.email||'';
+      $('#accountRoleLabel').textContent=cloudAdmin?'Administrador autorizado':'Cuenta de cliente';
+      $('#accountSubmitBtn').disabled=!!user;
       $$('.panel-section').forEach(p=>p.style.display=cloudAdmin?'':'none');
       $('#sessionMail').textContent=user?.email||'Iniciar sesión';
       $('#cloudStatus').textContent=cloudAdmin?'Conectado como administrador':'Solo consulta pública';
@@ -840,7 +877,60 @@
       if(error){$('#authStatus').textContent=error.message;return;}
       await initCloud();
     });
-    $('#signOutBtn').addEventListener('click',async()=>{if(supabaseClient)await supabaseClient.auth.signOut();cloudUser=null;cloudAdmin=false;$('#openAdminBtn').style.display='inline-flex';$('#loginBox').style.display='block';$$('.panel-section').forEach(p=>p.style.display='none');$('#sessionMail').textContent='Sin sesión';});
+    $('#signOutBtn').addEventListener('click',async()=>{if(supabaseClient)await supabaseClient.auth.signOut();cloudUser=null;cloudAdmin=false;$('#openAdminBtn').style.display='none';$('#signOutBtn').style.display='none';$('#loginBox').style.display='none';$('#accountLoggedBox').style.display='none';$('#accountSubmitBtn').disabled=false;$$('.panel-section').forEach(p=>p.style.display='none');$('#sessionMail').textContent='Sin sesión';});
+
+    let accountMode='login';
+    function accountStatus(message){$('#accountMessage').textContent=message;}
+    function setAccountMode(mode){
+      accountMode=mode;
+      $('#accountTitle').textContent=mode==='signup'?'Crear cuenta':mode==='reset'?'Restablecer contraseña':'Iniciar sesión';
+      $('#accountNameField').style.display=mode==='signup'?'grid':'none';
+      $('#accountPasswordField').style.display=mode==='reset'?'none':'grid';
+      $('#accountSubmitBtn').textContent=mode==='signup'?'Registrarme':mode==='reset'?'Enviar enlace':'Entrar';
+      $('#accountToggleBtn').textContent=mode==='login'?'Crear cuenta':'Volver a iniciar sesión';
+      $('#accountGoogleBtn').style.display=mode==='reset'?'none':'inline-flex';
+      accountStatus('');
+    }
+    const redirectUrl=()=>window.location.origin+window.location.pathname;
+    $('#openAccountBtn').addEventListener('click',()=>{$('#accountModal').classList.add('show');setAccountMode('login');});
+    $('#closeAccountBtn').addEventListener('click',()=>$('#accountModal').classList.remove('show'));
+    $('#accountToggleBtn').addEventListener('click',()=>setAccountMode(accountMode==='login'?'signup':'login'));
+    $('#accountResetBtn').addEventListener('click',()=>setAccountMode('reset'));
+    $('#accountSubmitBtn').addEventListener('click',async()=>{
+      if(!supabaseClient){accountStatus('Configura la URL y clave pública de Supabase en config.js.');return;}
+      const email=$('#accountEmail').value.trim(),password=$('#accountPassword').value;
+      if(!email){accountStatus('Escribe tu correo.');return;}
+      $('#accountSubmitBtn').disabled=true;
+      try{
+        let result;
+        if(accountMode==='signup'){
+          if(password.length<8)throw new Error('La contraseña debe tener al menos 8 caracteres.');
+          result=await supabaseClient.auth.signUp({email,password,options:{data:{full_name:$('#accountName').value.trim()},emailRedirectTo:redirectUrl()}});
+          if(result.error)throw result.error;
+          accountStatus(result.data.session?'Cuenta creada y sesión iniciada.':'Cuenta creada. Revisa tu correo para confirmar el registro.');
+        }else if(accountMode==='reset'){
+          result=await supabaseClient.auth.resetPasswordForEmail(email,{redirectTo:redirectUrl()});
+          if(result.error)throw result.error;
+          accountStatus('Si el correo está registrado, recibirás instrucciones para restablecer tu contraseña.');
+        }else{
+          result=await supabaseClient.auth.signInWithPassword({email,password});
+          if(result.error)throw result.error;
+          accountStatus('Sesión iniciada.');
+        }
+        if(result.data?.session){await initCloud();$('#accountModal').classList.remove('show');}
+      }catch(err){accountStatus(err.message||'Error de autenticación.');}
+      finally{$('#accountSubmitBtn').disabled=!!cloudUser;}
+    });
+    $('#accountGoogleBtn').addEventListener('click',async()=>{
+      if(!supabaseClient){accountStatus('Configura Supabase primero.');return;}
+      const {error}=await supabaseClient.auth.signInWithOAuth({provider:'google',options:{redirectTo:redirectUrl()}});
+      if(error)accountStatus(error.message);
+    });
+    $('#accountLogoutBtn').addEventListener('click',()=>$('#signOutBtn').click());
+    if(supabaseClient)supabaseClient.auth.onAuthStateChange((event)=>{
+      if(event==='SIGNED_IN'||event==='SIGNED_OUT'||event==='TOKEN_REFRESHED')setTimeout(()=>initCloud().catch(console.error),0);
+    });
+
     $('#lat').addEventListener('change',()=>{syncFormToState();refreshMaps();});
     $('#lng').addEventListener('change',()=>{syncFormToState();refreshMaps();});
     $('#mapStyle').addEventListener('change',()=>{syncFormToState();refreshMaps();});
