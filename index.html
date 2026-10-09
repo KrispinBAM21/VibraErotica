@@ -415,6 +415,12 @@ function supabaseConfigured(){
    DATA & STORAGE
 ============================== */
 const STORE='vibraEroticaRestored_v1';
+const VIBRA_PENDING_CONFIG='vibraerotica.config.pending.v1';
+const VIBRA_SYNC_STATUS='vibraerotica.config.sync-status.v1';
+function vibraPending(){try{return JSON.parse(localStorage.getItem(VIBRA_PENDING_CONFIG)||'null')}catch{return null}}
+function vibraMarkDirty(){try{localStorage.setItem(VIBRA_PENDING_CONFIG,JSON.stringify({config:state.config,at:Date.now()}));localStorage.setItem(VIBRA_SYNC_STATUS,'pending')}catch(e){console.warn('No se pudo guardar la configuración local',e)}}
+function vibraAckConfig(){localStorage.removeItem(VIBRA_PENDING_CONFIG);localStorage.setItem(VIBRA_SYNC_STATUS,'saved')}
+
 const defaults={
  config:{
   businessName:'VibraErótica',tagline:'Boutique para adultos y reservas',logo:'',whatsapp:'5213141234567',adminPin:'1234',deliveryEnabled:false,
@@ -432,12 +438,13 @@ const defaults={
  cart:{},orders:[],folioSeq:1
 };
 let state=load();
+try{const pending=vibraPending();if(pending?.config)state.config=merge(state.config,pending.config)}catch(e){console.warn(e)}
 let currentCategory='Todos',searchTerm='',customerMarker=null,clientMap=null,originMap=null,originMarker=null,tripMap=null,tripOriginMarker=null,tripDestMarker=null,tripRouteLayer=null,lastPdfBlob=null,lastPdfName='',lastOrderId=null;
 let checkout={delivery:'pickup',address:'',lat:null,lng:null,distance:0,shipping:0,name:'',phone:'',notes:'',paymentId:'',proofFile:null,proofUrl:'',proofName:''};
 function deepClone(o){return JSON.parse(JSON.stringify(o));}
 function load(){try{const x=JSON.parse(localStorage.getItem(STORE)||'null');return x?merge(defaults,x):deepClone(defaults)}catch(e){return deepClone(defaults)}}
 function merge(base,extra){if(Array.isArray(base))return Array.isArray(extra)?extra:base; if(base&&typeof base==='object'){const out={...base};for(const k in extra)out[k]=k in base?merge(base[k],extra[k]):extra[k];return out}return extra??base}
-function saveLocal(){localStorage.setItem(STORE,JSON.stringify(state))}
+function saveLocal(){try{localStorage.setItem(STORE,JSON.stringify(state))}catch(error){console.error('Guardado local:',error);if(typeof toast==='function')toast('Almacenamiento lleno: reduce el tamaño de imágenes antes de guardar.','error')}}
 function save(){
   saveLocal();
   if(adminSession&&supabaseClient){
@@ -481,7 +488,7 @@ async function loadPublicCloudState(){
     supabaseClient.from('products').select('*').order('sort_order',{ascending:true}).order('name',{ascending:true})
   ]);
   if(se)throw se;if(pe)throw pe;
-  if(settings?.data)state.config=merge(defaults.config,settings.data);
+  if(settings?.data){const pending=vibraPending();state.config=pending?.config?merge(merge(defaults.config,settings.data),pending.config):merge(defaults.config,settings.data);}
   if(Array.isArray(products))state.products=products.map(rowToProduct);
   saveLocal();applyDesign();renderHeader();renderCategories();renderCatalog();
 }
@@ -1133,9 +1140,57 @@ const delegatedModules=adminTabs.filter(([id])=>!['users','commissions'].include
 const broadUsers=panelUsers;panelUsers=async function(c,epoch){await broadUsers(c,epoch);if(epoch!==panelEpoch)return;const group=c.querySelector('.permission-grid');group.innerHTML=adminTabs.filter(([id])=>delegatedModules.includes(id)).map(([id,label])=>`<label class="permission-option"><input type="checkbox" data-panel-module="${id}"><span>${esc(label)}</span></label>`).join('');c.querySelectorAll('.small.muted').forEach(p=>{if(p.textContent.includes('requieren rol propietario'))p.textContent='Los permisos se verifican en Supabase. Usuarios y Comisiones se reservan al propietario.'});const users=await panelCall('staff_list');if(epoch!==panelEpoch)return;c.querySelectorAll('[data-panel-staff-edit]').forEach(b=>{const old=b.onclick;b.onclick=()=>{old();const u=users.find(x=>x.id===b.dataset.panelStaffEdit);group.querySelectorAll('[data-panel-module]').forEach(x=>x.checked=!!u?.data.modules?.includes(x.dataset.panelModule))}})};
 let cloudProductIds=new Set(state.products.map(p=>p.id)),pendingCloudModules=new Map(),cloudSaving=null;
 const productionLoad=loadPublicCloudState;loadPublicCloudState=async function(){await productionLoad();cloudProductIds=new Set(state.products.map(p=>p.id));state.config.ticket=ticketConfig(state.config.ticket)};
-function queueCloudModule(){const module=activeAdmin;if(['business','design','trip'].includes(module))pendingCloudModules.set(module,deepClone(state.config));if(module==='products')pendingCloudModules.set('products',deepClone(state.products))}
-save=function(){saveLocal();if(adminSession&&supabaseClient){queueCloudModule();clearTimeout(cloudSyncTimer);cloudSyncTimer=setTimeout(()=>syncAdminStateToCloud().catch(e=>toast('No se guardaron los cambios en Supabase: '+e.message,'error')),500)}};
-syncAdminStateToCloud=async function(){if(!supabaseClient||!adminSession)throw Error('Inicia sesión.');if(cloudSaving){await cloudSaving;if(!pendingCloudModules.size)return}if(!pendingCloudModules.size)queueCloudModule();const entries=[...pendingCloudModules.entries()];pendingCloudModules.clear();cloudSaving=(async()=>{for(const[module,snapshot]of entries){if(!panelCan(module))throw Error('No tienes permisos para guardar este módulo.');if(module==='products'){const rows=snapshot.map((p,i)=>productRow(p,i));if(rows.some(p=>!Number.isFinite(p.price)||p.price<0||!Number.isFinite(p.stock)||p.stock<0))throw Error('Precio o existencias inválidos.');if(rows.length){const {error}=await supabaseClient.from('products').upsert(rows,{onConflict:'id'});if(error)throw error}const keep=new Set(rows.map(p=>p.id)),remove=[...cloudProductIds].filter(id=>!keep.has(id));if(remove.length){const {error}=await supabaseClient.from('products').delete().in('id',remove);if(error)throw error}cloudProductIds=keep}else{const {error}=await supabaseClient.rpc('catalog_config_save',{p_module:module,p_data:snapshot});if(error)throw error}}})();try{await cloudSaving}finally{cloudSaving=null}};
+function queueCloudModule(){
+ const module=activeAdmin;
+ if(['business','design','trip','profile'].includes(module)){
+  vibraMarkDirty();
+  pendingCloudModules.set(module,deepClone(state.config));
+ }
+ if(module==='products')pendingCloudModules.set('products',deepClone(state.products));
+}
+save=function(){
+ saveLocal();
+ if(adminSession&&supabaseClient){
+  queueCloudModule();
+  clearTimeout(cloudSyncTimer);
+  cloudSyncTimer=setTimeout(()=>syncAdminStateToCloud().catch(e=>toast('No se guardaron los cambios en Supabase: '+e.message,'error')),650);
+ }
+};
+async function vibraSaveConfig(snapshot,module){
+ const payload=deepClone(snapshot);
+ delete payload.adminPin;
+ const {error:rpcError}=await supabaseClient.rpc('catalog_config_save',{p_module:module,p_data:payload});
+ if(!rpcError)return;
+ if(!/could not find the function|pgrst202|42883/i.test(String(rpcError.message||'')+' '+String(rpcError.code||'')))throw rpcError;
+ const {error:tableError}=await supabaseClient.from('catalog_settings').upsert({id:1,data:payload,updated_at:new Date().toISOString()},{onConflict:'id'});
+ if(tableError)throw Error('RPC: '+rpcError.message+'; tabla: '+tableError.message);
+}
+syncAdminStateToCloud=async function(){
+ if(!supabaseClient||!adminSession)throw Error('Inicia sesión para guardar en Supabase.');
+ if(cloudSaving)await cloudSaving;
+ if(!pendingCloudModules.size)queueCloudModule();
+ const entries=[...pendingCloudModules.entries()];
+ if(!entries.length)return;
+ cloudSaving=(async()=>{
+  for(const [module,snapshot] of entries){
+   if(!panelCan(module))throw Error('No tienes permisos para guardar el módulo '+module);
+   if(module==='products'){
+    const rows=snapshot.map((p,i)=>productRow(p,i));
+    if(rows.some(p=>!Number.isFinite(p.price)||p.price<0||!Number.isFinite(p.stock)||p.stock<0))throw Error('Precio o existencias inválidos.');
+    if(rows.length){const {error}=await supabaseClient.from('products').upsert(rows,{onConflict:'id'});if(error)throw error}
+    const keep=new Set(rows.map(p=>p.id));
+    const remove=[...cloudProductIds].filter(id=>!keep.has(id));
+    if(remove.length){const {error}=await supabaseClient.from('products').delete().in('id',remove);if(error)throw error}
+    cloudProductIds=keep;
+   }else{
+    await vibraSaveConfig(deepClone(state.config),module);
+   }
+   if(pendingCloudModules.get(module)===snapshot||JSON.stringify(pendingCloudModules.get(module))===JSON.stringify(snapshot))pendingCloudModules.delete(module);
+  }
+  if(![...pendingCloudModules.keys()].some(x=>x!=='products') && entries.some(([m])=>m!=='products'))vibraAckConfig();
+ })();
+ try{await cloudSaving}finally{cloudSaving=null}
+};
 const productionPane=renderAdminPane;renderAdminPane=async function(id){if(pendingCloudModules.size){try{clearTimeout(cloudSyncTimer);await syncAdminStateToCloud()}catch(e){toast('No se pudo guardar el módulo anterior: '+e.message,'error');return}}return productionPane(id)};
 setPaymentDecision=async function(id,status,reason=''){const {error}=await supabaseClient.rpc('catalog_payment_decision',{p_id:id,p_status:status,p_reason:reason});if(error)throw error};
 renderOrdersAdmin=async function(c){const epoch=panelEpoch;c.innerHTML=`<div class="section-card"><h3>Pedidos</h3>${panelField('orderSearchV3','Buscar folio, referencia, cliente o teléfono','','search')}<div id="ordersListV3">Cargando…</div><div class="toolbar">${panelButton('ordersReloadV3','Actualizar',UI.refresh,'secondary')}${panelButton('ordersExportV3','Exportar respaldo',UI.download,'secondary')}</div></div>`;try{await fetchCloudOrders();if(epoch!==panelEpoch)return;const draw=()=>{const term=document.getElementById('orderSearchV3').value.toLowerCase();document.getElementById('ordersListV3').innerHTML=`<div class="table-wrap"><table class="admin-table"><thead><tr><th>Folio</th><th>Cliente</th><th>Importe</th><th>Pago</th><th>Entrega</th><th>Acciones</th></tr></thead><tbody>${state.orders.filter(o=>(o.folio+' '+o.customer.name+' '+o.customer.phone+' '+(o.paymentReference||'')).toLowerCase().includes(term)).map(o=>`<tr><td>${esc(o.folio)}${o.paymentReference?'<br><span class=small>'+esc(o.paymentReference)+'</span>':''}</td><td>${esc(o.customer.name)}<br><span class="small muted">${esc(o.customer.phone)}</span></td><td>${money(o.total)}</td><td>${paymentBadge(o.paymentStatus)}</td><td><select class="select" data-v3-status="${esc(o.id)}">${['pendiente','pagado','entregado'].map(s=>`<option ${o.status===s?'selected':''}>${s}</option>`).join('')}</select></td><td><div class="row"><button class="icon-btn" data-v3-pdf="${esc(o.id)}" aria-label="Descargar PDF">${UI.download}</button><button class="icon-btn" data-v3-notes="${esc(o.id)}" aria-label="Guardar nota interna">${UI.edit}</button></div></td></tr>`).join('')}</tbody></table></div>`;c.querySelectorAll('[data-v3-status]').forEach(el=>el.onchange=async()=>{const o=state.orders.find(x=>x.id===el.dataset.v3Status);el.disabled=true;try{const {error}=await supabaseClient.rpc('catalog_order_action',{p_id:o.id,p_status:el.value});if(error)throw error;o.status=el.value;saveLocal();toast('Estado actualizado.','ok')}catch(e){el.value=o.status;toast(e.message,'error')}finally{el.disabled=false}});c.querySelectorAll('[data-v3-pdf]').forEach(el=>el.onclick=()=>reprintOrder(el.dataset.v3Pdf));c.querySelectorAll('[data-v3-notes]').forEach(el=>el.onclick=async()=>{const {data:existing,error:noteError}=await supabaseClient.rpc('catalog_order_note',{p_id:el.dataset.v3Notes});if(noteError){toast(noteError.message,'error');return}const note=prompt('Nota interna del pedido (queda en Supabase):',existing||'');if(note===null)return;const o=state.orders.find(x=>x.id===el.dataset.v3Notes);panelRun(el,async()=>{const {error}=await supabaseClient.rpc('catalog_order_action',{p_id:o.id,p_status:o.status,p_notes:note});if(error)throw error},'Nota interna guardada.')})};document.getElementById('orderSearchV3').oninput=draw;document.getElementById('ordersReloadV3').onclick=()=>renderAdminPane('orders');document.getElementById('ordersExportV3').onclick=exportJson;draw()}catch(e){if(epoch===panelEpoch)document.getElementById('ordersListV3').textContent=e.message}};
