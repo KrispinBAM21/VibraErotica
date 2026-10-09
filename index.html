@@ -1,5 +1,13 @@
 <!DOCTYPE html>
 <!--
+REGISTRO DE CAMBIOS — VibraErótica
+(a) Enlaces heredados: se corrigieron nombres de versión y almacenamiento de tema propios del proyecto; se conservan las CDN públicas necesarias.
+(b) Funciones propias: el tema de servicios ahora guarda los colores en la configuración central del catálogo; el componente complementario ya no sobrescribe variables globales.
+(c) Errores corregidos: conflicto entre catalog_settings y site_theme_v9, parpadeo inicial cuando existe tema local, nombre de almacenamiento legado, colores fijos del control administrativo.
+(d) PENDIENTE: requiere backend para sincronizar preferencias entre dispositivos; verificar en Supabase las políticas de catalog_settings y la publicación efectiva en GitHub Pages.
+-->
+
+<!--
 VIBRAERÓTICA — REGISTRO DE AUDITORÍA DE INDEX.HTML
 (a) Referencias heredadas: se normalizaron los nombres del sistema de comida anterior
     en variables, comentarios, metadatos y espacios de almacenamiento hacia VibraErotica.
@@ -25,6 +33,19 @@ Google Fonts (fuentes tipográficas). No se incluyen scripts del dominio de orig
 <head>
 <meta charset="UTF-8" />
 <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<script id="vibra-theme-first-paint">
+/* Carga temprana: evita el parpadeo de colores del tema predeterminado. */
+try {
+ const saved=JSON.parse(localStorage.getItem('vibraEroticaRestored_v1')||'null');
+ const d=saved?.config?.design;
+ if(d){
+  const root=document.documentElement.style;
+  const props={primary:'--primary',secondary:'--secondary',accent:'--accent',text:'--text',card:'--card',siteBg:'--site-bg',iconColor:'--product-icon-color'};
+  for(const [key,name] of Object.entries(props))if(typeof d[key]==='string'&&d[key])root.setProperty(name,d[key]);
+  if(d.font)root.setProperty('--font',JSON.stringify(d.font)+',sans-serif');
+ }
+} catch(error){console.warn('No se pudo restaurar el diseño guardado:',error)}
+</script>
 <title>VibraErótica — Boutique y reservas</title>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
@@ -200,7 +221,7 @@ body.dark-mode .leaflet-container{background:#171b21}
 .receipt-thumb img{width:100%;height:100%;object-fit:cover}
 @media(min-width:720px){.admin-dashboard{grid-template-columns:repeat(5,minmax(0,1fr))}.integration-grid{grid-template-columns:repeat(2,1fr)}}
 
-#adminModal{--card:#161a20;--site-bg:#0d1015;--text:#f3f4f6;--muted:#aeb7c5;--line:#303743;--primary:#c62828;--secondary:#242a33;background:var(--card);color:var(--text);height:96dvh;display:flex;flex-direction:column}#adminModal .modal-head{flex-shrink:0}#adminModal .modal-head button{color:#c62828}#adminModal .modal-body{flex:1;min-height:0;max-height:none;overflow:hidden}#adminModal .admin-layout{height:100%;min-height:0}#adminModal .admin-tabs{min-height:0;overflow:auto}#adminModal .admin-content{min-height:0;overflow-y:auto}#adminModal .tab-btn.active{color:var(--primary);background:var(--secondary)}#adminModal .input,#adminModal .select{background:#0d1015;color:var(--text)}.faithful-session{display:flex;justify-content:space-between;align-items:center;gap:12px;margin-bottom:14px;flex-wrap:wrap}.faithful-logo-preview{display:flex;align-items:center;gap:12px;margin:12px 0}.faithful-logo-preview img{width:96px;height:96px;object-fit:contain;border-radius:12px;background:#242a33}#adminModal .notice{border-left:4px solid var(--primary)}.faithful-press{animation:faithfulPress .35s ease}@keyframes faithfulPress{50%{transform:scale(.97)}}@media(max-width:1050px){#adminModal .admin-layout{display:flex;flex-direction:column}#adminModal .admin-tabs{flex:0 0 auto;max-height:120px}#adminModal .admin-content{flex:1}}@media(prefers-reduced-motion:reduce){.faithful-press{animation:none}}
+#adminModal{--card:#161a20;--site-bg:#0d1015;--text:#f3f4f6;--muted:#aeb7c5;--line:#303743;--secondary:#242a33;background:var(--card);color:var(--text);height:96dvh;display:flex;flex-direction:column}#adminModal .modal-head{flex-shrink:0}#adminModal .modal-head button{color:var(--primary)}#adminModal .modal-body{flex:1;min-height:0;max-height:none;overflow:hidden}#adminModal .admin-layout{height:100%;min-height:0}#adminModal .admin-tabs{min-height:0;overflow:auto}#adminModal .admin-content{min-height:0;overflow-y:auto}#adminModal .tab-btn.active{color:var(--primary);background:var(--secondary)}#adminModal .input,#adminModal .select{background:#0d1015;color:var(--text)}.faithful-session{display:flex;justify-content:space-between;align-items:center;gap:12px;margin-bottom:14px;flex-wrap:wrap}.faithful-logo-preview{display:flex;align-items:center;gap:12px;margin:12px 0}.faithful-logo-preview img{width:96px;height:96px;object-fit:contain;border-radius:12px;background:#242a33}#adminModal .notice{border-left:4px solid var(--primary)}.faithful-press{animation:faithfulPress .35s ease}@keyframes faithfulPress{50%{transform:scale(.97)}}@media(max-width:1050px){#adminModal .admin-layout{display:flex;flex-direction:column}#adminModal .admin-tabs{flex:0 0 auto;max-height:120px}#adminModal .admin-content{flex:1}}@media(prefers-reduced-motion:reduce){.faithful-press{animation:none}}
 #adminModal .admin-content{padding:20px}#adminModal .admin-tabs{width:220px}#adminModal .tab-btn{white-space:normal;word-break:normal;overflow-wrap:normal}#adminModal .tab-btn span{line-height:1.3}#adminModal .textarea{background:#0d1015;color:#f3f4f6}#adminModal .btn{color:white}#adminModal .btn.ghost,#adminModal .btn.secondary{color:#f3f4f6;background:#242a33}#adminModal .section-card{background:#161a20;border-color:#303743}#adminModal .permission-grid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:10px;margin:14px 0}.permission-option{display:flex;gap:8px;padding:10px;background:#242a33;border-radius:10px}.ticket-preview{max-width:360px;margin:20px auto;padding:20px;background:white;color:#111;border-radius:8px}.ticket-preview img{width:70px;height:70px;object-fit:contain}#adminModal .ticket-preview h3{color:white}@media(min-width:850px){#adminModal .admin-layout{display:grid!important;grid-template-columns:220px minmax(0,1fr)}#adminModal .admin-tabs{display:grid!important;align-content:start;max-height:none!important;border-right:1px solid #303743}}@media(max-width:849px){#adminModal .admin-tabs{width:100%;display:flex;max-height:130px}#adminModal .permission-grid{grid-template-columns:1fr}}
 
 body.dialog-open{overflow:hidden}.ticket-editor{display:grid;grid-template-columns:minmax(0,1.1fr) minmax(260px,.9fr);gap:16px}.ticket-controls{min-width:0}.ticket-preview-column{align-self:start;position:sticky;top:0}.ticket-canvas-preview{overflow:auto;background:#d9dfe7;padding:16px;border-radius:12px}.ticket-canvas-preview>svg{display:block;max-width:100%;height:auto;margin:auto;box-shadow:0 3px 15px #0003}#tvIconPicker{max-height:240px;overflow:auto}.icon-option[hidden]{display:none!important}@media(max-width:1000px){.ticket-editor{grid-template-columns:1fr}.ticket-preview-column{position:static}}
@@ -541,7 +562,7 @@ function applyDesign(){const d=state.config.design,r=document.documentElement.st
 }
 
 
-const THEME_STORE='foodCatalogThemeMode';
+const THEME_STORE='vibraerotica.theme.mode';
 let publicThemeMode=localStorage.getItem(THEME_STORE)||'default';
 function applyPublicTheme(){
   document.body.classList.toggle('dark-mode',publicThemeMode==='dark');
@@ -4817,8 +4838,24 @@ async function saveModes(){if(!admin)return;const id=el('#v9Practitioner').value
 function pricingData(){return {enabled:el('#v9TravelEnabled').value==='true',vehicle_name:el('#v9Vehicle').value.trim()||'Automóvil',km_per_liter:Number(el('#v9Consumption').value),fuel_price_per_liter:Number(el('#v9Fuel').value),fixed_departure_fee:Number(el('#v9Fixed').value),extra_per_km:Number(el('#v9PerKm').value)}}
 function calc(){const p=pricingData(),km=Number(el('#v9Distance').value);if(!el('#v9Distance').value||km<0||p.km_per_liter<=0||Object.values(p).some(x=>typeof x==='number'&&(!Number.isFinite(x)||x<0)))return el('#v9CostResult').textContent='Verifica km y precios no negativos, así como rendimiento mayor que cero.';const fuel=km/p.km_per_liter*p.fuel_price_per_liter,total=p.fixed_departure_fee+fuel+km*p.extra_per_km;el('#v9CostResult').textContent=`Gasolina estimada: $${fuel.toFixed(2)} MXN · Total estimado: $${total.toFixed(2)} MXN (para ${km.toFixed(1)} km de ruta introducidos)`;}
 async function saveTravel(){if(!admin)return;const p=pricingData();if(p.km_per_liter<=0||Object.values(p).some(x=>typeof x==='number'&&(!Number.isFinite(x)||x<0)))return setMsg('Revisa los datos del vehículo.');const r=await db().from('travel_pricing').upsert({id:1,...p});setMsg(r.error?r.error.message:'Cotizador guardado en Supabase.');if(!r.error)price=p}
-function applyTheme(){if(!theme)return;document.body.dataset.v9Template=theme.background_template;document.documentElement.style.setProperty('--v9-primary',theme.primary_color);document.documentElement.style.setProperty('--primary',theme.primary_color);document.documentElement.style.setProperty('--secondary',theme.secondary_color);document.querySelectorAll('.v9action:not(.secondary)').forEach(x=>x.style.background=theme.primary_color)}
-async function saveTheme(){if(!admin)return;const p={id:1,primary_color:el('#v9Primary').value,secondary_color:el('#v9Secondary').value,background_template:el('#v9Template').value};const r=await db().from('site_theme_v9').upsert(p);if(r.error)setMsg(r.error.message);else{theme=p;applyTheme();setMsg('Tema guardado y aplicado.')}}
+function applyTheme(){if(!theme)return;document.body.dataset.v9Template=theme.background_template;document.documentElement.style.setProperty('--v9-primary',theme.primary_color);document.querySelectorAll('.v9action:not(.secondary)').forEach(x=>x.style.background=theme.primary_color)}
+async function saveTheme(){
+ if(!admin)return setMsg('Se requiere sesión administrativa.');
+ const p={id:1,primary_color:el('#v9Primary').value,secondary_color:el('#v9Secondary').value,background_template:el('#v9Template').value};
+ try{
+   // El catálogo principal es la única fuente de colores globales.
+   if(typeof state!=='undefined'&&state.config?.design){
+     state.config.design.primary=p.primary_color;
+     state.config.design.secondary=p.secondary_color;
+     if(typeof saveLocal==='function')saveLocal();
+     if(typeof applyDesign==='function')applyDesign();
+     if(typeof syncAdminStateToCloud==='function')await syncAdminStateToCloud();
+   }
+   const r=await db().from('site_theme_v9').upsert(p);
+   if(r.error)console.warn('Tema complementario sin sincronizar:',r.error.message);
+   theme=p;applyTheme();setMsg('Diseño guardado como configuración principal.');
+ }catch(error){setMsg('No se pudo sincronizar el diseño: '+error.message)}
+}
 let retries=0;async function initialize(){setup();if(db()){await load()}else if(retries++<25)setTimeout(initialize,800)}
 if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',initialize,{once:true});else initialize();
 window.addEventListener('focus',()=>{if(db())load()});
