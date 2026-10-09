@@ -173,7 +173,7 @@
           <p class="muted" id="locationSummary">Configura el domicilio del negocio desde Administración → Negocio.</p>
           <div class="actions">
             <button class="primary" id="routeBtn">Cómo llegar desde mi ubicación</button>
-            <button class="ghost" id="mapsBtn">Abrir en Google Maps</button>
+            <button class="ghost" id="mapsBtn">Ver ubicación en el mapa</button>
           </div>
           <p class="small">El domicilio guardado también se utilizará para el botón “Cómo llegar”.</p>
         </article>
@@ -356,7 +356,7 @@
             <div class="module-card">
               <h3>Mapa y ubicación del negocio</h3>
               <div class="form-grid two">
-                <div class="field"><label>Clave CARTO (solo referencia local; no se envía a los mapas base públicos)</label><input id="cartoApi" type="password" autocomplete="off" placeholder="No necesaria para CARTO basemaps"></div>
+                <div class="field"><label>Clave de CARTO (guardada solo en Supabase)</label><input id="cartoApi" type="password" autocomplete="new-password" placeholder="Escribe una nueva clave para guardarla"></div><div class="field"><label>URL base CARTO</label><input id="cartoBaseUrl" value="https://basemaps.cartocdn.com" placeholder="https://basemaps.cartocdn.com"></div><div class="field"><label>Estado de CARTO</label><div id="cartoStatus" class="static-input">Pendiente de comprobar</div></div>
                 <div class="field"><label>Estilo de mapa</label><select id="mapStyle"><option>Voyager</option><option>Positron</option><option>Dark Matter</option></select></div>
                 <div class="field"><label>Latitud</label><input id="lat" type="number" step="any" value="19.332"></div>
                 <div class="field"><label>Longitud</label><input id="lng" type="number" step="any" value="-99.183"></div>
@@ -493,7 +493,7 @@
       profileLocation:'',
       primaryColor:'#ff1688',secondaryColor:'#8f2fff',bgColor:'#090d18',panelColor:'#121827',panel2Color:'#1a2234',fontScale:'1',pattern:'dots',
       pinIcon:'pin',pinLabel:'Local',pinText:'Local',pinColor:'#ff244d',
-      cartoApi:'', mapStyle:'Voyager', lat:'19.332', lng:'-99.183',
+      cartoApi:'', cartoBaseUrl:'https://basemaps.cartocdn.com', mapStyle:'Voyager', lat:'19.332', lng:'-99.183',
       addrStreet:'', addrColony:'', addrZip:'', addrTown:'', addrState:'', addrRef:'',
       whatsApp:'',
       socialFacebook:'',socialInstagram:'',socialTiktok:'',socialX:'',socialWebsite:'',socialChannel:'',
@@ -528,7 +528,7 @@
       try{const saved=JSON.parse(localStorage.getItem('vibra_admin_state')||'{}'); if(saved.pinIcon) saved.pinIcon=legacyIcons[saved.pinIcon]||saved.pinIcon; for(const p of saved.products||[])p.icon=legacyIcons[p.icon]||p.icon; for(const c of saved.categories||[])c.icon=legacyIcons[c.icon]||c.icon; return {...defaultState,...saved};}catch(e){return structuredClone(defaultState)}
     }
     function saveState(){
-      localStorage.setItem('vibra_admin_state', JSON.stringify(state));
+      localStorage.setItem('vibra_admin_state', JSON.stringify({...state,cartoApi:''}));
       applyState();
       saveCloud().catch(err=>{
         $('#cloudStatus').textContent='No se guardó en Supabase: '+err.message;
@@ -550,6 +550,7 @@
 
     function applyState(){
       const root=document.documentElement;
+      state.cartoApi='';
       root.style.setProperty('--primary', state.primaryColor);
       root.style.setProperty('--secondary', state.secondaryColor);
       root.style.setProperty('--bg', state.bgColor);
@@ -612,13 +613,13 @@
       list.innerHTML = state.categories.length ? state.categories.map((c,i)=>`<div class="item"><div class="thumb">${iconSvg(c.icon)}</div><div><strong>${c.name}</strong><div class="small">${c.type}</div></div><span class="chip">Activa</span><button class="ghost" onclick="removeCategory(${i})">Eliminar</button></div>`).join('') : '<div class="empty">No hay categorías.</div>';
     }
     function hydrateFormValues(){
-      const ids=['primaryColor','secondaryColor','bgColor','panelColor','panel2Color','fontScale','pinColor','pinLabel','pinText','businessName','businessTagline','whatsApp','cartoApi','mapStyle','lat','lng','addrStreet','addrColony','addrZip','addrTown','addrState','addrRef','socialFacebook','socialInstagram','socialTiktok','socialX','socialWebsite','socialChannel','profileTitle','profileLocation','profileBio','profileFacebook','profileInstagram','profileTiktok','profileX','profileWebsite','profileChannel'];
+      const ids=['primaryColor','secondaryColor','bgColor','panelColor','panel2Color','fontScale','pinColor','pinLabel','pinText','businessName','businessTagline','whatsApp','mapStyle','lat','lng','addrStreet','addrColony','addrZip','addrTown','addrState','addrRef','socialFacebook','socialInstagram','socialTiktok','socialX','socialWebsite','socialChannel','profileTitle','profileLocation','profileBio','profileFacebook','profileInstagram','profileTiktok','profileX','profileWebsite','profileChannel'];
       ids.forEach(id=>{const el=document.getElementById(id); if(el && state[id]!==undefined) el.value=state[id];});
       $$('.pin-tile').forEach(btn=>btn.classList.toggle('active', btn.dataset.pin===state.pinIcon));
       $$('.bg-tile').forEach(btn=>btn.classList.toggle('active', btn.dataset.pattern===state.pattern));
     }
     function syncFormToState(){
-      const ids=['primaryColor','secondaryColor','bgColor','panelColor','panel2Color','fontScale','pinColor','pinLabel','pinText','businessName','businessTagline','whatsApp','cartoApi','mapStyle','lat','lng','addrStreet','addrColony','addrZip','addrTown','addrState','addrRef','socialFacebook','socialInstagram','socialTiktok','socialX','socialWebsite','socialChannel','profileTitle','profileLocation','profileBio','profileFacebook','profileInstagram','profileTiktok','profileX','profileWebsite','profileChannel'];
+      const ids=['primaryColor','secondaryColor','bgColor','panelColor','panel2Color','fontScale','pinColor','pinLabel','pinText','businessName','businessTagline','whatsApp','mapStyle','lat','lng','addrStreet','addrColony','addrZip','addrTown','addrState','addrRef','socialFacebook','socialInstagram','socialTiktok','socialX','socialWebsite','socialChannel','profileTitle','profileLocation','profileBio','profileFacebook','profileInstagram','profileTiktok','profileX','profileWebsite','profileChannel'];
       ids.forEach(id=>{const el=document.getElementById(id); if(el) state[id]=el.value;});
       state.heroDescription = document.getElementById('profileBio').value || state.heroDescription;
       state.profileBio = document.getElementById('profileBio').value;
@@ -652,7 +653,21 @@
     $('#closeAdminBtn').addEventListener('click', ()=>$('#adminModal').classList.remove('show'));
     $('#brandLogo').addEventListener('click', ()=>$('#profileModal').classList.add('show'));
     $('#closeProfileBtn').addEventListener('click', ()=>$('#profileModal').classList.remove('show'));
-    $('#saveAllBtn').addEventListener('click', ()=>{if(!cloudAdmin){alert('Inicia sesión como administrador para guardar.');return;} syncFormToState();saveState();});
+    $('#saveAllBtn').addEventListener('click', async ()=>{
+      if(!cloudAdmin){alert('Inicia sesión como administrador para guardar.');return;}
+      syncFormToState();
+      const key=$('#cartoApi').value.trim();
+      if(key){
+        const {error}=await supabaseClient.rpc('vibra_admin_save_carto',{
+          p_key:key,p_url:$('#cartoBaseUrl').value.trim()
+        });
+        if(error){$('#cartoStatus').textContent='Error: '+error.message;return;}
+        $('#cartoApi').value='';
+        state.cartoApi='';
+        $('#cartoStatus').textContent='Clave guardada en Supabase (no se revela al navegador)';
+      }
+      saveState();
+    });
 
     $('#logoUpload').addEventListener('change', (e)=>{
       const file=e.target.files?.[0]; if(!file) return;
@@ -688,20 +703,45 @@
       saveState();
     });
 
+    // Rutas visualizadas sobre CARTO. Servicio OSRM configurable, independiente del mapa base.
+    let routeLayer=null, clientLocationMarker=null;
+    const directionsStatus=document.createElement('p');
+    directionsStatus.className='small'; directionsStatus.id='directionsStatus';
+    $('#routeBtn').parentNode.after(directionsStatus);
     $('#routeBtn').addEventListener('click', ()=>{
-      const address = encodeURIComponent(safeCoords().join(','));
-      if(!navigator.geolocation){ alert('Tu navegador no soporta geolocalización.'); return; }
-      navigator.geolocation.getCurrentPosition((pos)=>{
-        const origin=`${pos.coords.latitude},${pos.coords.longitude}`;
-        const url=`https://www.google.com/maps/dir/${origin}/${address}`;
-        window.open(url,'_blank');
-      },()=> window.open(`https://www.google.com/maps/search/?api=1&query=${address}`,'_blank'));
+      if(!navigator.geolocation){directionsStatus.textContent='Este navegador no admite geolocalización.';return;}
+      if(!publicMap){directionsStatus.textContent='Espera a que cargue el mapa.';return;}
+      directionsStatus.textContent='Solicitando tu ubicación…';
+      navigator.geolocation.getCurrentPosition(async ({coords})=>{
+        const endpoint=String(window.VIBRA_CONFIG?.routingEndpoint||'').replace(/\/$/,'');
+        if(!endpoint){
+          directionsStatus.textContent='Ubicación obtenida. Para mostrar una ruta por carretera, configura routingEndpoint en config.js.';
+          L.marker([coords.latitude,coords.longitude]).addTo(publicMap).bindPopup('Tu ubicación');
+          publicMap.fitBounds([[coords.latitude,coords.longitude],safeCoords()],{padding:[30,30]});
+          return;
+        }
+        const [lat,lng]=safeCoords();
+        try{
+          const url=`${endpoint}/route/v1/driving/${coords.longitude},${coords.latitude};${lng},${lat}?overview=full&geometries=geojson`;
+          const response=await fetch(url);
+          if(!response.ok)throw new Error('Servicio de rutas no disponible ('+response.status+')');
+          const data=await response.json();
+          const route=data.routes?.[0];
+          if(!route?.geometry)throw new Error('El servicio no encontró una ruta por carretera.');
+          if(routeLayer)publicMap.removeLayer(routeLayer);
+          if(clientLocationMarker)publicMap.removeLayer(clientLocationMarker);
+          routeLayer=L.geoJSON(route.geometry,{style:{color:state.primaryColor,weight:5,opacity:.85}}).addTo(publicMap);
+          clientLocationMarker=L.marker([coords.latitude,coords.longitude]).addTo(publicMap).bindPopup('Tu ubicación');
+          publicMap.fitBounds(routeLayer.getBounds(),{padding:[35,35]});
+          directionsStatus.textContent=`Ruta estimada: ${(route.distance/1000).toFixed(1)} km, ${Math.round(route.duration/60)} min. Tiempo orientativo.`;
+        }catch(error){directionsStatus.textContent='No se pudo calcular la ruta: '+error.message;}
+      },()=>{directionsStatus.textContent='No se obtuvo tu ubicación. Revisa los permisos del navegador.';},
+      {enableHighAccuracy:true,timeout:15000,maximumAge:0});
     });
     $('#mapsBtn').addEventListener('click', ()=>{
-      const address = encodeURIComponent(safeCoords().join(','));
-      window.open(`https://www.google.com/maps/search/?api=1&query=${address}`,'_blank');
+      document.querySelector('#publicMap').scrollIntoView({behavior:'smooth',block:'center'});
+      if(publicMap){publicMap.setView(safeCoords(),16);setTimeout(()=>publicMap.invalidateSize(),250);}
     });
-
 
     // Supabase: only public anon key. Do NOT put service_role or CARTO secrets in config.js.
     const cloudConfig = window.VIBRA_CONFIG || {};
@@ -715,10 +755,15 @@
       && Math.abs(Number(state.lat))<=90 && Math.abs(Number(state.lng))<=180
       ? [Number(state.lat),Number(state.lng)] : [19.0522,-104.3158];
     function cartoLayer(){
-      const style=mapTileStyles[state.mapStyle] || 'voyager';
-      return L.tileLayer(`https://{s}.basemaps.cartocdn.com/${style}/{z}/{x}/{y}{r}.png`,{
-        maxZoom:19, subdomains:'abcd', attribution:'&copy; OpenStreetMap contributors &copy; CARTO'
+      const style=String(state.mapStyle || 'Voyager');
+      const slug=style==='Positron'?'positron':style==='Dark Matter'?'dark':'voyager';
+      const url=`${cloudConfig.supabaseUrl}/functions/v1/carto-tiles/${slug}/{z}/{x}/{y}.png`;
+      if(!cloudConfig.supabaseUrl) $('#mapPreviewText').textContent='Configura la URL pública de Supabase en config.js.';
+      const layer=L.tileLayer(url,{
+        maxZoom:20, attribution:'&copy; OpenStreetMap contributors, &copy; CARTO'
       });
+      layer.on('tileerror',()=>{$('#mapPreviewText').textContent='Error de CARTO: revisa que sea una clave de CARTO Basemaps, su restricción de dominio y las solicitudes de red (F12).';});
+      return layer;
     }
     function refreshMaps(){
       if(!window.L){ $('#mapPreviewText').textContent='No cargó Leaflet. Revisa conexión/CDN.';return; }
@@ -758,7 +803,7 @@
       if(publicMarker)publicMarker.setLatLng(p);
     }
     async function initCloud(){
-      if(!supabaseClient){$('#cloudStatus').textContent='Configura config.js con la URL y anon key de Supabase.';return;}
+      if(!supabaseClient){$('#cloudStatus').textContent='Supabase sin configurar: edita config.js. El mapa CARTO puede funcionar solo con su clave.';refreshMaps();return;}
       const {data:{user}}=await supabaseClient.auth.getUser();
       cloudUser=user;
       if(user){
@@ -770,11 +815,11 @@
       $$('.panel-section').forEach(p=>p.style.display=cloudAdmin?'':'none');
       $('#sessionMail').textContent=user?.email||'Iniciar sesión';
       $('#cloudStatus').textContent=cloudAdmin?'Conectado como administrador':'Solo consulta pública';
+      if(cloudAdmin){const status=await supabaseClient.rpc('vibra_admin_carto_status'); if(!status.error){$('#cartoStatus').textContent=status.data?.configured?'CARTO configurado (clave oculta)':'CARTO aún no configurado'; if(status.data?.base_url)$('#cartoBaseUrl').value=status.data.base_url;}}
       const {data,error}=await supabaseClient.from('vibra_site_settings').select('config').eq('id',1).maybeSingle();
       if(error){console.warn(error);$('#cloudStatus').textContent='Error al leer ajustes: '+error.message;return;}
       if(data?.config){
-        const localCarto=state.cartoApi;
-        state={...state,...data.config,cartoApi:localCarto};
+        state={...state,...data.config,cartoApi:''};
         localStorage.setItem('vibra_admin_state',JSON.stringify(state));
         applyState();refreshMaps();
       }
@@ -782,8 +827,8 @@
     async function saveCloud(){
       if(!supabaseClient){$('#cloudStatus').textContent='Cambios solo locales: falta config.js';return;}
       if(!cloudAdmin){$('#cloudStatus').textContent='Guardado local. Inicia sesión como admin para publicar.';return;}
-      const {cartoApi,logoData,...publicData}=state;
-      // Don't publish CARTO credentials or base64 uploads in public configuration.
+      const {cartoApi,cartoBaseUrl,logoData,...publicData}=state;
+      // Nunca publicar credenciales CARTO en los ajustes públicos.
       const {error}=await supabaseClient.from('vibra_site_settings').update({config:publicData,updated_at:new Date().toISOString()}).eq('id',1);
       if(error)throw error;
       $('#cloudStatus').textContent='Guardado en Supabase';
@@ -799,6 +844,7 @@
     $('#lat').addEventListener('change',()=>{syncFormToState();refreshMaps();});
     $('#lng').addEventListener('change',()=>{syncFormToState();refreshMaps();});
     $('#mapStyle').addEventListener('change',()=>{syncFormToState();refreshMaps();});
+    // Las credenciales solo se guardan al pulsar el botón Guardar cambios.
     applyState();
     refreshMaps();
     initCloud().catch(err=>console.error('Supabase:',err));
