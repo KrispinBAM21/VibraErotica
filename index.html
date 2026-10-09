@@ -1,55 +1,691 @@
-<!doctype html><html lang="es"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>VibraErótica · Boutique y reservas</title><link rel="preconnect" href="https://cdn.jsdelivr.net"><link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css"><style>
-:root{--primary:#e70b82;--secondary:#261625;--accent:#ff66b5;--surface:#171922;--border:#363543;--muted:#aab0c2;--background:#0c0e15;color-scheme:dark}*{box-sizing:border-box}body{font:16px/1.5 system-ui,-apple-system,sans-serif;margin:0;background:var(--background);color:#f5f3f9}body:before{content:"";position:fixed;inset:0;pointer-events:none;opacity:.09;background-image:radial-gradient(circle at 20% 10%,var(--primary),transparent 30%),radial-gradient(circle at 90% 75%,var(--accent),transparent 25%)}header{position:sticky;top:0;background:#171922ee;border-bottom:1px solid var(--border);backdrop-filter:blur(14px);z-index:2000;padding:12px clamp(14px,4vw,45px)}.shell{max-width:1200px;margin:auto}.top,.flex{display:flex;gap:12px;align-items:center;flex-wrap:wrap}.top{justify-content:space-between}.brand{font-size:1.25rem;font-weight:800}.muted,small{color:var(--muted)}nav{display:flex;gap:8px;flex-wrap:wrap;margin-top:10px}.btn,button{font:inherit;cursor:pointer;color:inherit;background:#242734;border:1px solid #373746;border-radius:12px;padding:10px 14px}.btn:hover,button:hover{border-color:var(--accent)}button.primary{background:var(--primary);border-color:var(--primary);font-weight:700}.icon{width:21px;height:21px;vertical-align:middle;stroke:currentColor;fill:none;stroke-width:1.8;stroke-linecap:round;stroke-linejoin:round}.hero{padding:32px 30px;margin:23px 0;border-radius:25px;background:linear-gradient(115deg,#c40b68,#50204c 75%,#1c172c)}h1{margin:0;font-size:clamp(2rem,5vw,3.1rem)}h2{margin-top:5px}.panel{background:var(--surface);border:1px solid var(--border);border-radius:20px;padding:20px;margin:18px 0}.grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(240px,1fr));gap:16px}.item{background:#20222d;border:1px solid #393945;border-radius:18px;overflow:hidden}.item .info{padding:16px}.item img,.item video{width:100%;height:185px;object-fit:cover;display:block;background:#292331}.placeholder{height:185px;display:grid;place-items:center;color:#f8d8e8;background:linear-gradient(135deg,#3c203d,#251e36)}label{display:block;font-weight:600;margin:8px 0 4px}input,select,textarea{background:#10131c;border:1px solid #414251;color:#f9f5f9;padding:11px 12px;border-radius:12px;width:100%;font:inherit}input[type=checkbox]{width:auto;accent-color:var(--primary)}input[type=color]{height:46px;padding:4px}.fields{display:grid;grid-template-columns:repeat(auto-fit,minmax(200px,1fr));gap:10px}textarea{min-height:86px}.tabs{display:flex;gap:7px;flex-wrap:wrap;margin:14px 0}.tabs button[aria-selected=true]{background:var(--primary)}.hidden{display:none!important}.status{padding:10px 13px;border-radius:10px;background:#30232c;border:1px solid #6b385a;margin:12px 0}.layout{display:grid;grid-template-columns:1.2fr 1fr;gap:18px}@media(max-width:800px){.layout{grid-template-columns:1fr}.hero{padding:24px 17px}}#map{height:360px;border-radius:16px;overflow:hidden;background:#1a2334}.media-list{display:flex;gap:7px;flex-wrap:wrap}.media-list img,.media-list video{width:110px;height:88px;object-fit:cover;border-radius:8px}#admin{border:2px solid var(--primary)}.pill{display:inline-block;font-size:.78rem;padding:4px 9px;border-radius:18px;background:#392238;color:#ffd5ec}.num{font-variant-numeric:tabular-nums}footer{text-align:center;color:var(--muted);padding:30px}
-</style><script>try{const t=JSON.parse(localStorage.getItem('vibra_theme_preview')||'null');if(t&&typeof t==='object')for(const k of ['primary','secondary','accent'])if(/^#[0-9a-f]{6}$/i.test(t[k]||''))document.documentElement.style.setProperty('--'+k,t[k])}catch(e){}</script></head><body><header><div class="shell"><div class="top"><div><div class="brand">VibraErótica</div><small>Boutique para adultos · Servicios y reservaciones</small></div><div class="flex"><span id="userBadge" class="muted">Visitante</span><button id="loginButton">Iniciar sesión</button><button id="logoutButton" class="hidden">Salir</button><button id="adminButton" class="hidden">Administración</button></div></div><nav><button data-view="catalog">Productos y servicios</button><button data-view="locations">Sedes y cómo llegar</button><button data-view="mine">Mis reservaciones</button><button data-view="reviews">Opiniones</button></nav></div></header><main class="shell"><section class="hero"><h1>VibraErótica</h1><p>Explora artículos, conoce profesionales y reserva servicios de bienestar en nuestras sedes.</p><span class="pill">Acceso exclusivo para mayores de edad</span></section><div id="notice" class="status hidden"></div><section id="catalog" class="view"><div class="flex" style="justify-content:space-between"><h2>Productos y servicios</h2><input id="filter" placeholder="Buscar por nombre, marca o servicio" style="max-width:350px"></div><div id="catalogGrid" class="grid"></div></section><section id="locations" class="view hidden"><h2>Visítanos</h2><div class="layout"><div class="panel"><h3>Nuestras sedes</h3><div id="locationOptions"></div><div class="flex"><button class="primary" id="directions">Cómo llegar desde mi ubicación</button><button id="openMaps">Abrir en Google Maps</button></div><small>La ubicación se solicita con tu permiso. No se almacena.</small></div><div class="panel"><div id="map"></div></div></div></section><section id="mine" class="view hidden"><h2>Mis reservaciones</h2><div class="panel" id="mineList">Inicia sesión para consultar tus reservaciones.</div></section><section id="reviews" class="view hidden"><h2>Opiniones</h2><div class="panel">Este módulo se integrará tras verificar el esquema de reseñas. No se muestran opiniones inventadas.</div></section><section id="booking" class="view hidden"><div class="panel"><h2>Reservar servicio</h2><div id="bookingTitle"></div><div class="fields"><div><label>Masajista</label><select id="bookPractitioner"></select></div><div><label>Habitación</label><select id="bookRoom"></select></div><div><label>Duración</label><select id="bookDuration"><option value="30">30 minutos</option><option value="60">60 minutos</option><option value="90">90 minutos</option><option value="120">120 minutos</option></select></div><div><label>Fecha</label><input id="bookDate" type="date"></div><div><label>Hora disponible</label><select id="bookTime"><option>Selecciona una fecha</option></select></div><div><label>Nombre completo</label><input id="bookName" autocomplete="name"></div><div><label>Teléfono</label><input id="bookPhone" autocomplete="tel"></div></div><p id="bookEstimate" class="muted"></p><label><input type="checkbox" id="bookTerms"> Acepto las condiciones de reserva; la sesión comienza a la hora seleccionada. Consulta las condiciones de cancelación y reembolso aplicables.</label><p class="flex"><button class="primary" id="confirmBooking">Solicitar reserva</button><button data-view="catalog">Volver</button></p></div></section><section id="admin" class="hidden panel"><div class="flex" style="justify-content:space-between"><h2>Administración</h2><button id="closeAdmin">Cerrar</button></div><div class="tabs"><button data-admin="products" aria-selected="true">Productos y servicios</button><button data-admin="people">Masajistas y horarios</button><button data-admin="business">Negocio y sedes</button></div><div id="adminProducts" class="adminPane"><h3>Publicar ficha</h3><p class="muted">Selecciona el tipo de ficha; los masajes aparecen en el mismo catálogo público.</p><div class="fields"><div><label>Tipo</label><select id="pKind"><option value="product">Producto</option><option value="service">Servicio de masaje</option></select></div><div><label>Nombre</label><input id="pName"></div><div><label>Descripción</label><textarea id="pDescription"></textarea></div><div><label>Marca (opcional)</label><input id="pBrand"></div><div><label>Precio de producto (MXN)</label><input id="pPrice" type="number" value="0" min="0"></div><div><label>Stock</label><input id="pStock" type="number" min="0" value="0"></div><div><label>Categoría</label><select id="pCategory"></select></div><div><label>Masajista (servicios)</label><select id="pPractitioner"></select></div><div><label>Servicio (masajes)</label><select id="pService"></select></div></div><p><button class="primary" id="saveProduct">Crear ficha</button></p><h3>Fichas existentes</h3><div id="adminProductList"></div><div class="panel"><h3>Galería multimedia</h3><p class="muted">Selecciona una ficha guardada y sube hasta 15 fotografías y 2 videos, visibles en el catálogo.</p><label>Ficha</label><select id="mediaProduct"></select><label>Fotos o videos</label><input id="mediaInput" type="file" accept="image/*,video/mp4,video/webm" multiple><button id="uploadMedia">Subir medios</button><div id="mediaEntries"></div></div></div><div id="adminPeople" class="adminPane hidden"><h3>Masajistas</h3><div class="fields"><div><label>Nombre</label><input id="prName"></div><div><label>Teléfono</label><input id="prPhone"></div><div><label>Descripción</label><textarea id="prBio"></textarea></div></div><button class="primary" id="addPractitioner">Crear profesional</button><h3>Horarios laborales</h3><div class="fields"><div><label>Profesional</label><select id="hoursPractitioner"></select></div><div><label>Día</label><select id="hoursDay"><option value="0">Domingo</option><option value="1">Lunes</option><option value="2">Martes</option><option value="3">Miércoles</option><option value="4">Jueves</option><option value="5">Viernes</option><option value="6">Sábado</option></select></div><div><label>Desde</label><input id="hoursFrom" type="time" value="10:00"></div><div><label>Hasta</label><input id="hoursTo" type="time" value="20:00"></div></div><p><button id="saveHours">Guardar horario</button></p></div><div id="adminBusiness" class="adminPane hidden"><h3>Tarifa y apariencia</h3><div class="fields"><div><label>Tarifa de masaje por hora MXN</label><input id="hourlyRate" type="number" min="0" step=".01"></div><div><label>Color principal</label><input id="colorPrimary" type="color"></div><div><label>Secundario</label><input id="colorSecondary" type="color"></div><div><label>Acento</label><input id="colorAccent" type="color"></div><div><label>Estilo CARTO</label><select id="cartoStyle"><option value="voyager">Voyager</option><option value="light_all">Claro</option><option value="dark_all">Oscuro</option></select></div></div><p><button class="primary" id="saveBusiness">Guardar configuración en Supabase</button></p><h3>Sedes</h3><div class="fields"><div><label>Nombre</label><input id="locName"></div><div><label>Dirección</label><input id="locAddress"></div><div><label>Latitud</label><input id="locLat" type="number" step="any"></div><div><label>Longitud</label><input id="locLon" type="number" step="any"></div><div><label>Publicar</label><select id="locPublished"><option value="true">Sí</option><option value="false">No</option></select></div></div><p><button id="addLocation">Guardar sede</button></p><div id="adminLocationList"></div><small>Solo aparecerán al público las sedes publicadas. Verifica las coordenadas antes de publicar.</small></div></section></main><footer>VibraErótica · Información y reservas para adultos</footer><script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.js"></script><script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script><script>
-/* CONFIGURACIÓN PÚBLICA: sustituye estos dos valores en este archivo antes de publicar. */
-window.VIBRA_CONFIG = {
- supabaseUrl: 'https://qxintonbqxliapnwxapz.supabase.co',
- supabaseAnonKey: 'sb_publishable_9GDeQK4VBvSGL4H6TQiy_A_NYmiAPLC'
-};
-</script>
-<script id="vibra-app-inline">
-/* VibraErótica — implementación nativa sin dependencias de VentaComida. */
-(()=>{'use strict';
-const C=window.VIBRA_CONFIG||{};const $=id=>document.getElementById(id);const q=(s,r=document)=>[...r.querySelectorAll(s)];
-let db=null,user=null,admin=false,settings=null,locations=[],products=[],media=[],practitioners=[],services=[],rooms=[],categories=[],map=null,marker=null,selectedLocation=null,bookingProduct=null;
-function notice(msg){const n=$('notice');n.textContent=msg;n.classList.remove('hidden');scrollTo({top:0,behavior:'smooth'});}
-function err(e){notice(e?.message||String(e));console.error(e)}
-const money=n=>Number(n||0).toLocaleString('es-MX',{style:'currency',currency:'MXN'});
-function option(sel,id,label){const el=document.createElement('option');el.value=id;el.textContent=label;sel.append(el)}
-function text(el,s){el.textContent=s==null?'':String(s)}
-function show(view){q('.view').forEach(e=>e.classList.toggle('hidden',e.id!==view));if(view==='locations')setTimeout(()=>{if(map)map.invalidateSize();else drawMap()},50);if(view==='mine')loadMine();}
-async function fetchTable(table,cols='*'){const {data,error}=await db.from(table).select(cols);if(error)throw error;return data||[]}
-async function load(){
-const [p,m,pr,s,r,cat,loc,conf]=await Promise.all([
-fetchTable('products'),fetchTable('vibra_media'),fetchTable('practitioners'),fetchTable('services'),fetchTable('rooms'),fetchTable('categories'),fetchTable('vibra_locations'),db.from('vibra_config').select('*').eq('id',1).single()]);
-products=p;media=m;practitioners=pr;services=s;rooms=r;categories=cat;locations=loc.filter(x=>x.published||admin);if(conf.error)throw conf.error;settings=conf.data;
-const t=settings.theme||{};for(const k of ['primary','secondary','accent'])if(/^#[0-9a-f]{6}$/i.test(t[k]||''))document.documentElement.style.setProperty('--'+k,t[k]);localStorage.setItem('vibra_theme_preview',JSON.stringify(t));renderCatalog();renderLocations();renderAdmin();
-}
-function imageUrl(m){return db.storage.from('catalog-media').getPublicUrl(m.object_path).data.publicUrl}
-function renderCatalog(){const grid=$('catalogGrid');grid.replaceChildren();const search=$('filter').value.toLowerCase();const visible=products.filter(p=>(p.active||admin)&&[p.name,p.description,p.brand].join(' ').toLowerCase().includes(search));
-for(const p of visible){const card=document.createElement('article');card.className='item';const pm=media.filter(m=>m.product_id===p.id).sort((a,b)=>a.sort_order-b.sort_order);if(pm.length){const first=pm[0];const e=document.createElement(first.media_type==='video'?'video':'img');e.src=imageUrl(first);if(e.tagName==='VIDEO'){e.controls=true;e.preload='metadata'}else e.alt=p.name;card.append(e)}else{const ph=document.createElement('div');ph.className='placeholder';ph.innerHTML='<svg width="75" height="75" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.2"><path d="M4 7h16v13H4zM8 7V4h8v3M7 13h10m-5-4v8"/></svg>';card.append(ph)}const inf=document.createElement('div');inf.className='info';const title=document.createElement('h3');text(title,p.name);inf.append(title);if(p.brand){const b=document.createElement('span');b.className='pill';text(b,p.brand);inf.append(b)}const d=document.createElement('p');d.className='muted';text(d,p.description);inf.append(d);const price=document.createElement('p');const isService=p.kind==='service';text(price,isService?'Servicio · tarifa por hora '+money(settings?.hourly_rate):money(p.price));inf.append(price);if(isService){const n=practitioners.find(x=>x.id===p.practitioner_id);if(n){const sm=document.createElement('small');text(sm,'Profesional: '+n.display_name);inf.append(sm)}const b=document.createElement('button');b.className='primary';text(b,'Ver horarios y reservar');b.onclick=()=>openBooking(p);inf.append(document.createElement('p'),b)}else{const small=document.createElement('small');text(small,`Existencias: ${p.stock}`);inf.append(small)}if(pm.length>1){const gallery=document.createElement('div');gallery.className='media-list';for(const m of pm.slice(1)){const el=document.createElement(m.media_type==='video'?'video':'img');el.src=imageUrl(m);if(m.media_type==='video')el.controls=true;else el.alt=p.name;gallery.append(el)}inf.append(gallery)}card.append(inf);grid.append(card)}if(!visible.length)text(grid,'Aún no hay fichas publicadas. El administrador puede crear productos y servicios desde el panel.');}
-function renderLocations(){const host=$('locationOptions');host.replaceChildren();const published=locations.filter(l=>l.published);for(const l of published){const b=document.createElement('button');text(b,`${l.name} · ${l.address}`);b.style.margin='5px 4px 8px 0';b.onclick=()=>{selectedLocation=l;drawMap()};host.append(b)}selectedLocation=published.find(l=>l.id===selectedLocation?.id)||published[0]||null;if(!published.length){text(host,'No hay sedes publicadas.');$('directions').disabled=true;$('openMaps').disabled=true;$('map').textContent='El mapa aparecerá al publicar una sede.'}else{$('directions').disabled=false;$('openMaps').disabled=false;drawMap()}}
-function drawMap(){if(!selectedLocation||!window.L)return;const point=[Number(selectedLocation.latitude),Number(selectedLocation.longitude)];if(!map){$('map').textContent='';map=L.map('map').setView(point,15)}map.eachLayer(layer=>map.removeLayer(layer));const style=['voyager','light_all','dark_all'].includes(settings.map_style)?settings.map_style:'voyager';L.tileLayer(`https://basemaps.cartocdn.com/${style}/{z}/{x}/{y}{r}.png`,{attribution:'© OpenStreetMap contributors © CARTO',maxZoom:19}).addTo(map);map.setView(point,15);marker=L.marker(point).addTo(map).bindPopup(selectedLocation.name+' · '+selectedLocation.address).openPopup();setTimeout(()=>map.invalidateSize(),80)}
-function googleLink(origin){if(!selectedLocation)return null;const d=`${selectedLocation.latitude},${selectedLocation.longitude}`;const p=new URLSearchParams({api:'1',destination:d,travelmode:'driving'});if(origin)p.set('origin',origin);return 'https://www.google.com/maps/dir/?'+p.toString()}
-async function directions(){if(!selectedLocation)return;if(!navigator.geolocation){notice('Este navegador no permite obtener ubicación.');return}navigator.geolocation.getCurrentPosition(pos=>window.open(googleLink(`${pos.coords.latitude},${pos.coords.longitude}`),'_blank','noopener'),()=>notice('No se pudo acceder a tu ubicación. Puedes abrir el mapa y elegir tu punto de partida.'),{enableHighAccuracy:true,timeout:15000,maximumAge:0})}
-async function signIn(){const email=prompt('Correo electrónico:');if(!email)return;const password=prompt('Contraseña:');if(password===null)return;const {error}=await db.auth.signInWithPassword({email,password});if(error)err(error)}
-async function session(){const {data:{user:u}}=await db.auth.getUser();user=u;$('userBadge').textContent=u?.email||'Visitante';$('loginButton').classList.toggle('hidden',!!u);$('logoutButton').classList.toggle('hidden',!u);admin=false;if(u){const {data}=await db.from('staff_roles').select('role').eq('user_id',u.id).maybeSingle();admin=['admin','manager'].includes(data?.role)}$('adminButton').classList.toggle('hidden',!admin);$('admin').classList.add('hidden');await load()}
-function adminTab(name){q('.adminPane').forEach(x=>x.classList.toggle('hidden',x.id!=='admin'+name[0].toUpperCase()+name.slice(1)));q('[data-admin]').forEach(b=>b.setAttribute('aria-selected',String(b.dataset.admin===name)))}
-function renderAdmin(){if(!admin)return;for(const id of ['pCategory','pPractitioner','pService','hoursPractitioner','bookPractitioner','bookRoom','mediaProduct'])$(id).replaceChildren();option($('pCategory'),'','Sin categoría');categories.forEach(c=>option($('pCategory'),c.id,c.name));option($('pPractitioner'),'','Seleccionar');practitioners.forEach(p=>{option($('pPractitioner'),p.id,p.display_name);option($('hoursPractitioner'),p.id,p.display_name)});option($('pService'),'','Seleccionar');services.forEach(s=>option($('pService'),s.id,s.name));const ap=$('adminProductList');ap.replaceChildren();for(const p of products){const row=document.createElement('div');row.className='flex';row.style.margin='8px 0';const t=document.createElement('span');text(t,p.name+' · '+p.kind);const del=document.createElement('button');text(del,'Despublicar');del.onclick=async()=>{if(!confirm('¿Despublicar ficha?'))return;const{error}=await db.from('products').update({active:false}).eq('id',p.id);error?err(error):load()};row.append(t,del);ap.append(row);option($('mediaProduct'),p.id,p.name)}const lhost=$('adminLocationList');lhost.replaceChildren();for(const l of locations){const row=document.createElement('p');text(row,`${l.name} · ${l.published?'Pública':'Privada'} · ${l.latitude}, ${l.longitude}`);lhost.append(row)}$('hourlyRate').value=settings.hourly_rate;$('cartoStyle').value=settings.map_style;for(const k of ['Primary','Secondary','Accent'])$('color'+k).value=settings.theme?.[k.toLowerCase()]||{Primary:'#e70b82',Secondary:'#261625',Accent:'#ff66b5'}[k];renderMedia()}
-async function createProduct(){if(!admin)return;const kind=$('pKind').value;const payload={kind,name:$('pName').value.trim(),description:$('pDescription').value.trim(),brand:$('pBrand').value.trim()||null,price:kind==='service'?0:Number($('pPrice').value),stock:kind==='service'?0:Number($('pStock').value),category_id:$('pCategory').value||null,practitioner_id:kind==='service'?$('pPractitioner').value||null:null,service_id:kind==='service'?$('pService').value||null:null,active:true};if(!payload.name){notice('Indica el nombre de la ficha.');return}if(kind==='service'&&(!payload.practitioner_id||!payload.service_id)){notice('Selecciona profesional y servicio.');return}const{error}=await db.from('products').insert(payload);error?err(error):load()}
-async function addPractitioner(){const payload={display_name:$('prName').value.trim(),phone:$('prPhone').value.trim(),bio:$('prBio').value.trim()};if(!payload.display_name)return notice('Indica nombre.');const {error}=await db.from('practitioners').insert(payload);error?err(error):load()}
-async function saveHours(){const val={practitioner_id:$('hoursPractitioner').value,day_of_week:Number($('hoursDay').value),start_time:$('hoursFrom').value,end_time:$('hoursTo').value};if(!val.practitioner_id)return notice('Crea primero una profesional.');const {error}=await db.from('vibra_work_hours').upsert(val);error?err(error):notice('Horario guardado.')}
-async function saveBusiness(){const theme={primary:$('colorPrimary').value,secondary:$('colorSecondary').value,accent:$('colorAccent').value,background:'velvet'};const {error}=await db.from('vibra_config').update({theme,map_style:$('cartoStyle').value,hourly_rate:Number($('hourlyRate').value)}).eq('id',1);if(error)return err(error);localStorage.setItem('vibra_theme_preview',JSON.stringify(theme));await load();notice('Configuración guardada y aplicada.')}
-async function addLocation(){const v={name:$('locName').value.trim(),address:$('locAddress').value.trim(),latitude:Number($('locLat').value),longitude:Number($('locLon').value),published:$('locPublished').value==='true'};if(!v.name||!v.address||!$('locLat').value||!$('locLon').value)return notice('Completa la sede y sus coordenadas.');if(locations.length>=3)return notice('Máximo 3 sedes.');const{error}=await db.from('vibra_locations').insert(v);if(error)err(error);else{await load();notice('Sede guardada.')}}
-async function renderMedia(){const host=$('mediaEntries');host.replaceChildren();const id=$('mediaProduct').value;for(const m of media.filter(x=>x.product_id===id)){const row=document.createElement('div');row.className='flex';const link=document.createElement('a');link.href=imageUrl(m);link.target='_blank';link.rel='noopener';text(link,m.media_type+' · '+m.object_path.split('/').pop());const b=document.createElement('button');text(b,'Eliminar');b.onclick=async()=>{if(!confirm('¿Eliminar este archivo?'))return;const a=await db.storage.from('catalog-media').remove([m.object_path]);if(a.error)return err(a.error);const r=await db.from('vibra_media').delete().eq('id',m.id);r.error?err(r.error):load()};row.append(link,b);host.append(row)}}
-async function uploadMedia(){const id=$('mediaProduct').value;const files=[...$('mediaInput').files];if(!id||!files.length)return;let img=media.filter(m=>m.product_id===id&&m.media_type==='image').length;let video=media.filter(m=>m.product_id===id&&m.media_type==='video').length;for(const file of files){const type=file.type.startsWith('image/')?'image':(['video/mp4','video/webm'].includes(file.type)?'video':null);if(!type)return notice('Formato multimedia no permitido.');if((type==='image'&&++img>15)||(type==='video'&&++video>2))return notice('Límite: 15 fotos y 2 videos.')}for(const file of files){const type=file.type.startsWith('image/')?'image':'video';const ext=file.name.split('.').pop().toLowerCase().replace(/[^a-z0-9]/g,'');const path=id+'/'+crypto.randomUUID()+'.'+ext;const up=await db.storage.from('catalog-media').upload(path,file,{contentType:file.type});if(up.error)return err(up.error);const ins=await db.from('vibra_media').insert({product_id:id,media_type:type,object_path:path});if(ins.error)return err(ins.error)}$('mediaInput').value='';await load();notice('Galería guardada.')}
-async function openBooking(p){bookingProduct=p;show('booking');text($('bookingTitle'),p.name);$('bookPractitioner').replaceChildren();$('bookRoom').replaceChildren();const ps=practitioners.filter(pr=>pr.active&&(!p.practitioner_id||p.practitioner_id===pr.id));ps.forEach(pr=>option($('bookPractitioner'),pr.id,pr.display_name));rooms.filter(r=>r.active).forEach(r=>option($('bookRoom'),r.id,r.name));$('bookDate').min=new Date().toISOString().slice(0,10);$('bookDate').value=$('bookDate').min;await slots()}
-async function slots(){if(!bookingProduct)return;const sel=$('bookTime');sel.replaceChildren();const a=$('bookPractitioner').value,b=$('bookRoom').value,d=$('bookDate').value,minutes=Number($('bookDuration').value);text($('bookEstimate'),'Precio orientativo: '+money(Number(settings.hourly_rate)*minutes/60));if(!a||!b||!d)return option(sel,'','Faltan datos');const {data,error}=await db.rpc('vibra_available_slots',{p_practitioner:a,p_room:b,p_date:d,p_duration:minutes});if(error)return err(error);for(const x of data||[]){const date=new Date(x.start_at);option(sel,x.start_at,date.toLocaleTimeString('es-MX',{hour:'2-digit',minute:'2-digit',timeZone:'America/Mexico_City'}))}if(!sel.options.length)option(sel,'','No hay horarios disponibles')}
-async function confirmBooking(){if(!user)return notice('Inicia sesión para reservar.');if(!$('bookTerms').checked)return notice('Debes aceptar las condiciones.');if(!$('bookTime').value)return notice('Selecciona una hora libre.');const payload={p_service_id:bookingProduct.service_id,p_practitioner_id:$('bookPractitioner').value,p_room_id:$('bookRoom').value,p_starts_at:$('bookTime').value,p_duration_minutes:Number($('bookDuration').value),p_contact_name:$('bookName').value,p_contact_phone:$('bookPhone').value,p_accept_terms:true};const {data,error}=await db.rpc('create_reservation',payload);if(error)return err(error);notice('Reservación registrada: '+data+'. El precio final y estado deben validarse en administración.');show('mine')}
-async function loadMine(){const host=$('mineList');if(!user){text(host,'Inicia sesión para consultar tus reservaciones.');return}const {data,error}=await db.from('reservations').select('id,starts_at,duration_minutes,status,payment_status,total').eq('customer_id',user.id).order('starts_at',{ascending:false});if(error)return err(error);host.replaceChildren();if(!data.length)return text(host,'No tienes reservaciones todavía.');for(const r of data){const row=document.createElement('p');text(row,`${new Date(r.starts_at).toLocaleString('es-MX')} · ${r.duration_minutes} min · ${r.status} · ${r.payment_status} · ${money(r.total)}`);host.append(row)}}
-function events(){q('[data-view]').forEach(b=>b.addEventListener('click',()=>show(b.dataset.view)));q('[data-admin]').forEach(b=>b.addEventListener('click',()=>adminTab(b.dataset.admin)));$('loginButton').onclick=signIn;$('logoutButton').onclick=()=>db.auth.signOut();$('adminButton').onclick=()=>{if(!admin)return;$('admin').classList.remove('hidden');$('admin').scrollIntoView({behavior:'smooth'})};$('closeAdmin').onclick=()=>$('admin').classList.add('hidden');$('filter').oninput=renderCatalog;$('directions').onclick=directions;$('openMaps').onclick=()=>{const url=googleLink();if(url)window.open(url,'_blank','noopener')};$('saveProduct').onclick=createProduct;$('addPractitioner').onclick=addPractitioner;$('saveHours').onclick=saveHours;$('saveBusiness').onclick=saveBusiness;$('addLocation').onclick=addLocation;$('mediaProduct').onchange=renderMedia;$('uploadMedia').onclick=uploadMedia;$('confirmBooking').onclick=confirmBooking;for(const id of ['bookDate','bookPractitioner','bookRoom','bookDuration'])$(id).onchange=slots;$('pKind').onchange=()=>{const service=$('pKind').value==='service';for(const id of ['pPractitioner','pService'])$(id).disabled=!service;for(const id of ['pPrice','pStock'])$(id).disabled=service};$('pKind').onchange();}
-async function boot(){events();if(!C.supabaseUrl||!/^https:\/\//.test(C.supabaseUrl)||!C.supabaseAnonKey||C.supabaseAnonKey.includes('TU_')){notice('Configura primero public/config.js con los valores públicos de Supabase.');return}db=window.supabase.createClient(C.supabaseUrl,C.supabaseAnonKey);db.auth.onAuthStateChange(()=>setTimeout(()=>session().catch(err),0));await session()}
-boot().catch(err);
-})();
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>VibraErótica · Productos, servicios y reservaciones</title>
+  <style>
+    :root{
+      --bg:#090d18;
+      --panel:#121827;
+      --panel-2:#1a2234;
+      --line:#2b3347;
+      --text:#f4f6fb;
+      --muted:#aeb7ca;
+      --primary:#ff1688;
+      --secondary:#8f2fff;
+      --ok:#2fd67a;
+      --danger:#ff4f5e;
+      --radius:20px;
+      --shadow:0 20px 60px rgba(0,0,0,.35);
+      --hero:linear-gradient(135deg, rgba(255,22,136,.95), rgba(143,47,255,.24));
+      --pattern:radial-gradient(circle at 10px 10px, rgba(255,22,136,.08) 1px, transparent 1px);
+      --pattern-size:40px 40px;
+      --font-scale:1;
+    }
+    .vi-icon{width:1.3em;height:1.3em;vertical-align:middle;display:inline-block;flex:none;color:inherit}.product-icon .vi-icon,.thumb .vi-icon,.pin-tile .vi-icon{width:32px;height:32px}.pin-badge .vi-icon{width:24px;height:24px}
+    *{box-sizing:border-box}
+    html,body{margin:0;padding:0;background:
+      linear-gradient(90deg, rgba(255,22,136,.08), transparent 30%, transparent 70%, rgba(143,47,255,.09)),
+      var(--bg);
+      color:var(--text);font-family:Inter, system-ui, -apple-system, Segoe UI, Roboto, Arial, sans-serif;
+      font-size:calc(16px * var(--font-scale));}
+    body::before{content:"";position:fixed;inset:0;background-image:var(--pattern);background-size:var(--pattern-size);pointer-events:none;opacity:.6}
+    a{color:inherit;text-decoration:none}
+    button,input,select,textarea{font:inherit}
+    .container{width:min(1380px,calc(100% - 32px));margin:0 auto}
+    .topbar{position:sticky;top:0;z-index:20;background:rgba(10,14,25,.92);backdrop-filter:blur(14px);border-bottom:1px solid rgba(255,255,255,.08)}
+    .topbar-inner{display:flex;justify-content:space-between;align-items:center;gap:16px;padding:16px 0}
+    .brand{display:flex;align-items:center;gap:14px}
+    .brand-logo{width:56px;height:56px;border-radius:18px;background:linear-gradient(145deg,#202a3e,#121827);border:1px solid rgba(255,255,255,.06);display:grid;place-items:center;cursor:pointer;overflow:hidden}
+    .brand-logo img{width:100%;height:100%;object-fit:cover}
+    .brand-logo .dot{width:12px;height:12px;border-radius:999px;background:#000;box-shadow:0 0 0 4px rgba(255,255,255,.1)}
+    .brand-text h1{margin:0;font-size:1.6rem;line-height:1}
+    .brand-text p{margin:.25rem 0 0;color:var(--muted)}
+    .top-actions{display:flex;align-items:center;gap:10px;flex-wrap:wrap}
+    .pill,.ghost,.primary,.danger{border:none;border-radius:16px;padding:12px 16px;cursor:pointer;transition:.2s ease}
+    .pill,.ghost{background:var(--panel-2);color:var(--text);border:1px solid rgba(255,255,255,.06)}
+    .pill:hover,.ghost:hover{transform:translateY(-1px)}
+    .primary{background:linear-gradient(90deg,var(--primary),#ca147f);color:#fff;font-weight:700;box-shadow:0 10px 30px rgba(255,22,136,.25)}
+    .danger{background:#d03434;color:#fff;font-weight:700}
+    .nav-tabs{display:flex;gap:10px;flex-wrap:wrap;padding:0 0 18px}
+    .section{padding:22px 0}
+    .hero{background:var(--hero);border:1px solid rgba(255,255,255,.06);border-radius:30px;padding:42px;box-shadow:var(--shadow)}
+    .hero h2{font-size:3.2rem;margin:.1rem 0 .8rem}
+    .hero p{max-width:860px;color:#fff;opacity:.96;font-size:1.1rem}
+    .badge{display:inline-flex;align-items:center;gap:10px;padding:9px 14px;border-radius:999px;background:rgba(24,26,40,.45);border:1px solid rgba(255,255,255,.12);margin-top:8px}
+    .grid-2{display:grid;grid-template-columns:1fr 1fr;gap:18px}
+    .card{background:linear-gradient(180deg, rgba(255,255,255,.02), rgba(255,255,255,.01));border:1px solid rgba(255,255,255,.08);border-radius:24px;padding:22px;box-shadow:var(--shadow)}
+    .card h3,.card h4{margin-top:0}
+    .muted{color:var(--muted)}
+    .map-placeholder{min-height:320px;border-radius:20px;background:linear-gradient(135deg,#18253c,#1d2940);border:1px solid rgba(255,255,255,.06);padding:18px;display:flex;flex-direction:column;gap:14px;justify-content:flex-start}
+    .pin-preview{display:inline-flex;align-items:center;gap:10px;padding:10px 14px;border-radius:999px;background:#0e223f;border:1px solid rgba(255,255,255,.08);width:fit-content}
+    .pin-badge{color:var(--pin-color,#ff244d);display:grid;place-items:center;width:42px;height:42px;border-radius:999px;background:#122d52;border:2px solid #fff;font-size:1.2rem}
+    .products{display:grid;grid-template-columns:repeat(auto-fit,minmax(240px,1fr));gap:16px}
+    .product{padding:18px;border-radius:22px;background:rgba(255,255,255,.02);border:1px solid rgba(255,255,255,.08)}
+    .product-icon{width:54px;height:54px;border-radius:16px;background:#20283a;display:grid;place-items:center;font-size:1.5rem;margin-bottom:12px;color:var(--primary)}
+    .price{color:#ff4fa8;font-weight:700}
+    .admin-toggle{display:inline-flex;align-items:center;gap:10px}
+    .gear{width:22px;height:22px;display:inline-grid;place-items:center}
+    .modal{position:fixed;inset:0;background:rgba(4,8,15,.72);backdrop-filter:blur(10px);display:none;z-index:50}
+    .modal.show{display:block}
+    .drawer{position:absolute;inset:24px;background:#101623;border:1px solid rgba(255,255,255,.08);border-radius:28px;box-shadow:var(--shadow);overflow:hidden;display:grid;grid-template-columns:260px 1fr}
+    .sidebar{background:#111827;border-right:1px solid rgba(255,255,255,.08);display:flex;flex-direction:column;min-height:0}
+    .sidebar-header{padding:20px 18px;font-size:1.8rem;font-weight:800;border-bottom:1px solid rgba(255,255,255,.08)}
+    .sidebar-nav{padding:12px;display:flex;flex-direction:column;gap:8px;overflow:auto}
+    .nav-item{display:flex;align-items:center;gap:12px;padding:15px 16px;border-radius:18px;color:#dfe6f6;border:1px solid transparent;cursor:pointer;background:transparent}
+    .nav-item.active{background:#202838;border-color:rgba(255,255,255,.08);color:#fff}
+    .nav-item .icon{font-size:1.25rem;width:24px;text-align:center}
+    .drawer-body{overflow:auto;padding:18px 20px 28px}
+    .drawer-top{display:flex;justify-content:space-between;align-items:center;gap:10px;padding-bottom:18px;border-bottom:1px solid rgba(255,255,255,.08)}
+    .panel-section{display:none;padding:18px 0}
+    .panel-section.active{display:block}
+    .stack{display:grid;gap:18px}
+    .form-grid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:14px}
+    .form-grid.three{grid-template-columns:repeat(3,minmax(0,1fr))}
+    .form-grid.four{grid-template-columns:repeat(4,minmax(0,1fr))}
+    .field{display:grid;gap:8px}
+    .field label{font-weight:700;color:#dce3f4}
+    .field input,.field select,.field textarea,.field .static-input{width:100%;background:#090e19;border:1px solid var(--line);color:var(--text);padding:13px 14px;border-radius:16px;outline:none}
+    .field textarea{min-height:108px;resize:vertical}
+    .field input[type="color"]{padding:4px;height:48px}
+    .small{font-size:.92rem;color:var(--muted)}
+    .actions{display:flex;gap:12px;flex-wrap:wrap}
+    .module-card{padding:22px;border-radius:24px;background:linear-gradient(180deg, rgba(255,255,255,.02), rgba(255,255,255,.01));border:1px solid rgba(255,255,255,.08)}
+    .module-card > h3,.module-card > h4{margin-top:0}
+    .chips{display:flex;gap:10px;flex-wrap:wrap}
+    .chip{padding:10px 14px;border-radius:14px;border:1px solid rgba(255,255,255,.08);background:#161e2d;display:flex;align-items:center;gap:8px}
+    .pin-options,.bg-options{display:grid;grid-template-columns:repeat(auto-fit,minmax(120px,1fr));gap:12px}
+    .pin-tile,.bg-tile{background:#131b29;border:1px solid var(--line);border-radius:18px;padding:16px;text-align:center;cursor:pointer}
+    .pin-tile.active,.bg-tile.active{outline:2px solid var(--primary);background:#1a2133}
+    .preview-box{border-radius:22px;border:1px solid rgba(255,255,255,.08);background:#111b2a;min-height:120px;padding:14px;display:flex;align-items:center;justify-content:center}
+    .category-list,.product-list{display:grid;gap:14px}
+    .row{display:flex;gap:12px;align-items:center;flex-wrap:wrap}
+    .split{display:grid;grid-template-columns:1.1fr .9fr;gap:18px}
+    .thumb{width:60px;height:60px;border-radius:16px;background:#1e2738;display:grid;place-items:center;font-size:1.4rem;color:var(--primary);border:1px solid rgba(255,255,255,.08)}
+    .table-mini{display:grid;gap:8px}
+    .table-mini .item{display:grid;grid-template-columns:60px 1fr auto auto;gap:14px;align-items:center;padding:14px;border-radius:18px;background:#101625;border:1px solid rgba(255,255,255,.06)}
+    .search-actions{display:flex;gap:10px;flex-wrap:wrap}
+    .empty{padding:18px;border:1px dashed rgba(255,255,255,.15);border-radius:16px;color:var(--muted)}
+    .footer-note{margin-top:18px;color:var(--muted)}
+    @media (max-width:1100px){
+      .drawer{grid-template-columns:1fr;inset:12px}
+      .sidebar{max-height:240px}
+      .grid-2,.split,.form-grid,.form-grid.three,.form-grid.four{grid-template-columns:1fr}
+    }
+    @media (max-width:720px){
+      .hero{padding:28px}
+      .hero h2{font-size:2.4rem}
+      .topbar-inner{align-items:flex-start;flex-direction:column}
+      .brand{width:100%}
+      .top-actions{width:100%}
+    }
+  </style>
+</head>
+<body>
+<svg xmlns="http://www.w3.org/2000/svg" width="0" height="0" style="position:absolute;overflow:hidden" aria-hidden="true"><defs><symbol id="vi-gear" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.7 1.7 0 0 0 .34 1.9l.06.06-1.8 1.8-.06-.06a1.7 1.7 0 0 0-1.9-.34 1.7 1.7 0 0 0-1 1.56V21h-2.6v-.09a1.7 1.7 0 0 0-1-1.56 1.7 1.7 0 0 0-1.9.34l-.06.06-1.8-1.8.06-.06A1.7 1.7 0 0 0 8.1 15a1.7 1.7 0 0 0-1.56-1H6v-2.6h.54a1.7 1.7 0 0 0 1.56-1 1.7 1.7 0 0 0-.34-1.9L7.7 8.44l1.8-1.8.06.06a1.7 1.7 0 0 0 1.9.34 1.7 1.7 0 0 0 1-1.56V5h2.6v.48a1.7 1.7 0 0 0 1 1.56 1.7 1.7 0 0 0 1.9-.34l.06-.06 1.8 1.8-.06.06a1.7 1.7 0 0 0-.34 1.9 1.7 1.7 0 0 0 1.56 1H21V14h-.04a1.7 1.7 0 0 0-1.56 1z"/></symbol><symbol id="vi-pin" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><path d="M20 10c0 5-8 12-8 12S4 15 4 10a8 8 0 0 1 16 0Z"/><circle cx="12" cy="10" r="2.5"/></symbol><symbol id="vi-store" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><path d="m3 10 2-6h14l2 6v10H3V10Z"/><path d="M3 10c0 3 4 3 4 0 0 3 4 3 4 0 0 3 4 3 4 0 0 3 4 3 4 0 0 3 2 3 2 0M9 20v-6h6v6"/></symbol><symbol id="vi-home" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><path d="m3 11 9-8 9 8M5 10v11h14V10M9 21v-7h6v7"/></symbol><symbol id="vi-bottle" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><path d="M9 3h6M10 3v4l-3 4v10h10V11l-3-4V3M7 14h10"/></symbol><symbol id="vi-cocktail" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><path d="M3 4h18l-9 10-9-10ZM12 14v7M7 21h10"/></symbol><symbol id="vi-star" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><path d="m12 2 3.2 6.8 7.3 1-5.3 5.1 1.3 7.1-6.5-3.5-6.5 3.5 1.3-7.1-5.3-5.1 7.3-1z"/></symbol><symbol id="vi-palette" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><path d="M12 3a9 9 0 1 0 0 18h1a2 2 0 0 0 2-2c0-1-.7-1.6-.7-2.4a2 2 0 0 1 2-2H18a4 4 0 0 0 4-4C22 6 17.5 3 12 3Z"/><circle cx="7.5" cy="11" r="1"/><circle cx="10" cy="7.5" r="1"/><circle cx="15" cy="7.5" r="1"/></symbol><symbol id="vi-heart" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><path d="M20.8 4.6a5.4 5.4 0 0 0-7.6 0L12 5.8l-1.2-1.2a5.4 5.4 0 0 0-7.6 7.6L12 21l8.8-8.8a5.4 5.4 0 0 0 0-7.6Z"/></symbol><symbol id="vi-package" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><path d="m3 7 9-4 9 4v10l-9 4-9-4V7ZM3 7l9 4 9-4M12 11v10"/></symbol><symbol id="vi-categories" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="3" width="7" height="7" rx="1"/><rect x="14" y="3" width="7" height="7" rx="1"/><rect x="3" y="14" width="7" height="7" rx="1"/><path d="M17.5 14v8M13.5 18h8"/></symbol><symbol id="vi-plate" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><circle cx="9" cy="12" r="6"/><circle cx="9" cy="12" r="3"/><path d="M19 3v18M16 3v6c0 2 6 2 6 0V3"/></symbol><symbol id="vi-cup" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><path d="M5 8h12l-1 12H6L5 8ZM4 5h14M13 5l2-3M17 8h2a3 3 0 0 1 0 6h-2"/></symbol><symbol id="vi-glass" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><path d="M5 3h14l-2 9a5 5 0 0 1-10 0L5 3ZM12 17v4M7 21h10"/></symbol><symbol id="vi-cigarette" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="10" width="18" height="5" rx="1"/><path d="M15 10v5M19 3c-3 2 1 3-2 5M14 3c-3 2 1 3-2 5"/></symbol><symbol id="vi-spa" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><path d="M12 21c-6-3-8-8-7-13 4 1 7 4 7 8 0-6 3-10 7-12 2 8-1 14-7 17ZM3 18c3-1 6-1 9 3 3-4 6-4 9-3"/></symbol><symbol id="vi-adult" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="4" width="18" height="16" rx="3"/><path d="M7 16V8h3l2 8M7 13h5M15 8h4l-4 8h4"/></symbol></defs></svg>
+  <header class="topbar">
+    <div class="container">
+      <div class="topbar-inner">
+        <div class="brand">
+          <div id="brandLogo" class="brand-logo" title="Ver perfil del negocio">
+            <div class="dot"></div>
+          </div>
+          <div class="brand-text">
+            <h1 id="brandName">VibraErótica</h1>
+            <p id="brandTag">Boutique para adultos · Servicios y reservaciones</p>
+          </div>
+        </div>
+        <div class="top-actions">
+          <span class="muted" id="sessionMail">admin@vibraerotica.mx</span>
+          <button class="ghost">Salir</button>
+          <button class="pill admin-toggle" id="openAdminBtn"><span class="gear"><svg class="vi-icon" aria-hidden="true"><use href="#vi-gear"></use></svg></span>Administración</button>
+        </div>
+      </div>
+      <nav class="nav-tabs">
+        <button class="pill">Productos y servicios</button>
+        <button class="pill">Sedes y cómo llegar</button>
+        <button class="pill">Mis reservaciones</button>
+        <button class="pill">Opiniones</button>
+      </nav>
+    </div>
+  </header>
 
-</script></body></html>
+  <main class="container section">
+    <section class="hero">
+      <h2 id="heroTitle">VibraErótica</h2>
+      <p id="heroDescription">Explora artículos, conoce profesionales y reserva servicios de bienestar en nuestras sedes.</p>
+      <div class="badge"><svg class="vi-icon" aria-hidden="true"><use href="#vi-adult"></use></svg> Acceso exclusivo para mayores de edad</div>
+    </section>
+
+    <section class="section">
+      <h2>Visítanos</h2>
+      <div class="grid-2">
+        <article class="card">
+          <h3>Nuestras sedes</h3>
+          <p class="muted" id="locationSummary">Configura el domicilio del negocio desde Administración → Negocio.</p>
+          <div class="actions">
+            <button class="primary" id="routeBtn">Cómo llegar desde mi ubicación</button>
+            <button class="ghost" id="mapsBtn">Abrir en Google Maps</button>
+          </div>
+          <p class="small">El domicilio guardado también se utilizará para el botón “Cómo llegar”.</p>
+        </article>
+        <article class="card">
+          <div class="map-placeholder">
+            <div class="pin-preview"><span class="pin-badge" id="pinPreviewIcon"><svg class="vi-icon" aria-hidden="true"><use href="#vi-store"></use></svg></span><strong id="pinPreviewLabel">Local</strong></div>
+            <div class="muted" id="mapPreviewText">Aquí se mostrará la sede pública con el estilo de mapa configurado en el módulo Negocio.</div>
+          </div>
+        </article>
+      </div>
+    </section>
+
+    <section class="section">
+      <h2>Productos y servicios destacados</h2>
+      <div class="products" id="productGrid">
+        <div class="product"><div class="product-icon"><svg class="vi-icon" aria-hidden="true"><use href="#vi-plate"></use></svg></div><h4>Comida</h4><p class="muted">Comidas y snacks.</p></div>
+        <div class="product"><div class="product-icon"><svg class="vi-icon" aria-hidden="true"><use href="#vi-cup"></use></svg></div><h4>Líquidos</h4><p class="muted">Refrescos, agua y bebidas.</p></div>
+        <div class="product"><div class="product-icon"><svg class="vi-icon" aria-hidden="true"><use href="#vi-glass"></use></svg></div><h4>Licores</h4><p class="muted">Botellas y tragos.</p></div>
+        <div class="product"><div class="product-icon"><svg class="vi-icon" aria-hidden="true"><use href="#vi-cigarette"></use></svg></div><h4>Cigarros</h4><p class="muted">Cajetillas y extras.</p></div>
+      </div>
+    </section>
+  </main>
+
+  <div class="modal" id="profileModal">
+    <div class="drawer" style="grid-template-columns:1fr;max-width:900px;margin:auto;inset:40px;">
+      <div class="drawer-body">
+        <div class="drawer-top">
+          <h2>Perfil del negocio</h2>
+          <button class="ghost" id="closeProfileBtn">Cerrar</button>
+        </div>
+        <div class="stack">
+          <div class="module-card">
+            <h3 id="profileBusinessName">VibraErótica</h3>
+            <p class="muted" id="profileDescription">Aquí aparecerá la descripción pública del negocio.</p>
+            <div class="chips" id="socialLinks"></div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <div class="modal" id="adminModal">
+    <div class="drawer">
+      <aside class="sidebar">
+        <div class="sidebar-header">Panel de administración</div>
+        <nav class="sidebar-nav">
+          <button class="nav-item active" data-panel="customization"><span class="icon"><svg class="vi-icon" aria-hidden="true"><use href="#vi-palette"></use></svg></span>Personalización</button>
+          <button class="nav-item" data-panel="business"><span class="icon"><svg class="vi-icon" aria-hidden="true"><use href="#vi-store"></use></svg></span>Negocio</button>
+          <button class="nav-item" data-panel="profile"><span class="icon"><svg class="vi-icon" aria-hidden="true"><use href="#vi-heart"></use></svg></span>Perfil y redes</button>
+          <button class="nav-item" data-panel="products"><span class="icon"><svg class="vi-icon" aria-hidden="true"><use href="#vi-package"></use></svg></span>Productos y servicios</button>
+          <button class="nav-item" data-panel="categories"><span class="icon"><svg class="vi-icon" aria-hidden="true"><use href="#vi-categories"></use></svg></span>Categorías</button>
+        </nav>
+      </aside>
+      <section class="drawer-body">
+        <div class="drawer-top">
+          <div>
+            <h2 style="margin:.2rem 0">Configuración modular</h2>
+            <div class="muted">Aquí se concentra la administración visual y comercial del sitio.</div>
+          </div>
+          <div class="actions">
+            <button class="primary" id="saveAllBtn">Guardar cambios</button>
+            <button class="ghost" id="closeAdminBtn">Cerrar</button>
+          </div>
+        </div>
+
+        <div class="panel-section active" id="panel-customization">
+          <div class="stack">
+            <div class="module-card">
+              <h3>Diseño general</h3>
+              <div class="form-grid three">
+                <div class="field">
+                  <label>Color principal</label>
+                  <input id="primaryColor" type="color" value="#ff1688">
+                </div>
+                <div class="field">
+                  <label>Color secundario</label>
+                  <input id="secondaryColor" type="color" value="#8f2fff">
+                </div>
+                <div class="field">
+                  <label>Tamaño base de letra</label>
+                  <select id="fontScale">
+                    <option value="0.92">Pequeño</option>
+                    <option value="1" selected>Normal</option>
+                    <option value="1.08">Mediano</option>
+                    <option value="1.18">Grande</option>
+                  </select>
+                </div>
+              </div>
+              <div class="form-grid three" style="margin-top:14px">
+                <div class="field">
+                  <label>Color del fondo</label>
+                  <input id="bgColor" type="color" value="#090d18">
+                </div>
+                <div class="field">
+                  <label>Fondo de paneles</label>
+                  <input id="panelColor" type="color" value="#121827">
+                </div>
+                <div class="field">
+                  <label>Color de ventanas / modal</label>
+                  <input id="panel2Color" type="color" value="#1a2234">
+                </div>
+              </div>
+            </div>
+
+            <div class="module-card">
+              <h3>Plantillas e iconos de fondo</h3>
+              <div class="bg-options">
+                <button class="bg-tile active" data-pattern="dots">Puntos discretos</button>
+                <button class="bg-tile" data-pattern="rings">Aros</button>
+                <button class="bg-tile" data-pattern="squares">Ventanas</button>
+                <button class="bg-tile" data-pattern="lines">Líneas</button>
+                <button class="bg-tile" data-pattern="none">Sin iconos</button>
+              </div>
+              <div class="footer-note">Aplica a fondo, ventanas, tarjetas y la estética general del sitio.</div>
+            </div>
+          </div>
+        </div>
+
+        <div class="panel-section" id="panel-business">
+          <div class="stack">
+            <div class="module-card">
+              <h3>Pin del negocio</h3>
+              <div class="pin-options">
+                <button class="pin-tile active" data-pin="pin"><svg class="vi-icon" aria-hidden="true"><use href="#vi-pin"></use></svg><div class="small">Ubicación</div></button>
+                <button class="pin-tile" data-pin="store"><svg class="vi-icon" aria-hidden="true"><use href="#vi-store"></use></svg><div class="small">Local</div></button>
+                <button class="pin-tile" data-pin="home"><svg class="vi-icon" aria-hidden="true"><use href="#vi-home"></use></svg><div class="small">Casa</div></button>
+                <button class="pin-tile" data-pin="cocktail"><svg class="vi-icon" aria-hidden="true"><use href="#vi-cocktail"></use></svg><div class="small">Licor</div></button>
+                <button class="pin-tile" data-pin="star"><svg class="vi-icon" aria-hidden="true"><use href="#vi-star"></use></svg><div class="small">Especial</div></button>
+              </div>
+              <div class="form-grid three" style="margin-top:14px">
+                <div class="field"><label>Color del pin</label><input id="pinColor" type="color" value="#ff244d"></div>
+                <div class="field"><label>Nombre del pin</label><input id="pinLabel" value="Local"></div>
+                <div class="field"><label>Texto visible en mapa</label><input id="pinText" value="Local"></div>
+              </div>
+              <div class="preview-box" style="margin-top:14px">
+                <div class="pin-preview"><span class="pin-badge" id="pinPreviewIconAdmin"><svg class="vi-icon" aria-hidden="true"><use href="#vi-pin"></use></svg></span><strong id="pinPreviewLabelAdmin">Local</strong></div>
+              </div>
+            </div>
+
+            <div class="module-card">
+              <h3>Horarios del negocio</h3>
+              <div class="table-mini">
+                <div class="item"><strong>Lunes</strong><input type="time" id="h-lu-open" value="09:00"><input type="time" id="h-lu-close" value="20:00"><label class="chip"><input type="checkbox" id="h-lu-active" checked> Abierto</label></div>
+                <div class="item"><strong>Martes</strong><input type="time" id="h-ma-open" value="09:00"><input type="time" id="h-ma-close" value="20:00"><label class="chip"><input type="checkbox" id="h-ma-active" checked> Abierto</label></div>
+                <div class="item"><strong>Miércoles</strong><input type="time" id="h-mi-open" value="09:00"><input type="time" id="h-mi-close" value="20:00"><label class="chip"><input type="checkbox" id="h-mi-active" checked> Abierto</label></div>
+                <div class="item"><strong>Jueves</strong><input type="time" id="h-ju-open" value="09:00"><input type="time" id="h-ju-close" value="20:00"><label class="chip"><input type="checkbox" id="h-ju-active" checked> Abierto</label></div>
+                <div class="item"><strong>Viernes</strong><input type="time" id="h-vi-open" value="09:00"><input type="time" id="h-vi-close" value="20:00"><label class="chip"><input type="checkbox" id="h-vi-active" checked> Abierto</label></div>
+                <div class="item"><strong>Sábado</strong><input type="time" id="h-sa-open" value="10:00"><input type="time" id="h-sa-close" value="22:00"><label class="chip"><input type="checkbox" id="h-sa-active" checked> Abierto</label></div>
+                <div class="item"><strong>Domingo</strong><input type="time" id="h-do-open" value="10:00"><input type="time" id="h-do-close" value="18:00"><label class="chip"><input type="checkbox" id="h-do-active"> Abierto</label></div>
+              </div>
+            </div>
+
+            <div class="module-card">
+              <h3>Identidad y contacto</h3>
+              <div class="form-grid two">
+                <div class="field"><label>Nombre del negocio</label><input id="businessName" value="VibraErótica"></div>
+                <div class="field"><label>Eslogan</label><input id="businessTagline" value="Boutique para adultos · Servicios y reservaciones"></div>
+                <div class="field"><label>Logo del negocio</label><input id="logoUpload" type="file" accept="image/*"></div>
+                <div class="field"><label>WhatsApp</label><input id="whatsApp" placeholder="521XXXXXXXXXX"></div>
+              </div>
+              <div class="small" style="margin-top:10px">El logo puede ser grande; la vista previa se recorta para ajustarlo al icono superior.</div>
+            </div>
+
+            <div class="module-card">
+              <h3>Contraseña del administrador</h3>
+              <div class="form-grid two">
+                <div class="field"><label>Nueva contraseña</label><input type="password" placeholder="••••••••"></div>
+                <div class="field"><label>Confirmar contraseña</label><input type="password" placeholder="••••••••"></div>
+              </div>
+            </div>
+
+            <div class="module-card">
+              <h3>Mapa y ubicación del negocio</h3>
+              <div class="form-grid two">
+                <div class="field"><label>API de CARTO</label><input id="cartoApi" placeholder="pega aquí tu API key"></div>
+                <div class="field"><label>Estilo de mapa</label><select id="mapStyle"><option>Voyager</option><option>Positron</option><option>Dark Matter</option></select></div>
+                <div class="field"><label>Latitud</label><input id="lat" value="19.332"></div>
+                <div class="field"><label>Longitud</label><input id="lng" value="-99.183"></div>
+              </div>
+              <div class="map-placeholder" style="margin-top:14px">
+                <div class="pin-preview"><span class="pin-badge" id="mapPinPreview"><svg class="vi-icon" aria-hidden="true"><use href="#vi-pin"></use></svg></span><strong id="mapPinLabel">Local</strong></div>
+                <div class="small">Aquí irá el mapa interactivo para mover el pin manualmente una vez cargada la API de CARTO.</div>
+              </div>
+              <div class="actions" style="margin-top:14px"><button class="ghost">Ubicar dirección</button><button class="primary">Confirmar punto de salida</button></div>
+            </div>
+
+            <div class="module-card">
+              <h3>Domicilio del negocio</h3>
+              <div class="form-grid three">
+                <div class="field"><label>Calle</label><input id="addrStreet"></div>
+                <div class="field"><label>Colonia</label><input id="addrColony"></div>
+                <div class="field"><label>Código postal</label><input id="addrZip"></div>
+                <div class="field"><label>Municipio</label><input id="addrTown"></div>
+                <div class="field"><label>Estado</label><input id="addrState"></div>
+                <div class="field"><label>Referencias</label><input id="addrRef"></div>
+              </div>
+            </div>
+
+            <div class="module-card">
+              <h3>Métodos de pago</h3>
+              <div class="form-grid three">
+                <div class="field"><label>Método</label><input value="Transferencia bancaria"></div>
+                <div class="field"><label>Beneficiario</label><input></div>
+                <div class="field"><label>Cuenta / CLABE / instrucciones</label><input value="CLABE 012345678901234567"></div>
+                <div class="field"><label>Generar referencia</label><select><option>Sí</option><option>No</option></select></div>
+                <div class="field"><label>Permitir adjuntar comprobante</label><select><option>Sí</option><option>No</option></select></div>
+              </div>
+            </div>
+
+            <div class="module-card">
+              <h3>Redes sociales</h3>
+              <div class="form-grid three">
+                <div class="field"><label>Facebook</label><input id="socialFacebook"></div>
+                <div class="field"><label>Instagram</label><input id="socialInstagram"></div>
+                <div class="field"><label>TikTok</label><input id="socialTiktok"></div>
+                <div class="field"><label>X</label><input id="socialX"></div>
+                <div class="field"><label>Sitio web</label><input id="socialWebsite"></div>
+                <div class="field"><label>Canal de WhatsApp</label><input id="socialChannel"></div>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <div class="panel-section" id="panel-profile">
+          <div class="stack">
+            <div class="module-card">
+              <h3>Perfil público desplegable</h3>
+              <p class="small">Este contenido se mostrará cuando el usuario pulse el logo superior izquierdo.</p>
+              <div class="form-grid two">
+                <div class="field"><label>Título público</label><input id="profileTitle" value="VibraErótica"></div>
+                <div class="field"><label>Texto de ubicación</label><input id="profileLocation" placeholder="Ej. Manzanillo, Colima"></div>
+                <div class="field" style="grid-column:1/-1"><label>Descripción del perfil</label><textarea id="profileBio">Boutique para adultos, productos y servicios con atención discreta.</textarea></div>
+              </div>
+            </div>
+            <div class="module-card">
+              <h3>Redes y enlaces del perfil</h3>
+              <div class="form-grid three">
+                <div class="field"><label>Facebook</label><input id="profileFacebook"></div>
+                <div class="field"><label>Instagram</label><input id="profileInstagram"></div>
+                <div class="field"><label>TikTok</label><input id="profileTiktok"></div>
+                <div class="field"><label>X</label><input id="profileX"></div>
+                <div class="field"><label>Sitio web</label><input id="profileWebsite"></div>
+                <div class="field"><label>Canal de WhatsApp</label><input id="profileChannel"></div>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <div class="panel-section" id="panel-products">
+          <div class="stack">
+            <div class="module-card">
+              <div class="row" style="justify-content:space-between">
+                <div>
+                  <h3>Productos y servicios</h3>
+                  <p class="small">Administra comida, líquidos, licores, cigarros y servicios.</p>
+                </div>
+                <div class="actions">
+                  <button class="primary" id="addProductBtn">+ Nuevo registro</button>
+                </div>
+              </div>
+              <div class="form-grid four">
+                <div class="field"><label>Nombre</label><input id="productName" placeholder="Ej. Whisky etiqueta negra"></div>
+                <div class="field"><label>Tipo</label><select id="productType"><option>Producto</option><option>Servicio</option></select></div>
+                <div class="field"><label>Categoría</label><select id="productCategory"><option>Comida</option><option>Líquidos</option><option>Licores</option><option>Cigarros</option><option>Servicios</option></select></div>
+                <div class="field"><label>Precio</label><input id="productPrice" placeholder="0.00"></div>
+                <div class="field"><label>Ícono</label><select id="productIcon"><option value="plate">Comida</option><option value="cup">Líquido</option><option value="glass">Licor</option><option value="cigarette">Cigarro</option><option value="spa">Servicio</option></select></div>
+                <div class="field"><label>Stock / cupos</label><input id="productStock" placeholder="0"></div>
+                <div class="field"><label>Imagen</label><input type="file"></div>
+                <div class="field"><label>Activo</label><select id="productActive"><option>Sí</option><option>No</option></select></div>
+                <div class="field" style="grid-column:1/-1"><label>Descripción</label><textarea id="productDescription" placeholder="Descripción breve del producto o servicio"></textarea></div>
+              </div>
+              <div class="actions" style="margin-top:14px"><button class="primary" id="saveProductBtn">Guardar producto / servicio</button></div>
+            </div>
+
+            <div class="module-card">
+              <h3>Listado</h3>
+              <div class="product-list table-mini" id="adminProductList"></div>
+            </div>
+          </div>
+        </div>
+
+        <div class="panel-section" id="panel-categories">
+          <div class="stack">
+            <div class="module-card">
+              <h3>Crear categorías</h3>
+              <div class="form-grid three">
+                <div class="field"><label>Nombre de la categoría</label><input id="categoryName" placeholder="Ej. Licores premium"></div>
+                <div class="field"><label>Ícono</label><select id="categoryIcon"><option value="plate">Comida</option><option value="cup">Líquido</option><option value="glass">Licor</option><option value="cigarette">Cigarro</option><option value="spa">Servicio</option></select></div>
+                <div class="field"><label>Tipo</label><select id="categoryType"><option>Comida</option><option>Líquidos</option><option>Licores</option><option>Cigarros</option><option>Servicios</option></select></div>
+              </div>
+              <div class="actions" style="margin-top:14px"><button class="primary" id="addCategoryBtn">Agregar categoría</button></div>
+            </div>
+            <div class="module-card">
+              <h3>Categorías registradas</h3>
+              <div class="category-list table-mini" id="categoryList"></div>
+            </div>
+          </div>
+        </div>
+      </section>
+    </div>
+  </div>
+
+  <script>
+    const defaultState = {
+      businessName:'VibraErótica',
+      businessTagline:'Boutique para adultos · Servicios y reservaciones',
+      heroTitle:'VibraErótica',
+      heroDescription:'Explora artículos, conoce profesionales y reserva servicios de bienestar en nuestras sedes.',
+      profileTitle:'VibraErótica',
+      profileBio:'Boutique para adultos, productos y servicios con atención discreta.',
+      profileLocation:'',
+      primaryColor:'#ff1688',secondaryColor:'#8f2fff',bgColor:'#090d18',panelColor:'#121827',panel2Color:'#1a2234',fontScale:'1',pattern:'dots',
+      pinIcon:'pin',pinLabel:'Local',pinText:'Local',pinColor:'#ff244d',
+      cartoApi:'', mapStyle:'Voyager', lat:'19.332', lng:'-99.183',
+      addrStreet:'', addrColony:'', addrZip:'', addrTown:'', addrState:'', addrRef:'',
+      whatsApp:'',
+      socialFacebook:'',socialInstagram:'',socialTiktok:'',socialX:'',socialWebsite:'',socialChannel:'',
+      profileFacebook:'',profileInstagram:'',profileTiktok:'',profileX:'',profileWebsite:'',profileChannel:'',
+      logoData:'',
+      products:[
+        {name:'Comida del día', type:'Producto', category:'Comida', price:'120', icon:'plate', stock:'12', description:'Snacks y alimentos.', active:'Sí'},
+        {name:'Agua mineral 600 ml', type:'Producto', category:'Líquidos', price:'35', icon:'cup', stock:'20', description:'Bebida fría.', active:'Sí'},
+        {name:'Whisky premium', type:'Producto', category:'Licores', price:'780', icon:'glass', stock:'6', description:'Botella premium.', active:'Sí'},
+        {name:'Cajetilla clásica', type:'Producto', category:'Cigarros', price:'95', icon:'cigarette', stock:'15', description:'Presentación regular.', active:'Sí'}
+      ],
+      categories:[
+        {name:'Comida', icon:'plate', type:'Comida'},
+        {name:'Líquidos', icon:'cup', type:'Líquidos'},
+        {name:'Licores', icon:'glass', type:'Licores'},
+        {name:'Cigarros', icon:'cigarette', type:'Cigarros'},
+        {name:'Servicios', icon:'spa', type:'Servicios'}
+      ]
+    };
+
+    function iconSvg(name){
+      const permitted=new Set(['gear','pin','store','home','bottle','cocktail','star','palette','heart','package','categories','plate','cup','glass','cigarette','spa','adult']);
+      const safe=permitted.has(name)?name:'package';
+      return `<svg class="vi-icon" aria-hidden="true"><use href="#vi-${safe}"></use></svg>`;
+    }
+    const legacyIcons={'\u{1f4cd}':'pin','\u{1f3ea}':'store','\u{1f3e0}':'home','\u{1f378}':'cocktail','\u2b50':'star','\u{1f37d}\ufe0f':'plate','\u{1f964}':'cup','\u{1f943}':'glass','\u{1f6ac}':'cigarette','\u{1f486}':'spa'};
+    const $ = (s,p=document)=>p.querySelector(s);
+    const $$ = (s,p=document)=>[...p.querySelectorAll(s)];
+    let state = loadState();
+
+    function loadState(){
+      try{const saved=JSON.parse(localStorage.getItem('vibra_admin_state')||'{}'); if(saved.pinIcon) saved.pinIcon=legacyIcons[saved.pinIcon]||saved.pinIcon; for(const p of saved.products||[])p.icon=legacyIcons[p.icon]||p.icon; for(const c of saved.categories||[])c.icon=legacyIcons[c.icon]||c.icon; return {...defaultState,...saved};}catch(e){return structuredClone(defaultState)}
+    }
+    function saveState(){
+      localStorage.setItem('vibra_admin_state', JSON.stringify(state));
+      applyState();
+      alert('Cambios guardados localmente en este prototipo.');
+    }
+
+    function applyPattern(pattern){
+      const root=document.documentElement;
+      const map={
+        dots:'radial-gradient(circle at 10px 10px, rgba(255,22,136,.08) 1px, transparent 1px)',
+        rings:'radial-gradient(circle, transparent 14px, rgba(255,22,136,.08) 15px, transparent 16px)',
+        squares:'linear-gradient(rgba(255,22,136,.07) 1px, transparent 1px), linear-gradient(90deg, rgba(255,22,136,.07) 1px, transparent 1px)',
+        lines:'linear-gradient(90deg, rgba(255,22,136,.08), transparent 24%), linear-gradient(rgba(143,47,255,.05), transparent)',
+        none:'none'
+      };
+      root.style.setProperty('--pattern', map[pattern]||map.dots);
+      root.style.setProperty('--pattern-size', pattern==='squares'?'42px 42px':pattern==='rings'?'120px 120px':'40px 40px');
+    }
+
+    function applyState(){
+      const root=document.documentElement;
+      root.style.setProperty('--primary', state.primaryColor);
+      root.style.setProperty('--secondary', state.secondaryColor);
+      root.style.setProperty('--bg', state.bgColor);
+      root.style.setProperty('--panel', state.panelColor);
+      root.style.setProperty('--panel-2', state.panel2Color);
+      root.style.setProperty('--font-scale', state.fontScale);
+      root.style.setProperty('--pin-color',state.pinColor||'#ff244d');
+      root.style.setProperty('--hero', `linear-gradient(135deg, ${hexToRgba(state.primaryColor,.94)}, ${hexToRgba(state.secondaryColor,.22)})`);
+      applyPattern(state.pattern);
+      $('#brandName').textContent = state.businessName;
+      $('#brandTag').textContent = state.businessTagline;
+      $('#heroTitle').textContent = state.businessName;
+      $('#heroDescription').textContent = state.heroDescription;
+      $('#profileBusinessName').textContent = state.profileTitle || state.businessName;
+      $('#profileDescription').textContent = state.profileBio;
+      $('#sessionMail').textContent = 'admin@vibraerotica.mx';
+      $('#pinPreviewIcon').innerHTML = iconSvg(state.pinIcon);
+      $('#pinPreviewLabel').textContent = state.pinText;
+      $('#pinPreviewIconAdmin').innerHTML = iconSvg(state.pinIcon);
+      $('#pinPreviewLabelAdmin').textContent = state.pinText;
+      $('#mapPinPreview').innerHTML = iconSvg(state.pinIcon);
+      $('#mapPinLabel').textContent = state.pinText;
+      $('#locationSummary').textContent = buildAddress() || 'Configura el domicilio del negocio desde Administración → Negocio.';
+      $('#mapPreviewText').textContent = buildAddress() ? `Sede pública: ${buildAddress()}` : 'Aquí se mostrará la sede pública con el estilo de mapa configurado en el módulo Negocio.';
+      const brandLogo=$('#brandLogo');
+      brandLogo.innerHTML = state.logoData ? `<img src="${state.logoData}" alt="Logo">` : '<div class="dot"></div>';
+      renderProfileLinks();
+      renderAdminProducts();
+      renderPublicProducts();
+      renderCategories();
+      hydrateFormValues();
+    }
+
+    function buildAddress(){
+      return [state.addrStreet, state.addrColony, state.addrTown, state.addrState, state.addrZip].filter(Boolean).join(', ');
+    }
+    function renderProfileLinks(){
+      const container = $('#socialLinks');
+      const links=[
+        ['Facebook',state.profileFacebook||state.socialFacebook],['Instagram',state.profileInstagram||state.socialInstagram],['TikTok',state.profileTiktok||state.socialTiktok],['X',state.profileX||state.socialX],['Sitio web',state.profileWebsite||state.socialWebsite],['Canal de WhatsApp',state.profileChannel||state.socialChannel]
+      ].filter(([,v])=>v);
+      container.innerHTML = links.length ? links.map(([k,v])=>`<a class="chip" href="${v}" target="_blank" rel="noopener">${k}</a>`).join('') : '<div class="empty">Aún no hay redes configuradas.</div>';
+    }
+    function renderAdminProducts(){
+      const list=$('#adminProductList');
+      list.innerHTML = state.products.length ? state.products.map((p,i)=>`
+        <div class="item">
+          <div class="thumb">${iconSvg(p.icon)}</div>
+          <div><strong>${p.name}</strong><div class="small">${p.category} · ${p.type} · $${p.price}</div></div>
+          <span class="chip">Stock: ${p.stock}</span>
+          <button class="ghost" onclick="removeProduct(${i})">Eliminar</button>
+        </div>`).join('') : '<div class="empty">No hay productos o servicios registrados.</div>';
+    }
+    function renderPublicProducts(){
+      const grid=$('#productGrid');
+      grid.innerHTML = state.products.filter(p=>p.active!=='No').slice(0,8).map(p=>`<div class="product"><div class="product-icon">${iconSvg(p.icon)}</div><h4>${p.name}</h4><p class="muted">${p.description||p.category}</p><div class="price">$${p.price}</div></div>`).join('');
+    }
+    function renderCategories(){
+      const list=$('#categoryList');
+      list.innerHTML = state.categories.length ? state.categories.map((c,i)=>`<div class="item"><div class="thumb">${iconSvg(c.icon)}</div><div><strong>${c.name}</strong><div class="small">${c.type}</div></div><span class="chip">Activa</span><button class="ghost" onclick="removeCategory(${i})">Eliminar</button></div>`).join('') : '<div class="empty">No hay categorías.</div>';
+    }
+    function hydrateFormValues(){
+      const ids=['primaryColor','secondaryColor','bgColor','panelColor','panel2Color','fontScale','pinColor','pinLabel','pinText','businessName','businessTagline','whatsApp','cartoApi','mapStyle','lat','lng','addrStreet','addrColony','addrZip','addrTown','addrState','addrRef','socialFacebook','socialInstagram','socialTiktok','socialX','socialWebsite','socialChannel','profileTitle','profileLocation','profileBio','profileFacebook','profileInstagram','profileTiktok','profileX','profileWebsite','profileChannel'];
+      ids.forEach(id=>{const el=document.getElementById(id); if(el && state[id]!==undefined) el.value=state[id];});
+      $$('.pin-tile').forEach(btn=>btn.classList.toggle('active', btn.dataset.pin===state.pinIcon));
+      $$('.bg-tile').forEach(btn=>btn.classList.toggle('active', btn.dataset.pattern===state.pattern));
+    }
+    function syncFormToState(){
+      const ids=['primaryColor','secondaryColor','bgColor','panelColor','panel2Color','fontScale','pinColor','pinLabel','pinText','businessName','businessTagline','whatsApp','cartoApi','mapStyle','lat','lng','addrStreet','addrColony','addrZip','addrTown','addrState','addrRef','socialFacebook','socialInstagram','socialTiktok','socialX','socialWebsite','socialChannel','profileTitle','profileLocation','profileBio','profileFacebook','profileInstagram','profileTiktok','profileX','profileWebsite','profileChannel'];
+      ids.forEach(id=>{const el=document.getElementById(id); if(el) state[id]=el.value;});
+      state.heroDescription = document.getElementById('profileBio').value || state.heroDescription;
+      state.profileBio = document.getElementById('profileBio').value;
+    }
+    function hexToRgba(hex,a){
+      const h=hex.replace('#','');
+      const bigint=parseInt(h.length===3?h.split('').map(x=>x+x).join(''):h,16);
+      const r=(bigint>>16)&255,g=(bigint>>8)&255,b=bigint&255;
+      return `rgba(${r},${g},${b},${a})`;
+    }
+
+    window.removeProduct=(i)=>{state.products.splice(i,1); saveState();}
+    window.removeCategory=(i)=>{state.categories.splice(i,1); saveState();}
+
+    document.addEventListener('click', (e)=>{
+      const navBtn=e.target.closest('.nav-item');
+      if(navBtn){
+        $$('.nav-item').forEach(b=>b.classList.remove('active'));
+        navBtn.classList.add('active');
+        const key=navBtn.dataset.panel;
+        $$('.panel-section').forEach(p=>p.classList.remove('active'));
+        $('#panel-'+key).classList.add('active');
+      }
+      const pinBtn=e.target.closest('.pin-tile');
+      if(pinBtn){ state.pinIcon=pinBtn.dataset.pin; applyState(); }
+      const bgBtn=e.target.closest('.bg-tile');
+      if(bgBtn){ state.pattern=bgBtn.dataset.pattern; applyState(); hydrateFormValues(); }
+    });
+
+    $('#openAdminBtn').addEventListener('click', ()=>$('#adminModal').classList.add('show'));
+    $('#closeAdminBtn').addEventListener('click', ()=>$('#adminModal').classList.remove('show'));
+    $('#brandLogo').addEventListener('click', ()=>$('#profileModal').classList.add('show'));
+    $('#closeProfileBtn').addEventListener('click', ()=>$('#profileModal').classList.remove('show'));
+    $('#saveAllBtn').addEventListener('click', ()=>{syncFormToState(); saveState();});
+
+    $('#logoUpload').addEventListener('change', (e)=>{
+      const file=e.target.files?.[0]; if(!file) return;
+      const reader=new FileReader();
+      reader.onload=()=>{state.logoData=reader.result; applyState();};
+      reader.readAsDataURL(file);
+    });
+
+    $('#saveProductBtn').addEventListener('click', ()=>{
+      const name=$('#productName').value.trim();
+      if(!name){ alert('Escribe el nombre del producto o servicio.'); return; }
+      state.products.unshift({
+        name,
+        type:$('#productType').value,
+        category:$('#productCategory').value,
+        price:$('#productPrice').value||'0',
+        icon:$('#productIcon').value,
+        stock:$('#productStock').value||'0',
+        description:$('#productDescription').value,
+        active:$('#productActive').value
+      });
+      ['productName','productPrice','productStock','productDescription'].forEach(id=>$('#'+id).value='');
+      saveState();
+    });
+
+    $('#addCategoryBtn').addEventListener('click', ()=>{
+      const name=$('#categoryName').value.trim();
+      if(!name){ alert('Escribe el nombre de la categoría.'); return; }
+      state.categories.unshift({name, icon:$('#categoryIcon').value, type:$('#categoryType').value});
+      $('#categoryName').value='';
+      saveState();
+    });
+
+    $('#routeBtn').addEventListener('click', ()=>{
+      const address = encodeURIComponent(buildAddress() || 'VibraErotica');
+      if(!navigator.geolocation){ alert('Tu navegador no soporta geolocalización.'); return; }
+      navigator.geolocation.getCurrentPosition((pos)=>{
+        const origin=`${pos.coords.latitude},${pos.coords.longitude}`;
+        const url=`https://www.google.com/maps/dir/${origin}/${address}`;
+        window.open(url,'_blank');
+      },()=> window.open(`https://www.google.com/maps/search/?api=1&query=${address}`,'_blank'));
+    });
+    $('#mapsBtn').addEventListener('click', ()=>{
+      const address = encodeURIComponent(buildAddress() || 'VibraErotica');
+      window.open(`https://www.google.com/maps/search/?api=1&query=${address}`,'_blank');
+    });
+
+    applyState();
+  </script>
+</body>
+</html>
