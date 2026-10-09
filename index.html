@@ -4,6 +4,10 @@
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <title>VibraErótica · Productos, servicios y reservaciones</title>
+  <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" integrity="sha256-p4NxAoJBhIIN+hmNHrzRCf9tD/miZyo9V+zM2u0S+W9I=" crossorigin="" />
+  <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js" integrity="sha256-20nQCchB9co0qIjJZRGuk2/Z9VM+kNiyxNV1lvTlZBo=" crossorigin=""></script>
+  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+  <script src="./config.js"></script>
   <style>
     :root{
       --bg:#090d18;
@@ -24,6 +28,9 @@
       --font-scale:1;
     }
     .vi-icon{width:1.3em;height:1.3em;vertical-align:middle;display:inline-block;flex:none;color:inherit}.product-icon .vi-icon,.thumb .vi-icon,.pin-tile .vi-icon{width:32px;height:32px}.pin-badge .vi-icon{width:24px;height:24px}
+    #publicMap,#adminMap{height:320px;min-height:320px;border-radius:18px;z-index:1;background:#18243a}
+    .leaflet-container{font:inherit}
+    .status-line{padding:10px 14px;border:1px solid var(--line);border-radius:12px;color:var(--muted)}
     *{box-sizing:border-box}
     html,body{margin:0;padding:0;background:
       linear-gradient(90deg, rgba(255,22,136,.08), transparent 30%, transparent 70%, rgba(143,47,255,.09)),
@@ -137,8 +144,8 @@
           </div>
         </div>
         <div class="top-actions">
-          <span class="muted" id="sessionMail">admin@vibraerotica.mx</span>
-          <button class="ghost">Salir</button>
+          <span class="muted" id="sessionMail">Sin sesión</span>
+          <button class="ghost" id="signOutBtn">Salir</button>
           <button class="pill admin-toggle" id="openAdminBtn"><span class="gear"><svg class="vi-icon" aria-hidden="true"><use href="#vi-gear"></use></svg></span>Administración</button>
         </div>
       </div>
@@ -171,10 +178,8 @@
           <p class="small">El domicilio guardado también se utilizará para el botón “Cómo llegar”.</p>
         </article>
         <article class="card">
-          <div class="map-placeholder">
-            <div class="pin-preview"><span class="pin-badge" id="pinPreviewIcon"><svg class="vi-icon" aria-hidden="true"><use href="#vi-store"></use></svg></span><strong id="pinPreviewLabel">Local</strong></div>
-            <div class="muted" id="mapPreviewText">Aquí se mostrará la sede pública con el estilo de mapa configurado en el módulo Negocio.</div>
-          </div>
+          <div id="publicMap" role="application" aria-label="Mapa de ubicación de la sede"></div>
+          <p class="small" id="mapPreviewText">Mapa CARTO del local publicado.</p>
         </article>
       </div>
     </section>
@@ -227,11 +232,21 @@
             <div class="muted">Aquí se concentra la administración visual y comercial del sitio.</div>
           </div>
           <div class="actions">
+            <span class="small" id="cloudStatus">Guardado local (configura Supabase).</span>
             <button class="primary" id="saveAllBtn">Guardar cambios</button>
             <button class="ghost" id="closeAdminBtn">Cerrar</button>
           </div>
         </div>
 
+        <div class="module-card" id="loginBox" style="margin-top:16px;display:none">
+          <h3>Inicio de sesión administrativo</h3>
+          <div class="form-grid two">
+            <div class="field"><label>Correo</label><input id="authEmail" type="email" autocomplete="username"></div>
+            <div class="field"><label>Contraseña</label><input id="authPassword" type="password" autocomplete="current-password"></div>
+          </div>
+          <div class="actions" style="margin-top:12px"><button class="primary" id="loginBtn">Acceder</button></div>
+          <p class="small" id="authStatus">Solo usuarios con rol admin pueden guardar en Supabase.</p>
+        </div>
         <div class="panel-section active" id="panel-customization">
           <div class="stack">
             <div class="module-card">
@@ -341,15 +356,13 @@
             <div class="module-card">
               <h3>Mapa y ubicación del negocio</h3>
               <div class="form-grid two">
-                <div class="field"><label>API de CARTO</label><input id="cartoApi" placeholder="pega aquí tu API key"></div>
+                <div class="field"><label>Clave CARTO (solo referencia local; no se envía a los mapas base públicos)</label><input id="cartoApi" type="password" autocomplete="off" placeholder="No necesaria para CARTO basemaps"></div>
                 <div class="field"><label>Estilo de mapa</label><select id="mapStyle"><option>Voyager</option><option>Positron</option><option>Dark Matter</option></select></div>
-                <div class="field"><label>Latitud</label><input id="lat" value="19.332"></div>
-                <div class="field"><label>Longitud</label><input id="lng" value="-99.183"></div>
+                <div class="field"><label>Latitud</label><input id="lat" type="number" step="any" value="19.332"></div>
+                <div class="field"><label>Longitud</label><input id="lng" type="number" step="any" value="-99.183"></div>
               </div>
-              <div class="map-placeholder" style="margin-top:14px">
-                <div class="pin-preview"><span class="pin-badge" id="mapPinPreview"><svg class="vi-icon" aria-hidden="true"><use href="#vi-pin"></use></svg></span><strong id="mapPinLabel">Local</strong></div>
-                <div class="small">Aquí irá el mapa interactivo para mover el pin manualmente una vez cargada la API de CARTO.</div>
-              </div>
+              <div id="adminMap" style="margin-top:14px" role="application" aria-label="Mapa para mover el marcador de la sede"></div>
+              <p class="small">Arrastra el marcador o pulsa el mapa para seleccionar coordenadas. Guarda los cambios para publicarlos.</p>
               <div class="actions" style="margin-top:14px"><button class="ghost">Ubicar dirección</button><button class="primary">Confirmar punto de salida</button></div>
             </div>
 
@@ -517,7 +530,9 @@
     function saveState(){
       localStorage.setItem('vibra_admin_state', JSON.stringify(state));
       applyState();
-      alert('Cambios guardados localmente en este prototipo.');
+      saveCloud().catch(err=>{
+        $('#cloudStatus').textContent='No se guardó en Supabase: '+err.message;
+      });
     }
 
     function applyPattern(pattern){
@@ -550,15 +565,15 @@
       $('#heroDescription').textContent = state.heroDescription;
       $('#profileBusinessName').textContent = state.profileTitle || state.businessName;
       $('#profileDescription').textContent = state.profileBio;
-      $('#sessionMail').textContent = 'admin@vibraerotica.mx';
-      $('#pinPreviewIcon').innerHTML = iconSvg(state.pinIcon);
-      $('#pinPreviewLabel').textContent = state.pinText;
+      $('#sessionMail').textContent = cloudUser?.email || 'Sin sesión';
+      if($('#pinPreviewIcon')) $('#pinPreviewIcon').innerHTML = iconSvg(state.pinIcon);
+      if($('#pinPreviewLabel')) $('#pinPreviewLabel').textContent = state.pinText;
       $('#pinPreviewIconAdmin').innerHTML = iconSvg(state.pinIcon);
       $('#pinPreviewLabelAdmin').textContent = state.pinText;
-      $('#mapPinPreview').innerHTML = iconSvg(state.pinIcon);
-      $('#mapPinLabel').textContent = state.pinText;
+      if($('#mapPinPreview')) $('#mapPinPreview').innerHTML = iconSvg(state.pinIcon);
+      if($('#mapPinLabel')) $('#mapPinLabel').textContent = state.pinText;
       $('#locationSummary').textContent = buildAddress() || 'Configura el domicilio del negocio desde Administración → Negocio.';
-      $('#mapPreviewText').textContent = buildAddress() ? `Sede pública: ${buildAddress()}` : 'Aquí se mostrará la sede pública con el estilo de mapa configurado en el módulo Negocio.';
+      $('#mapPreviewText').textContent = buildAddress() ? `Sede pública: ${buildAddress()}` : 'Publica una dirección y las coordenadas desde Negocio.';
       const brandLogo=$('#brandLogo');
       brandLogo.innerHTML = state.logoData ? `<img src="${state.logoData}" alt="Logo">` : '<div class="dot"></div>';
       renderProfileLinks();
@@ -615,8 +630,8 @@
       return `rgba(${r},${g},${b},${a})`;
     }
 
-    window.removeProduct=(i)=>{state.products.splice(i,1); saveState();}
-    window.removeCategory=(i)=>{state.categories.splice(i,1); saveState();}
+    window.removeProduct=(i)=>{if(!cloudAdmin)return;state.products.splice(i,1);saveState();}
+    window.removeCategory=(i)=>{if(!cloudAdmin)return;state.categories.splice(i,1);saveState();}
 
     document.addEventListener('click', (e)=>{
       const navBtn=e.target.closest('.nav-item');
@@ -625,7 +640,7 @@
         navBtn.classList.add('active');
         const key=navBtn.dataset.panel;
         $$('.panel-section').forEach(p=>p.classList.remove('active'));
-        $('#panel-'+key).classList.add('active');
+        $('#panel-'+key).classList.add('active');if(key==='business')setTimeout(refreshAdminMap,120);
       }
       const pinBtn=e.target.closest('.pin-tile');
       if(pinBtn){ state.pinIcon=pinBtn.dataset.pin; applyState(); }
@@ -633,11 +648,11 @@
       if(bgBtn){ state.pattern=bgBtn.dataset.pattern; applyState(); hydrateFormValues(); }
     });
 
-    $('#openAdminBtn').addEventListener('click', ()=>$('#adminModal').classList.add('show'));
+    $('#openAdminBtn').addEventListener('click', ()=>{$('#adminModal').classList.add('show');setTimeout(refreshAdminMap,120);});
     $('#closeAdminBtn').addEventListener('click', ()=>$('#adminModal').classList.remove('show'));
     $('#brandLogo').addEventListener('click', ()=>$('#profileModal').classList.add('show'));
     $('#closeProfileBtn').addEventListener('click', ()=>$('#profileModal').classList.remove('show'));
-    $('#saveAllBtn').addEventListener('click', ()=>{syncFormToState(); saveState();});
+    $('#saveAllBtn').addEventListener('click', ()=>{if(!cloudAdmin){alert('Inicia sesión como administrador para guardar.');return;} syncFormToState();saveState();});
 
     $('#logoUpload').addEventListener('change', (e)=>{
       const file=e.target.files?.[0]; if(!file) return;
@@ -647,6 +662,7 @@
     });
 
     $('#saveProductBtn').addEventListener('click', ()=>{
+      if(!cloudAdmin){alert('Debes iniciar sesión como administrador.');return;}
       const name=$('#productName').value.trim();
       if(!name){ alert('Escribe el nombre del producto o servicio.'); return; }
       state.products.unshift({
@@ -664,6 +680,7 @@
     });
 
     $('#addCategoryBtn').addEventListener('click', ()=>{
+      if(!cloudAdmin){alert('Debes iniciar sesión como administrador.');return;}
       const name=$('#categoryName').value.trim();
       if(!name){ alert('Escribe el nombre de la categoría.'); return; }
       state.categories.unshift({name, icon:$('#categoryIcon').value, type:$('#categoryType').value});
@@ -672,7 +689,7 @@
     });
 
     $('#routeBtn').addEventListener('click', ()=>{
-      const address = encodeURIComponent(buildAddress() || 'VibraErotica');
+      const address = encodeURIComponent(safeCoords().join(','));
       if(!navigator.geolocation){ alert('Tu navegador no soporta geolocalización.'); return; }
       navigator.geolocation.getCurrentPosition((pos)=>{
         const origin=`${pos.coords.latitude},${pos.coords.longitude}`;
@@ -681,11 +698,110 @@
       },()=> window.open(`https://www.google.com/maps/search/?api=1&query=${address}`,'_blank'));
     });
     $('#mapsBtn').addEventListener('click', ()=>{
-      const address = encodeURIComponent(buildAddress() || 'VibraErotica');
+      const address = encodeURIComponent(safeCoords().join(','));
       window.open(`https://www.google.com/maps/search/?api=1&query=${address}`,'_blank');
     });
 
+
+    // Supabase: only public anon key. Do NOT put service_role or CARTO secrets in config.js.
+    const cloudConfig = window.VIBRA_CONFIG || {};
+    const supabaseClient = (cloudConfig.supabaseUrl && cloudConfig.supabaseAnonKey && window.supabase)
+      ? window.supabase.createClient(cloudConfig.supabaseUrl, cloudConfig.supabaseAnonKey)
+      : null;
+    let cloudUser=null, cloudAdmin=false;
+    let publicMap, adminMap, publicMarker, adminMarker, currentTileLayer;
+    const mapTileStyles={Voyager:'voyager', Positron:'light_all', 'Dark Matter':'dark_all'};
+    const safeCoords=()=>[Number(state.lat),Number(state.lng)].every(Number.isFinite)
+      && Math.abs(Number(state.lat))<=90 && Math.abs(Number(state.lng))<=180
+      ? [Number(state.lat),Number(state.lng)] : [19.0522,-104.3158];
+    function cartoLayer(){
+      const style=mapTileStyles[state.mapStyle] || 'voyager';
+      return L.tileLayer(`https://{s}.basemaps.cartocdn.com/${style}/{z}/{x}/{y}{r}.png`,{
+        maxZoom:19, subdomains:'abcd', attribution:'&copy; OpenStreetMap contributors &copy; CARTO'
+      });
+    }
+    function refreshMaps(){
+      if(!window.L){ $('#mapPreviewText').textContent='No cargó Leaflet. Revisa conexión/CDN.';return; }
+      const pos=safeCoords();
+      try{
+        if(!publicMap){
+          publicMap=L.map('publicMap',{scrollWheelZoom:false}).setView(pos,14);
+          publicMarker=L.marker(pos).addTo(publicMap);
+        }
+        if(currentTileLayer) publicMap.removeLayer(currentTileLayer);
+        currentTileLayer=cartoLayer().addTo(publicMap);
+        publicMarker.setLatLng(pos).bindPopup(state.pinText||'Local');
+        publicMap.setView(pos,14);
+        setTimeout(()=>publicMap.invalidateSize(),100);
+        if($('#adminModal').classList.contains('show')) refreshAdminMap();
+      }catch(e){console.warn('Error CARTO:',e);$('#mapPreviewText').textContent='Error al cargar mapa: '+e.message;}
+    }
+    function refreshAdminMap(){
+      if(!window.L || !cloudAdmin)return;
+      const pos=safeCoords();
+      if(!adminMap){
+        adminMap=L.map('adminMap',{scrollWheelZoom:false}).setView(pos,15);
+        adminMarker=L.marker(pos,{draggable:true}).addTo(adminMap);
+        adminMarker.on('dragend',()=>setPoint(adminMarker.getLatLng()));
+        adminMap.on('click',e=>setPoint(e.latlng));
+      }
+      if(adminMap._cartoLayer)adminMap.removeLayer(adminMap._cartoLayer);
+      adminMap._cartoLayer=cartoLayer().addTo(adminMap);
+      adminMarker.setLatLng(pos);adminMap.setView(pos,15);
+      setTimeout(()=>adminMap.invalidateSize(),200);
+    }
+    function setPoint(p){
+      state.lat=Number(p.lat).toFixed(6);
+      state.lng=Number(p.lng).toFixed(6);
+      $('#lat').value=state.lat;$('#lng').value=state.lng;
+      if(adminMarker)adminMarker.setLatLng(p);
+      if(publicMarker)publicMarker.setLatLng(p);
+    }
+    async function initCloud(){
+      if(!supabaseClient){$('#cloudStatus').textContent='Configura config.js con la URL y anon key de Supabase.';return;}
+      const {data:{user}}=await supabaseClient.auth.getUser();
+      cloudUser=user;
+      if(user){
+        const {data:role,error:rerr}=await supabaseClient.from('staff_roles').select('role').eq('user_id',user.id).maybeSingle();
+        cloudAdmin=!rerr && !!role && ['admin','owner','propietario'].includes(role.role);
+      }
+      $('#loginBox').style.display=cloudAdmin?'none':'block';
+      $('#openAdminBtn').style.display='inline-flex';
+      $$('.panel-section').forEach(p=>p.style.display=cloudAdmin?'':'none');
+      $('#sessionMail').textContent=user?.email||'Iniciar sesión';
+      $('#cloudStatus').textContent=cloudAdmin?'Conectado como administrador':'Solo consulta pública';
+      const {data,error}=await supabaseClient.from('vibra_site_settings').select('config').eq('id',1).maybeSingle();
+      if(error){console.warn(error);$('#cloudStatus').textContent='Error al leer ajustes: '+error.message;return;}
+      if(data?.config){
+        const localCarto=state.cartoApi;
+        state={...state,...data.config,cartoApi:localCarto};
+        localStorage.setItem('vibra_admin_state',JSON.stringify(state));
+        applyState();refreshMaps();
+      }
+    }
+    async function saveCloud(){
+      if(!supabaseClient){$('#cloudStatus').textContent='Cambios solo locales: falta config.js';return;}
+      if(!cloudAdmin){$('#cloudStatus').textContent='Guardado local. Inicia sesión como admin para publicar.';return;}
+      const {cartoApi,logoData,...publicData}=state;
+      // Don't publish CARTO credentials or base64 uploads in public configuration.
+      const {error}=await supabaseClient.from('vibra_site_settings').update({config:publicData,updated_at:new Date().toISOString()}).eq('id',1);
+      if(error)throw error;
+      $('#cloudStatus').textContent='Guardado en Supabase';
+      refreshMaps();
+    }
+    $('#loginBtn').addEventListener('click',async()=>{
+      if(!supabaseClient){$('#authStatus').textContent='Configura config.js primero';return;}
+      const {error}=await supabaseClient.auth.signInWithPassword({email:$('#authEmail').value,password:$('#authPassword').value});
+      if(error){$('#authStatus').textContent=error.message;return;}
+      await initCloud();
+    });
+    $('#signOutBtn').addEventListener('click',async()=>{if(supabaseClient)await supabaseClient.auth.signOut();cloudUser=null;cloudAdmin=false;$('#openAdminBtn').style.display='inline-flex';$('#loginBox').style.display='block';$$('.panel-section').forEach(p=>p.style.display='none');$('#sessionMail').textContent='Sin sesión';});
+    $('#lat').addEventListener('change',()=>{syncFormToState();refreshMaps();});
+    $('#lng').addEventListener('change',()=>{syncFormToState();refreshMaps();});
+    $('#mapStyle').addEventListener('change',()=>{syncFormToState();refreshMaps();});
     applyState();
+    refreshMaps();
+    initCloud().catch(err=>console.error('Supabase:',err));
   </script>
 </body>
 </html>
