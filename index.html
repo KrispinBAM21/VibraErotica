@@ -12,7 +12,7 @@
 
 <style>
 :root{
-  --primary:#c62828; --secondary:#fff3f3; --accent:#ffb300; --text:#232323; --card:#ffffff;
+  --primary:#e50091; --secondary:#27182b; --accent:#eaa9cb; --text:#232323; --card:#ffffff;
   --site-bg:#f7f7f9; --muted:#6b7280; --line:#e5e7eb; --success:#16834b; --warning:#b7791f; --danger:#b42318;
   --radius:18px; --product-icon-size:72px; --product-icon-color:#c62828; --font:'Inter',sans-serif;
   --pattern-opacity:.055; --bg-image-opacity:.18;
@@ -401,7 +401,7 @@ const defaults={
   map:{provider:'carto',apiKey:'',style:'voyager',attribution:'OpenStreetMap contributors, CARTO'},
   payments:[{id:'pay1',title:'Transferencia bancaria',data:'Configurar en Administración'},{id:'pay2',title:'Depósito en tienda de conveniencia',data:'Configurar en Administración'}],
   shipping:{base:35,perKm:8,margin:20,rounding:5,freeFrom:600,roundTrip:false,vehicle:'moto',fuel:'Magna',efficiency:{moto:28,auto:13,truck:9,bike:9999},fuelPrice:{Magna:24.5,Premium:26.4,'Diésel':25.9}},
-  design:{primary:'#c62828',secondary:'#fff3f3',accent:'#ffb300',text:'#232323',card:'#ffffff',siteBg:'#f7f7f9',bgType:'solid',grad1:'#f7f7f9',grad2:'#fff0e6',gradAngle:135,bgImage:'',bgOpacity:.18,pattern:true,patternOpacity:.055,iconColor:'#c62828',iconSize:72,font:'Inter',rounded:true}
+  design:{primary:'#e50091',secondary:'#27182b',accent:'#eaa9cb',text:'#232323',card:'#ffffff',siteBg:'#f7f7f9',bgType:'solid',grad1:'#f7f7f9',grad2:'#fff0e6',gradAngle:135,bgImage:'',bgOpacity:.18,pattern:true,patternOpacity:.055,iconColor:'#c62828',iconSize:72,font:'Inter',rounded:true}
  },
  products:[
   {id:'ve1',name:'Lencería elegante',description:'Colección de lencería para adultos.',category:'Lencería',price:450,stock:12,icon:'gift',image:'',active:true},
@@ -5119,47 +5119,35 @@ window.addEventListener('focus',()=>{if(block()&&db())load().catch(console.warn)
 </style>
 <script id="vibra-servicios-admin">
 (()=>{
- const $=s=>document.querySelector(s);
- const e=s=>String(s??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
- let updating=false;
- const client=()=>typeof supabaseClient!=='undefined'?supabaseClient:null;
- function attach(){
-   const pane=$('#adminContent'),admin=$('#adminModal.show');if(!pane||!admin)return;
-   const tab=typeof activeAdmin!=='undefined'?activeAdmin:'';
-   const section=$('#vibraServicesEditor');
-   if(tab!=='products'){
-     if(section)section.remove();
-   }else if(!section){
-     const section=document.createElement('section');section.id='vibraServicesEditor';section.className='section-card';
-     section.innerHTML=`<h3>Servicios de masaje y profesionales</h3><p class="small muted">Crea las fichas públicas de profesionales. Se guardan en Supabase.</p><div class="admin-grid two"><label class="field">Nombre profesional<input id="vibraStaffName" class="input" maxlength="100"></label><label class="field">Teléfono de contacto<input id="vibraStaffPhone" class="input" maxlength="25"></label><label class="field">Descripción<textarea id="vibraStaffBio" class="textarea"></textarea></label><label class="field">Servicio<input id="vibraServiceName" class="input" value="Masaje de bienestar"></label><label class="field">Tarifa por hora<input id="vibraServicePrice" class="input" type="number" min="0" step="0.01"></label><label class="field">Duración (minutos)<input id="vibraServiceDuration" class="input" value="30,60,90" placeholder="30,60,90"></label></div><div class="toolbar"><button class="btn" id="vibraSaveProfessional">Guardar profesional y servicio</button></div><p id="vibraServiceStatus" role="status" class="small muted"></p>`;
-     pane.append(section);
-     $('#vibraSaveProfessional').onclick=async()=>{
-       const db=client(),status=$('#vibraServiceStatus');if(!db){status.textContent='Sin conexión Supabase';return}
-       const name=$('#vibraStaffName').value.trim(),service=$('#vibraServiceName').value.trim(),phone=$('#vibraStaffPhone').value.trim(),bio=$('#vibraStaffBio').value.trim(),price=Number($('#vibraServicePrice').value);
-       const durations=$('#vibraServiceDuration').value.split(',').map(v=>Number(v.trim())).filter(v=>Number.isInteger(v)&&v>=15&&v<=240);
-       if(!name||!service||!Number.isFinite(price)||price<0||!durations.length){status.textContent='Completa profesional, servicio, tarifa y duraciones válidas.';return}
-       try{
-         const {data:u,error:ue}=await db.auth.getUser();if(ue)throw ue;if(!u.user)throw Error('Inicia sesión');
-         const {data:role,error:re}=await db.from('staff_roles').select('role').eq('user_id',u.user.id).maybeSingle();if(re)throw re;
-         if(!['admin','manager'].includes(role?.role))throw Error('No tienes permisos de edición');
-         const {data:p,error:pe}=await db.from('practitioners').insert({display_name:name,contact_phone:phone,bio,active:true}).select('id').single();if(pe)throw pe;
-         const {data:s,error:se}=await db.from('services').insert({name:service,hourly_price:price,active:true}).select('id').single();if(se)throw se;
-         const {error:le}=await db.from('practitioner_services').insert({practitioner_id:p.id,service_id:s.id});if(le)throw le;
-         const {error:de}=await db.from('service_durations').insert(durations.map(minutes=>({service_id:s.id,minutes})));if(de)throw de;
-         status.textContent='Profesional y servicio guardados. Configura horarios y modalidades en Negocio.';
-         $('#vibraStaffName').value='';
-       }catch(error){status.textContent='No se guardó: '+error.message}
-     };
-   }
-   if(tab==='products'){
-     const btn=$('#vibraCatalogSuggest');if(!btn){const toolbar=$('#adminContent .toolbar');if(toolbar){const b=document.createElement('button');b.className='btn secondary';b.id='vibraCatalogSuggest';b.textContent='Catálogo sugerido para México';toolbar.append(b);b.onclick=()=>{const target=$('#vibraServicesEditor');if(!target)return;let box=$('#vibraCatalogNames');if(!box){box=document.createElement('div');box.id='vibraCatalogNames';box.className='section-card';target.before(box)}box.innerHTML='<h3>Referencias para crear artículos</h3><p>Agua: Bonafont, Ciel, Epura. Refrescos: Coca-Cola, Pepsi, Sprite, 7Up, Jarritos. Cervezas: Corona, Modelo, Victoria, Tecate, Indio. Licores: Bacardí, José Cuervo, Don Julio, Smirnoff, Johnnie Walker. Cigarros: Marlboro, Camel, Pall Mall. Cada producto requiere precio, disponibilidad y verificación de edad aplicable.</p>';};}}
-   }
-   if(tab==='business'){
-     const original=$('#v10Panel');if(original){let wrap=$('#vibraAdminExtras');if(!wrap){wrap=document.createElement('section');wrap.id='vibraAdminExtras';wrap.className='section-card';wrap.innerHTML='<h3>Tarifas, complementos y promociones</h3>';pane.append(wrap)}if(original.parentNode!==wrap)wrap.append(original)}
-   }
+ const q=s=>document.querySelector(s), esc=s=>String(s??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]));
+ const client=()=>typeof supabaseClient==='undefined'?null:supabaseClient;
+ let mediaFiles=[],busy=false,editorOpened=false;
+ const setStatus=s=>{const el=q('#vibraServiceStatus');if(el)el.textContent=s};
+ const moneyValue=s=>{const v=Number(s);return Number.isFinite(v)&&v>=0?v:null};
+ function view(){
+   const pane=q('#adminContent');if(!pane||!q('#adminModal.show')||typeof activeAdmin==='undefined'||activeAdmin!=='products')return;
+   const heading=q('#vibraServicesEditor');if(heading)return;
+   const section=document.createElement('section');section.id='vibraServicesEditor';section.className='section-card';
+   section.innerHTML=`<div class="toolbar"><button type="button" class="btn secondary" id="vibraNewService">${UI.plus}<span>Nuevo servicio</span></button></div><section id="vibraServiceForm" hidden><h3>Nuevo servicio y profesional</h3><div class="admin-grid two"><label class="field">Nombre profesional<input id="vibraStaffName" class="input" maxlength="100"></label><label class="field">Nombre del servicio<input id="vibraServiceName" class="input" maxlength="120" value="Masaje de bienestar"></label><label class="field">Descripción<textarea id="vibraStaffBio" class="textarea" maxlength="2500"></textarea></label><label class="field">Tarifa del servicio (MXN)<input id="vibraServicePrice" class="input" type="number" min="0" step="0.01"></label><label class="field">Duraciones disponibles (minutos, separadas por comas)<input id="vibraServiceDuration" class="input" value="30,60,90"></label><label class="field">Teléfono (opcional)<input id="vibraStaffPhone" class="input" maxlength="25"></label><label class="field">Instagram (opcional)<input id="vibraInstagram" class="input" type="url" placeholder="https://instagram.com/..."></label><label class="field">Facebook (opcional)<input id="vibraFacebook" class="input" type="url" placeholder="https://facebook.com/..."></label><label class="field">TikTok (opcional)<input id="vibraTiktok" class="input" type="url" placeholder="https://tiktok.com/@..."></label><label class="field">Fotos y videos (hasta 15 fotos y 10 videos; cada video de máximo 3 minutos)<input id="vibraMedia" class="input" type="file" accept="image/jpeg,image/png,image/webp,video/mp4,video/webm" multiple></label></div><div id="vibraMediaSummary" class="small muted"></div><div class="toolbar"><button type="button" class="btn" id="vibraSaveProfessional">Guardar profesional y servicio</button><button type="button" class="btn secondary" id="vibraCancelService">Cancelar</button></div><p id="vibraServiceStatus" class="small muted" role="status"></p></section>`;
+   const toolbar=pane.querySelector('.toolbar');(toolbar||pane).after(section);
+   q('#vibraNewService').onclick=()=>{editorOpened=!editorOpened;q('#vibraServiceForm').hidden=!editorOpened};
+   q('#vibraCancelService').onclick=()=>{editorOpened=false;q('#vibraServiceForm').hidden=true};
+   q('#vibraMedia').onchange=async e=>{mediaFiles=[...e.target.files];try{await validateFiles(mediaFiles);q('#vibraMediaSummary').textContent=mediaFiles.length+' archivos seleccionados';}catch(err){mediaFiles=[];e.target.value='';q('#vibraMediaSummary').textContent=err.message}};
+   q('#vibraSaveProfessional').onclick=saveProfessional;
  }
- const observer=new MutationObserver(()=>{if(updating)return;updating=true;requestAnimationFrame(()=>{updating=false;attach()})});
- document.addEventListener('DOMContentLoaded',()=>{observer.observe(document.body,{childList:true,subtree:true});attach()});
+ async function videoLength(file){return new Promise((resolve,reject)=>{const url=URL.createObjectURL(file),v=document.createElement('video');v.preload='metadata';v.onloadedmetadata=()=>{const duration=v.duration;URL.revokeObjectURL(url);resolve(duration)};v.onerror=()=>{URL.revokeObjectURL(url);reject(Error('No se pudo verificar la duración de '+file.name))};v.src=url})}
+ async function validateFiles(files){const images=files.filter(f=>f.type.startsWith('image/')),videos=files.filter(f=>f.type.startsWith('video/'));if(images.length>15||videos.length>10)throw Error('Máximo 15 fotos y 10 videos');if(files.some(f=>!['image/jpeg','image/png','image/webp','video/mp4','video/webm'].includes(f.type)))throw Error('Formato de archivo no permitido');for(const f of files){if(f.size>100*1024*1024)throw Error('El archivo '+f.name+' excede 100 MB');if(f.type.startsWith('video/')&&await videoLength(f)>180)throw Error('Cada video debe durar 3 minutos o menos: '+f.name)} }
+ async function saveProfessional(){if(busy)return;busy=true;const button=q('#vibraSaveProfessional');button.disabled=true;try{
+   const db=client();if(!db)throw Error('Supabase no está disponible');const name=q('#vibraStaffName').value.trim(),service=q('#vibraServiceName').value.trim(),bio=q('#vibraStaffBio').value.trim(),phone=q('#vibraStaffPhone').value.trim(),price=moneyValue(q('#vibraServicePrice').value),durations=[...new Set(q('#vibraServiceDuration').value.split(',').map(x=>Number(x.trim())))];if(!name||!service||price===null||!durations.length||durations.some(x=>!Number.isInteger(x)||x<15||x>480||x%15))throw Error('Revisa nombre, servicio, tarifa y duraciones (múltiplos de 15 min)');await validateFiles(mediaFiles);
+   const {data:{user},error:ue}=await db.auth.getUser();if(ue)throw ue;if(!user)throw Error('Inicia sesión');const {data:role,error:re}=await db.from('staff_roles').select('role').eq('user_id',user.id).maybeSingle();if(re)throw re;if(!['admin','manager'].includes(role?.role))throw Error('No tienes permisos');
+   const socials={instagram:q('#vibraInstagram').value.trim(),facebook:q('#vibraFacebook').value.trim(),tiktok:q('#vibraTiktok').value.trim()};for(const val of Object.values(socials))if(val&&!/^https:\/\//i.test(val))throw Error('Las redes deben comenzar con https://');
+   const {data:p,error:pe}=await db.from('practitioners').insert({display_name:name,bio,contact_phone:phone||null,social_links:socials,active:true}).select('id').single();if(pe)throw pe;
+   const {data:s,error:se}=await db.from('services').insert({name:service,description:bio,hourly_price:price,active:true}).select('id').single();if(se)throw se;
+   for(const [table,payload] of [['practitioner_services',[{practitioner_id:p.id,service_id:s.id}]],['service_durations',durations.map(minutes=>({service_id:s.id,minutes}))]]){const {error}=await db.from(table).insert(payload);if(error)throw error}
+   let uploaded=0;for(const [index,file] of mediaFiles.entries()){const safe=file.name.replace(/[^a-zA-Z0-9._-]/g,'_');const path='practitioners/'+p.id+'/'+crypto.randomUUID()+'_'+safe;const {error:up}=await db.storage.from('catalog-media').upload(path,file,{contentType:file.type,upsert:false});if(up)throw Error('Profesional guardado; falló archivo '+file.name+': '+up.message);const {error:me}=await db.from('practitioner_media').insert({practitioner_id:p.id,object_path:path,media_type:file.type.startsWith('video/')?'video':'image',sort_order:index,duration_seconds:file.type.startsWith('video/')?Math.ceil(await videoLength(file)):null});if(me)throw Error('Archivo subido, registro incompleto: '+me.message);uploaded++}
+   setStatus('Servicio publicado. Archivos adjuntos: '+uploaded+'. Configura horarios de atención y modalidades.');mediaFiles=[];q('#vibraMedia').value='';
+ }catch(err){setStatus('No se completó el guardado: '+err.message)}finally{busy=false;button.disabled=false}}
+ let pending=false;const observer=new MutationObserver(()=>{if(pending)return;pending=true;requestAnimationFrame(()=>{pending=false;view()})});document.addEventListener('DOMContentLoaded',()=>{observer.observe(document.body,{subtree:true,childList:true});view()});
 })();
 </script>
 </body>
