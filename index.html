@@ -5170,5 +5170,67 @@ window.addEventListener('focus',()=>{if(block()&&db())load().catch(console.warn)
  let pending=false;const observer=new MutationObserver(()=>{if(pending)return;pending=true;requestAnimationFrame(()=>{pending=false;view()})});document.addEventListener('DOMContentLoaded',()=>{observer.observe(document.body,{subtree:true,childList:true});view()});
 })();
 </script>
+
+<style id="vibra-catalog-unificado">
+#vibraServiceCatalog{display:contents}
+#vibraServiceCatalog .vibra-service-card{background:var(--card);border:1px solid var(--line);border-radius:var(--radius);padding:12px;min-width:0;display:flex;flex-direction:column;gap:10px}
+#vibraServiceCatalog .vibra-service-photo{height:176px;width:100%;object-fit:contain;background:var(--secondary);border-radius:12px}
+#vibraServiceCatalog .vibra-service-content{flex:1;min-width:0}
+#vibraServiceCatalog .vibra-service-content h3{margin:0 0 6px;font-size:1rem}
+#vibraServiceCatalog .vibra-service-content p{font-size:.82rem;color:var(--muted);margin:4px 0}
+#vibraServiceCatalog .vibra-service-card button{margin-top:auto}
+#v9Section>.v9panel:has(#v9Professionals)> .v9head,#v9Section>.v9panel:has(#v9Professionals)> .v9muted,#v9Professionals{display:none!important}
+.vibra-demo-card{border:1px dashed var(--primary);background:var(--card);padding:14px;border-radius:14px}
+.vibra-demo-card strong{display:block;margin:10px 0}.vibra-demo-card small{color:var(--muted)}
+</style>
+<script id="vibra-catalog-integracion">
+(()=>{
+'use strict';
+const $=s=>document.querySelector(s);
+const escText=s=>String(s??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+let lastServices='';
+function updateServices(){
+  const grid=$('#catalogGrid'),source=$('#v9Professionals');if(!grid||!source)return;
+  let wrap=$('#vibraServiceCatalog');if(!wrap){wrap=document.createElement('section');wrap.id='vibraServiceCatalog';wrap.className='vibra-services-inline';grid.append(wrap)}
+  if(wrap.parentElement!==grid)grid.append(wrap);
+  const cards=[...source.querySelectorAll('article[data-p],article.v9site')];
+  const category=typeof currentCategory==='string'?currentCategory:'Todos';
+  const term=($('#searchInput')?.value||'').trim().toLowerCase();
+  const show=category==='Todos'||/masaje|servicio|bienestar/i.test(category);
+  const html=show?cards.filter(c=>c.textContent.toLowerCase().includes(term)).map(c=>{
+    const action=c.querySelector('button[data-p]'),id=action?.dataset.p||'';
+    const img=c.querySelector('img'),title=c.querySelector('h3')?.textContent||'Servicio',desc=c.querySelector('.v9staff p')?.textContent||'';
+    const ps=[...c.querySelectorAll('p')].map(x=>x.textContent).filter(Boolean);
+    return `<article class="vibra-service-card"><div>${img?`<img class="vibra-service-photo" src="${escText(img.getAttribute('src'))}" alt="${escText(title)}">`:`<div class="vibra-service-photo" style="display:grid;place-items:center;color:var(--primary)">${typeof UI!=='undefined'?UI.business:''}</div>`}</div><div class="vibra-service-content"><h3>${escText(title)}</h3><p>${escText(desc)}</p>${ps.slice(1,3).map(x=>`<p>${escText(x)}</p>`).join('')}</div><button class="btn" data-vibra-book="${escText(id)}">Reservar</button></article>`;
+  }).join(''):'';
+  if(html!==lastServices){wrap.innerHTML=html;lastServices=html;}
+  wrap.hidden=!html;
+  if(html){grid.querySelectorAll(':scope > .section-card').forEach(n=>{if(n.textContent.includes('No hay productos para mostrar'))n.style.display='none'});}
+  wrap.querySelectorAll('[data-vibra-book]').forEach(b=>b.onclick=()=>{
+    const real=[...source.querySelectorAll('button[data-p]')].find(x=>x.dataset.p===b.dataset.vibraBook);
+    if(real){real.click();$('#v9Modalities')?.scrollIntoView({behavior:'smooth',block:'center'});}
+  });
+}
+const observer=new MutationObserver(changes=>{if(changes.some(x=>x.target.id==='v9Professionals'||x.target.closest?.('#v9Professionals'))){updateServices()}});
+function init(){const src=$('#v9Professionals');if(src)observer.observe(src,{childList:true,subtree:true});updateServices();}
+const orig=typeof renderCatalog==='function'?renderCatalog:null;
+if(orig){renderCatalog=function(){const out=orig.apply(this,arguments);queueMicrotask(updateServices);return out};}
+const demo=[['Lencería elegante','Lencería'],['Aceite para masaje','Bienestar'],['Masaje relajante (ejemplo)','Servicios'],['Accesorio para parejas','Accesorios']];
+function adminButtons(){const host=$('#adminContent');if(!host||typeof activeAdmin==='undefined'||activeAdmin!=='products')return;
+  const toolbar=host.querySelector('.toolbar');if(!toolbar||host.querySelector('#vibraNewService'))return;
+  const create=document.createElement('button');create.type='button';create.id='vibraNewService';create.className='btn secondary';create.textContent='Nuevo servicio';create.onclick=()=>{
+    const section=$('#v9Admin');if(section){section.hidden=false;section.scrollIntoView({behavior:'smooth',block:'start'});}else alert('El editor de profesionales requiere una sesión autorizada y el módulo de servicios de Supabase.');
+  };toolbar.append(create);
+  const preview=document.createElement('button');preview.type='button';preview.className='btn ghost';preview.textContent='Vista previa del catálogo';preview.onclick=()=>{
+    let panel=host.querySelector('#vibraPreview');if(panel){panel.remove();return;}
+    panel=document.createElement('section');panel.id='vibraPreview';panel.className='section-card';panel.innerHTML='<h3>Vista previa (datos de muestra, no publicados)</h3><div class="grid" style="padding:8px 0">'+demo.map(([name,cat])=>`<article class="vibra-demo-card"><strong>${escText(name)}</strong><small>${escText(cat)}</small></article>`).join('')+'</div>';
+    toolbar.after(panel);
+  };toolbar.append(preview);
+}
+const adminObserver=new MutationObserver(()=>adminButtons());
+function start(){init();let tries=0;const wait=setInterval(()=>{if($('#v9Professionals')){clearInterval(wait);init()}else if(++tries>40)clearInterval(wait)},500);const host=$('#adminContent');if(host)adminObserver.observe(host,{childList:true});adminButtons();}
+if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',start);else start();
+})();
+</script>
 </body>
 </html>
