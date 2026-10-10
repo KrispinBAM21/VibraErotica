@@ -348,11 +348,25 @@ const FOOD = {
 };
 
 
+FOOD['vino']='<svg viewBox="0 0 64 64"><path d="M18 9h28v10c0 11-5 17-14 17S18 30 18 19zM32 36v17M20 54h24M19 18h26"/></svg>';
+FOOD['licor']='<svg viewBox="0 0 64 64"><path d="M25 7h14v9l5 5v31H20V21l5-5zM25 16h14M23 29h18v13H23z"/></svg>';
+FOOD['coctel']='<svg viewBox="0 0 64 64"><path d="M12 15h40L32 36zM32 36v18M20 54h24M35 15l8-10M17 19h30"/></svg>';
+FOOD['cigarros']='<svg viewBox="0 0 64 64"><path d="M9 34h39v9H9zM40 34v9M48 34v9M16 25c-5-5 6-7 1-15M29 26c-5-5 6-8 1-17"/></svg>';
+FOOD['copa']='<svg viewBox="0 0 64 64"><path d="M20 12h24l-3 15a10 10 0 0 1-18 0zM32 35v17M20 52h24"/></svg>';
+FOOD['lingerie']='<svg viewBox="0 0 64 64"><path d="M16 12v12c0 9-7 11-7 21 16 9 30 9 46 0 0-10-7-12-7-21V12M16 17l16 12 16-12M20 47l-3 9m27-9 3 9"/></svg>';
+FOOD['masaje']='<svg viewBox="0 0 64 64"><circle cx="18" cy="19" r="6"/><path d="M10 41h44M17 34l10-8 10 4 12-7M10 47h44M24 47v7m20-7v7"/></svg>';
+FOOD['adultos']='<svg viewBox="0 0 64 64"><rect x="10" y="13" width="44" height="39" rx="10"/><path d="M18 26h15M18 35h20M39 23l7 7m0-7-7 7"/></svg>';
+FOOD['agua-mineral']='<svg viewBox="0 0 64 64"><path d="M25 8h14v7l5 8v30H20V23l5-8zM24 32h16M27 9h10"/></svg>';
+FOOD['cerveza-botella']='<svg viewBox="0 0 64 64"><path d="M26 6h12v10l5 7v30H21V23l5-7zM26 16h12M22 34h20v13H22z"/></svg>';
+FOOD['persona']='<svg viewBox="0 0 64 64"><circle cx="32" cy="16" r="10"/><path d="M13 55V43c0-10 8-17 19-17s19 7 19 17v12"/></svg>';
 const FOOD_PACKS={
   'Clásicos':['plate','burger','pizza','taco','burrito','hotdog','fries','chicken','salad','soup','sandwich','torta','quesadilla','eggs'],
   'Internacional':['sushi','pasta','ramen','steak','fish','shrimp','nachos','wings','kebab','croissant','pancakes','waffle','cereal','avocado','chili','corn','bread'],
   'Bebidas':['coffee','soda','juice','water','beer','milkshake','tea','smoothie','lemonade','boba'],
-  'Postres':['icecream','cake','cookie','donut','fruit','muffin','cupcake','chocolate','popsicle']
+  'Postres':['icecream','cake','cookie','donut','fruit','muffin','cupcake','chocolate','popsicle'],
+  'Vinos y licores':['vino','licor','coctel','copa','beer','cerveza-botella'],
+  'Cigarros':['cigarros'],
+  'Bienestar +18':['lingerie','masaje','adultos','persona','agua-mineral']
 };
 let activeFoodPack='Todos';
 function foodIconKeys(){
@@ -609,10 +623,18 @@ function addConfiguredTileLayer(map,containerId){
   const url=cartoTileUrl();
   if(!url){showMapConfigNeeded(containerId);return false}
   try{
-    L.tileLayer(url,{
+    const tiles=L.tileLayer(url,{
       maxZoom:20,
       attribution:'&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors, &copy; <a href="https://carto.com/attribution/">CARTO</a>'
     }).addTo(map);
+    let failures=0;
+    tiles.on('tileerror',async()=>{
+      if(++failures!==2)return;
+      let detail='No fue posible descargar las teselas CARTO.';
+      try{const probe=url.replace('{z}','4').replace('{x}','3').replace('{y}','7');const response=await fetch(probe);if(!response.ok)detail+=' HTTP '+response.status+': '+(await response.text()).slice(0,180)}catch(error){detail+=' '+error.message}
+      const host=document.getElementById(containerId);
+      if(host&&!host.querySelector('.vibra-map-error')){const note=document.createElement('div');note.className='vibra-map-error';note.textContent=detail;host.append(note)}
+    });
     return true;
   }catch(e){
     showMapConfigNeeded(containerId);
@@ -1197,7 +1219,7 @@ const CUSTOMER_ICON=FOOD.customer,GOOGLE_ICON='<svg viewBox="0 0 24 24" aria-hid
 function v4Modal(id,title){let m=document.getElementById(id);if(!m){m=document.createElement('div');m.className='modal';m.id=id;m.innerHTML=`<div class="modal-head"><strong>${esc(title)}</strong><button class="icon-btn" data-close-modal="${id}" aria-label="Cerrar">${UI.close}</button></div><div class="modal-body"></div>`;document.body.append(m)}return m}
 async function customerRpc(action,data={}){if(!supabaseClient||!customerSession)throw Error('Inicia sesión.');const r=await supabaseClient.rpc('catalog_customer',{p_action:action,p_data:data});if(r.error)throw r.error;return r.data}
 function syncAdminVisibility(){const b=document.getElementById('adminBtn');const allowed=!!adminSession&&(!!panelAccess.master||panelAccess.owner||panelAccess.modules.length>0);b.hidden=!allowed;b.style.display=allowed?'':'none';b.setAttribute('aria-hidden',String(!allowed));}
-function clearCustomerState(){customerSerial++;customerSession=null;customerProfile=null;customerAddresses=[];avatarDraft='';accountError='';adminSession=null;panelAccess={owner:false,master:false,modules:[]};panelEpoch++;pendingCloudModules.clear();clearTimeout(cloudSyncTimer);state.orders=[];checkout.name='';checkout.phone='';checkout.callPhone='';checkout.address='';checkout.lat=checkout.lng=null;checkout.distance=checkout.shipping=0;checkout.savedAddressId='';orderRequestId='';sessionStorage.removeItem('foodCatalog.orderRequestId');lastPdfBlob=null;lastOrderId=null;lastQuote=null;publicQuoteSerial++;addressEditorSerial++;saveLocal();for(const id of ['adminModal','customerProfileModal','foodAddressModal','summaryModal']){const m=document.getElementById(id);if(m){closeModal(id);if(!['summaryModal','adminModal'].includes(id))m.querySelector('.modal-body')?.replaceChildren()}}document.getElementById('adminTabs').replaceChildren();document.getElementById('adminContent').replaceChildren();syncAdminVisibility();renderAccountButton();if(publicFoodPin){publicFoodMap.removeLayer(publicFoodPin);publicFoodPin=null}if(publicFoodRoute){publicFoodMap.removeLayer(publicFoodRoute);publicFoodRoute=null}document.getElementById('foodDestination').value='';document.getElementById('foodQuote').textContent='Selecciona un destino para consultar el recorrido.';renderSavedAddressShortcut()}
+function clearCustomerState(){customerSerial++;customerSession=null;customerProfile=null;customerAddresses=[];avatarDraft='';accountError='';adminSession=null;panelAccess={owner:false,master:false,modules:[]};panelEpoch++;pendingCloudModules.clear();clearTimeout(cloudSyncTimer);state.orders=[];checkout.name='';checkout.phone='';checkout.callPhone='';checkout.address='';checkout.lat=checkout.lng=null;checkout.distance=checkout.shipping=0;checkout.savedAddressId='';orderRequestId='';sessionStorage.removeItem('foodCatalog.orderRequestId');lastPdfBlob=null;lastOrderId=null;lastQuote=null;publicQuoteSerial++;addressEditorSerial++;saveLocal();for(const id of ['adminModal','customerProfileModal','foodAddressModal','summaryModal']){const m=document.getElementById(id);if(m){closeModal(id);if(!['summaryModal','adminModal'].includes(id))m.querySelector('.modal-body')?.replaceChildren()}}document.getElementById('adminTabs').replaceChildren();document.getElementById('adminContent').replaceChildren();syncAdminVisibility();renderAccountButton();if(publicFoodPin){publicFoodMap.removeLayer(publicFoodPin);publicFoodPin=null}if(publicFoodRoute){publicFoodMap.removeLayer(publicFoodRoute);publicFoodRoute=null}document.getElementById('foodDestination').value='';document.getElementById('foodQuote').textContent='Utiliza tu ubicación para localizar el establecimiento.';renderSavedAddressShortcut()}
 adminSignOut=async function(){clearCustomerState();if(supabaseClient){const {error}=await supabaseClient.auth.signOut();if(error){toast(error.message,'error');return}}toast('Sesión cerrada.','ok')};
 panelVerify=async function(){panelAccess={owner:false,master:false,modules:[]};syncAdminVisibility();if(!supabaseClient||!adminSession)return false;const who=adminSession.user.id,epoch=customerSerial;const {data,error}=await supabaseClient.auth.getUser();if(error||!data?.user||adminSession?.user.id!==who||epoch!==customerSerial)return false;try{const r=await supabaseClient.rpc('catalog_panel',{p_action:'access',p_payload:{}});if(r.error)throw r.error;if(adminSession?.user.id!==who||epoch!==customerSerial)return false;panelAccess={owner:false,master:false,modules:[],...r.data};}catch{}syncAdminVisibility();return panelAccess.master||panelAccess.owner||panelAccess.modules.length>0};
 const v4Can=panelCan;panelCan=function(id){if(id==='subscription')return !!adminSession&&!!panelAccess.master;return v4Can(id)};
@@ -1239,7 +1261,7 @@ async function renderSubscription(c,epoch){await refreshSiteStatus();const histo
 const v4Catalog=renderCatalog;renderCatalog=function(){if(siteStatus&&!siteStatus.active&&!siteStatus.master){document.getElementById('catalogGrid').replaceChildren();return}v4Catalog()};
 state.orders=[];saveLocal();
 // Inicialización pública: el mapa no depende de iniciar sesión ni de guardar un domicilio.
-const foodPublic=document.createElement('section');foodPublic.id='foodDeliveryPlanner';foodPublic.className='food-delivery-planner';foodPublic.innerHTML=`<div class="section-card"><span class="eyebrow">UBICACIÓN Y ENTREGA</span><h2>Encuentra el local y calcula tu envío</h2><p class="small muted" id="foodOriginLabel">${esc(state.config.origin.address)}</p><div id="foodSavedAddresses"></div><div class="address-picker-row"><label class="field">Calle o dirección de entrega<input class="input" id="foodDestination" placeholder="Busca una calle o marca tu destino en el mapa"></label>${panelButton('foodSearchDestination','Buscar',UI.search,'secondary')}${panelButton('foodGpsDestination','Mi ubicación',UI.pin,'secondary')}</div><div class="map" id="foodPublicMap"></div><p class="small muted">El marcador Local indica el punto de salida. Ajusta el marcador de entrega a la entrada.</p></div><aside class="section-card"><h3>Resumen de costos</h3><div id="foodQuote">Selecciona un destino para consultar el recorrido.</div><div class="toolbar">${panelButton('foodCalculate','Actualizar recorrido',UI.refresh,'secondary')}${panelButton('foodGoCart','Revisar pedido',UI.cart)}</div><div id="foodSocials" class="toolbar"></div></aside>`;document.getElementById('catalogGrid').after(foodPublic);document.getElementById('foodGoCart').onclick=openDrawer;document.getElementById('foodCalculate').onclick=e=>panelRun(e.currentTarget,()=>quoteFoodRoute());document.getElementById('foodDestination').oninput=e=>{checkout.address=e.target.value;checkout.savedAddressId=''};document.getElementById('foodSearchDestination').onclick=e=>panelRun(e.currentTarget,async()=>{const p=await foodSearch(document.getElementById('foodDestination').value);checkout.address=p.address;document.getElementById('foodDestination').value=p.address;await chooseFoodDestination(p.lat,p.lng)});document.getElementById('foodGpsDestination').onclick=e=>panelRun(e.currentTarget,async()=>{const p=await foodGps();checkout.address=document.getElementById('foodDestination').value||'Ubicación actual';await chooseFoodDestination(p.coords.latitude,p.coords.longitude)});renderAccountButton();renderSavedAddressShortcut();setTimeout(initFoodPublicMap,200);const v4Cloud=loadPublicCloudState;loadPublicCloudState=async function(){await v4Cloud();const o=state.config.origin;document.getElementById('foodOriginLabel').textContent=o.address;publicFoodOrigin?.setLatLng([o.lat,o.lng]);renderSavedAddressShortcut()};
+const foodPublic=document.createElement('section');foodPublic.id='foodDeliveryPlanner';foodPublic.className='food-delivery-planner';foodPublic.innerHTML=`<div class="section-card"><span class="eyebrow">UBICACIÓN DEL LOCAL</span><h2>Cómo llegar al local</h2><p class="small muted" id="foodOriginLabel">${esc(state.config.origin.address)}</p><div id="foodSavedAddresses"></div><div class="address-picker-row"><label class="field">Calle o dirección de entrega<input class="input" id="foodDestination" placeholder="Busca una calle o marca tu destino en el mapa"></label>${panelButton('foodSearchDestination','Buscar',UI.search,'secondary')}${panelButton('foodGpsDestination','Mi ubicación',UI.pin,'secondary')}</div><div class="map" id="foodPublicMap"></div><p class="small muted">El marcador Local indica el punto de salida. Ajusta el marcador de entrega a la entrada.</p></div><aside class="section-card"><h3>Información de la ruta</h3><div id="foodQuote">Utiliza tu ubicación para localizar el establecimiento.</div><div class="toolbar">${panelButton('foodCalculate','Actualizar recorrido',UI.refresh,'secondary')}${panelButton('foodGoCart','Revisar pedido',UI.cart)}</div><div id="foodSocials" class="toolbar"></div></aside>`;document.getElementById('catalogGrid').after(foodPublic);document.getElementById('foodGoCart').onclick=openDrawer;document.getElementById('foodCalculate').onclick=e=>panelRun(e.currentTarget,()=>quoteFoodRoute());document.getElementById('foodDestination').oninput=e=>{checkout.address=e.target.value;checkout.savedAddressId=''};document.getElementById('foodSearchDestination').onclick=e=>panelRun(e.currentTarget,async()=>{const p=await foodSearch(document.getElementById('foodDestination').value);checkout.address=p.address;document.getElementById('foodDestination').value=p.address;await chooseFoodDestination(p.lat,p.lng)});document.getElementById('foodGpsDestination').onclick=e=>panelRun(e.currentTarget,async()=>{const p=await foodGps();checkout.address=document.getElementById('foodDestination').value||'Ubicación actual';await chooseFoodDestination(p.coords.latitude,p.coords.longitude)});renderAccountButton();renderSavedAddressShortcut();setTimeout(initFoodPublicMap,200);const v4Cloud=loadPublicCloudState;loadPublicCloudState=async function(){await v4Cloud();const o=state.config.origin;document.getElementById('foodOriginLabel').textContent=o.address;publicFoodOrigin?.setLatLng([o.lat,o.lng]);renderSavedAddressShortcut()};
 setInterval(()=>{if(!document.hidden&&supabaseClient){refreshSiteStatus().catch(()=>{});if(customerSession)panelVerify().catch(()=>{})}},30000);
 
 /* Estructura del panel y ticket basada en el index de maniobras adjunto. */
@@ -3608,7 +3630,7 @@ renderProductsAdmin=function(c){
  if(!c||document.getElementById('v15CategoryBanner'))return;
  const toolbar=c.querySelector('.toolbar');
  const banner=document.createElement('section');banner.id='v15CategoryBanner';banner.className='v15-category-banner';
- banner.innerHTML=`<h3>Categorías y filtros del catálogo</h3><p>Desde aquí puedes crear categorías, renombrarlas y mover productos. “Más vendidos” y “Por tiempo” son filtros automáticos: se calculan con ventas y ofertas activas.</p><button class="btn secondary" id="v15OpenCategories">${UI.products}<span>Administrar categorías y productos</span></button>`;
+ banner.innerHTML=`<h3>Categorías y filtros del catálogo</h3><p>Desde aquí puedes crear categorías, renombrarlas y mover productos. Organiza tus productos y profesionales desde este módulo.</p><button class="btn secondary" id="v15OpenCategories">${UI.products}<span>Administrar categorías y productos</span></button>`;
  toolbar?.after(banner);
  document.getElementById('v15OpenCategories').onclick=()=>renderAdminPane('categories');
 
@@ -4732,14 +4754,14 @@ window.renderReceiptsAdmin=async function(host){
   host.innerHTML='<div class="section-card"><h3>Comprobantes</h3><p>Documentos privados del bucket payment-proofs.</p><div id="vibraProofs">Cargando…</div></div>';
   const target=host.querySelector('#vibraProofs');
   try{
-    if(!window.supabaseClient)throw Error('Supabase no está conectado');
-    const {data,error}=await window.supabaseClient.from('payment_proofs').select('id,object_path,order_id,reservation_id,review_status,created_at').order('created_at',{ascending:false}).limit(200);
+    if(!supabaseClient)throw Error('Supabase no está conectado');
+    const {data,error}=await supabaseClient.from('payment_proofs').select('id,object_path,order_id,reservation_id,review_status,created_at').order('created_at',{ascending:false}).limit(200);
     if(error)throw error;
     target.innerHTML=(data||[]).length?(data||[]).map(p=>'<article class="section-card"><strong>'+esc(p.reservation_id?'Reservación':'Compra')+'</strong><p>'+esc(p.review_status)+' · '+esc(new Date(p.created_at).toLocaleString('es-MX'))+'</p><button class="btn secondary" data-vibra-proof="'+esc(p.id)+'">Ver comprobante</button></article>').join(''):'<p>Aún no se han registrado comprobantes.</p>';
     target.querySelectorAll('[data-vibra-proof]').forEach(b=>b.onclick=async()=>{
       try{
         const r=(data||[]).find(x=>x.id===b.dataset.vibraProof);
-        const {data:url,error:e}=await window.supabaseClient.storage.from('payment-proofs').createSignedUrl(r.object_path,120);
+        const {data:url,error:e}=await supabaseClient.storage.from('payment-proofs').createSignedUrl(r.object_path,120);
         if(e)throw e;
         window.open(url.signedUrl,'_blank','noopener,noreferrer');
       }catch(e){toast(e.message,'error')}
@@ -4750,20 +4772,20 @@ window.renderPaymentReviewAdmin=async function(host){
   host.innerHTML='<div class="section-card"><h3>Revisión de pagos</h3><p>Aprobar o rechazar comprobantes de compras y reservaciones.</p><div id="vibraPaymentRows">Cargando…</div></div>';
   const target=host.querySelector('#vibraPaymentRows');
   try{
-    const {data,error}=await window.supabaseClient.from('payment_proofs').select('id,object_path,order_id,reservation_id,review_status,created_at').eq('review_status','pending').order('created_at',{ascending:false}).limit(200);
+    const {data,error}=await supabaseClient.from('payment_proofs').select('id,object_path,order_id,reservation_id,review_status,created_at').eq('review_status','pending').order('created_at',{ascending:false}).limit(200);
     if(error)throw error;
     target.innerHTML=(data||[]).length?(data||[]).map(p=>'<article class="section-card"><strong>'+esc(p.reservation_id?'Reservación':'Compra')+'</strong><p>'+esc(new Date(p.created_at).toLocaleString('es-MX'))+'</p><button class="btn secondary" data-vibra-see="'+esc(p.id)+'">Ver archivo</button> <button class="btn" data-vibra-decide="'+esc(p.id)+'" data-approve="true">Aprobar</button> <button class="btn danger" data-vibra-decide="'+esc(p.id)+'" data-approve="false">Rechazar</button></article>').join(''):'<p>No hay pagos pendientes de revisión.</p>';
-    target.querySelectorAll('[data-vibra-see]').forEach(b=>b.onclick=async()=>{try{const r=data.find(x=>x.id===b.dataset.vibraSee);const {data:u,error:e}=await window.supabaseClient.storage.from('payment-proofs').createSignedUrl(r.object_path,120);if(e)throw e;window.open(u.signedUrl,'_blank','noopener,noreferrer')}catch(e){toast(e.message,'error')}});
+    target.querySelectorAll('[data-vibra-see]').forEach(b=>b.onclick=async()=>{try{const r=data.find(x=>x.id===b.dataset.vibraSee);const {data:u,error:e}=await supabaseClient.storage.from('payment-proofs').createSignedUrl(r.object_path,120);if(e)throw e;window.open(u.signedUrl,'_blank','noopener,noreferrer')}catch(e){toast(e.message,'error')}});
     target.querySelectorAll('[data-vibra-decide]').forEach(b=>b.onclick=async()=>{
       if(!confirm('¿Confirmas esta decisión de pago?'))return;
-      try{const {error:e}=await window.supabaseClient.rpc('vibra_review_payment_v7',{p_proof_id:b.dataset.vibraDecide,p_approve:b.dataset.approve==='true'});if(e)throw e;window.renderPaymentReviewAdmin(host)}catch(e){toast(e.message,'error')}
+      try{const {error:e}=await supabaseClient.rpc('vibra_review_payment_v7',{p_proof_id:b.dataset.vibraDecide,p_approve:b.dataset.approve==='true'});if(e)throw e;window.renderPaymentReviewAdmin(host)}catch(e){toast(e.message,'error')}
     });
   }catch(e){target.textContent='Error de consulta: '+e.message}
 };
 // El mapa necesita coordenadas válidas de la marca: no inventar latitud/longitud.
 window.vibraMostrarMapa=async function(element){
-  if(!element||!window.supabaseClient)return;
-  const {data,error}=await window.supabaseClient.from('brand_settings').select('latitude,longitude').eq('id',1).maybeSingle();
+  if(!element||!supabaseClient)return;
+  const {data,error}=await supabaseClient.from('brand_settings').select('latitude,longitude').eq('id',1).maybeSingle();
   if(error||!data||!Number.isFinite(data.latitude)||!Number.isFinite(data.longitude)){
     element.textContent='Configura la ubicación del local desde Administración → Negocio.';return;
   }
@@ -4810,7 +4832,7 @@ function setup(){
 if(el('#v9Section'))return;
 const older=el('#v8Section');if(older)older.remove();
 const n=document.createElement('section');n.id='v9Section';n.innerHTML=`
-<section class="v9panel"><div class="v9head">${ic('pin')}<h2>Visítanos · sedes oficiales</h2></div><p class="v9muted">Selecciona la sede que deseas visitar. Solo se muestran ubicaciones publicadas por el negocio.</p><div id="v9Locations" class="v9grid"></div><div id="v9Map" class="v9map"></div><p id="v9PlaceInfo" class="v9muted"></p><button class="v9action" id="v9Directions">${ic('arrow')} Cómo llegar desde mi ubicación</button><a class="v9action secondary" id="v9OpenMap" target="_blank" rel="noopener">Abrir mapa</a><p id="v9GeoState" class="v9small"></p></section>
+<section class="v9panel" id="vibraOldPublicLocations" hidden><div class="v9head">${ic('pin')}<h2>Visítanos · sedes oficiales</h2></div><p class="v9muted">Selecciona la sede que deseas visitar. Solo se muestran ubicaciones publicadas por el negocio.</p><div id="v9Locations" class="v9grid"></div><div id="v9Map" class="v9map"></div><p id="v9PlaceInfo" class="v9muted"></p><button class="v9action" id="v9Directions">${ic('arrow')} Cómo llegar desde mi ubicación</button><a class="v9action secondary" id="v9OpenMap" target="_blank" rel="noopener">Abrir mapa</a><p id="v9GeoState" class="v9small"></p></section>
 <section class="v9panel"><div class="v9head">${ic('spa')}<h2>Profesionales y servicios</h2></div><p class="v9muted">Sesiones de bienestar con opciones según disponibilidad: en el local, a domicilio, hotel o motel.</p><div id="v9Professionals" class="v9grid"></div><div id="v9Modalities" hidden><h3>Opciones de atención</h3><p id="v9ModesText"></p><label class="v9small">Selecciona modalidad<select id="v9Mode" class="v9select"></select></label><button class="v9action" id="v9Continue">Consultar horarios y reservar</button><p class="v9small">Los horarios ocupados se consultan en Supabase. El trayecto externo requiere confirmación.</p><div id="v9Booking" hidden><h3>Selecciona fecha y hora</h3><div class="v9fields"><label>Servicio<select id="v9Service"></select></label><label>Habitación<select id="v9Room"></select></label><label>Duración<select id="v9Duration"></select></label><label>Fecha<input id="v9Date" type="date"></label><label>Horarios disponibles<select id="v9Time"></select></label><label>Nombre<input id="v9ClientName" maxlength="90"></label><label>Teléfono<input id="v9ClientPhone" maxlength="25"></label></div><label><input id="v9Terms" type="checkbox"> Acepto las condiciones de reserva: el tiempo inicia a la hora seleccionada y la ausencia o retraso no prolongan el servicio. Consulta las condiciones de cancelación aplicables.</label><p><button class="v9action" id="v9SubmitBooking">Confirmar reserva local</button></p><p id="v9BookingStatus" class="v9small"></p></div></div></section>
 <section id="v9Admin" class="v9panel"><div class="v9head">${ic('car')}<h2>Administrar sedes, modalidades y rutas de servicios</h2></div><p class="v9small">Sólo personal autorizado. Hasta 3 sedes. Las direcciones privadas de clientes no aparecen en el mapa público.</p>
 <h3>Sedes autorizadas</h3><div class="v9fields"><label>Nombre de sede<input id="v9LocName" placeholder="Sede Centro"></label><label>Dirección completa<input id="v9LocAddress"></label><label>Latitud<input id="v9LocLat" type="number" step="any"></label><label>Longitud<input id="v9LocLng" type="number" step="any"></label><label>Visible al público<select id="v9LocActive"><option value="true">Sí</option><option value="false">No</option></select></label></div><button class="v9action" id="v9SaveLoc">Guardar nueva sede</button><div id="v9ManageSites"></div>
@@ -4830,7 +4852,7 @@ el('#v9Admin').classList.toggle('visible',admin);renderLocations();renderStaff()
 let media=[];
 function renderLocations(){const wrap=el('#v9Locations');if(!wrap)return;const active=locations.filter(x=>x.is_active).sort((a,b)=>a.sort_order-b.sort_order);
 if(!selected||!active.some(a=>a.id===selected))selected=active[0]?.id;
-wrap.innerHTML=active.length?active.map(x=>`<button class="v9site" aria-pressed="${x.id===selected}" data-site="${esc(x.id)}"><h3>${ic('pin')} ${esc(x.name)}</h3><p>${esc(x.address)}</p></button>`).join(''):'<p class="v9muted">Ubicaciones por publicar. El administrador debe seleccionar y guardar una sede.</p>';
+wrap.innerHTML=active.length?active.map(x=>`<button class="v9site" aria-pressed="${x.id===selected}" data-site="${esc(x.id)}"><h3>${ic('pin')} ${esc(x.name)}</h3><p>${esc(x.address)}</p></button>`).join(''):'<p class="v9muted">La ubicación del establecimiento se configura en Administración → Negocio.</p>';
 wrap.querySelectorAll('[data-site]').forEach(b=>b.onclick=()=>{selected=b.dataset.site;renderLocations()});
 const loc=active.find(x=>x.id===selected);const map=el('#v9Map');if(!loc){map.innerHTML='<p class="v9muted">El mapa se mostrará cuando exista una sede publicada.</p>';el('#v9Directions').disabled=true;el('#v9OpenMap').removeAttribute('href');return}
 el('#v9Directions').disabled=false;el('#v9PlaceInfo').textContent=loc.name+' — '+loc.address;
@@ -5086,6 +5108,61 @@ window.addEventListener('focus',()=>{if(block()&&db())load().catch(console.warn)
     requestAnimationFrame(()=>{scheduled=false;rename();insertSedes();});
   });
   document.addEventListener('DOMContentLoaded',()=>{observer.observe(document.body,{subtree:true,childList:true});rename();insertSedes();});
+})();
+</script>
+
+<style id="vibra-revision-estilos">
+#vibraOldPublicLocations{display:none!important}
+#v10Panel{display:none!important}
+#adminContent #vibraAdminExtras #v10Panel{display:block!important;margin:0!important;padding:12px!important;max-width:100%}
+.vibra-map-error{position:absolute;z-index:1200;left:12px;right:12px;bottom:18px;padding:12px;border:1px solid var(--primary);border-radius:9px;background:var(--card);color:var(--text);font-size:13px}
+#foodDeliveryPlanner .section-card aside{background:var(--card)}
+#vibraServicesEditor .admin-grid{gap:12px}
+#vibraServicesEditor input,#vibraServicesEditor select,#vibraServicesEditor textarea{width:100%}
+</style>
+<script id="vibra-servicios-admin">
+(()=>{
+ const $=s=>document.querySelector(s);
+ const e=s=>String(s??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+ let updating=false;
+ const client=()=>typeof supabaseClient!=='undefined'?supabaseClient:null;
+ function attach(){
+   const pane=$('#adminContent'),admin=$('#adminModal.show');if(!pane||!admin)return;
+   const tab=typeof activeAdmin!=='undefined'?activeAdmin:'';
+   const section=$('#vibraServicesEditor');
+   if(tab!=='products'){
+     if(section)section.remove();
+   }else if(!section){
+     const section=document.createElement('section');section.id='vibraServicesEditor';section.className='section-card';
+     section.innerHTML=`<h3>Servicios de masaje y profesionales</h3><p class="small muted">Crea las fichas públicas de profesionales. Se guardan en Supabase.</p><div class="admin-grid two"><label class="field">Nombre profesional<input id="vibraStaffName" class="input" maxlength="100"></label><label class="field">Teléfono de contacto<input id="vibraStaffPhone" class="input" maxlength="25"></label><label class="field">Descripción<textarea id="vibraStaffBio" class="textarea"></textarea></label><label class="field">Servicio<input id="vibraServiceName" class="input" value="Masaje de bienestar"></label><label class="field">Tarifa por hora<input id="vibraServicePrice" class="input" type="number" min="0" step="0.01"></label><label class="field">Duración (minutos)<input id="vibraServiceDuration" class="input" value="30,60,90" placeholder="30,60,90"></label></div><div class="toolbar"><button class="btn" id="vibraSaveProfessional">Guardar profesional y servicio</button></div><p id="vibraServiceStatus" role="status" class="small muted"></p>`;
+     pane.append(section);
+     $('#vibraSaveProfessional').onclick=async()=>{
+       const db=client(),status=$('#vibraServiceStatus');if(!db){status.textContent='Sin conexión Supabase';return}
+       const name=$('#vibraStaffName').value.trim(),service=$('#vibraServiceName').value.trim(),phone=$('#vibraStaffPhone').value.trim(),bio=$('#vibraStaffBio').value.trim(),price=Number($('#vibraServicePrice').value);
+       const durations=$('#vibraServiceDuration').value.split(',').map(v=>Number(v.trim())).filter(v=>Number.isInteger(v)&&v>=15&&v<=240);
+       if(!name||!service||!Number.isFinite(price)||price<0||!durations.length){status.textContent='Completa profesional, servicio, tarifa y duraciones válidas.';return}
+       try{
+         const {data:u,error:ue}=await db.auth.getUser();if(ue)throw ue;if(!u.user)throw Error('Inicia sesión');
+         const {data:role,error:re}=await db.from('staff_roles').select('role').eq('user_id',u.user.id).maybeSingle();if(re)throw re;
+         if(!['admin','manager'].includes(role?.role))throw Error('No tienes permisos de edición');
+         const {data:p,error:pe}=await db.from('practitioners').insert({display_name:name,contact_phone:phone,bio,active:true}).select('id').single();if(pe)throw pe;
+         const {data:s,error:se}=await db.from('services').insert({name:service,hourly_price:price,active:true}).select('id').single();if(se)throw se;
+         const {error:le}=await db.from('practitioner_services').insert({practitioner_id:p.id,service_id:s.id});if(le)throw le;
+         const {error:de}=await db.from('service_durations').insert(durations.map(minutes=>({service_id:s.id,minutes})));if(de)throw de;
+         status.textContent='Profesional y servicio guardados. Configura horarios y modalidades en Negocio.';
+         $('#vibraStaffName').value='';
+       }catch(error){status.textContent='No se guardó: '+error.message}
+     };
+   }
+   if(tab==='products'){
+     const btn=$('#vibraCatalogSuggest');if(!btn){const toolbar=$('#adminContent .toolbar');if(toolbar){const b=document.createElement('button');b.className='btn secondary';b.id='vibraCatalogSuggest';b.textContent='Catálogo sugerido para México';toolbar.append(b);b.onclick=()=>{const target=$('#vibraServicesEditor');if(!target)return;let box=$('#vibraCatalogNames');if(!box){box=document.createElement('div');box.id='vibraCatalogNames';box.className='section-card';target.before(box)}box.innerHTML='<h3>Referencias para crear artículos</h3><p>Agua: Bonafont, Ciel, Epura. Refrescos: Coca-Cola, Pepsi, Sprite, 7Up, Jarritos. Cervezas: Corona, Modelo, Victoria, Tecate, Indio. Licores: Bacardí, José Cuervo, Don Julio, Smirnoff, Johnnie Walker. Cigarros: Marlboro, Camel, Pall Mall. Cada producto requiere precio, disponibilidad y verificación de edad aplicable.</p>';};}}
+   }
+   if(tab==='business'){
+     const original=$('#v10Panel');if(original){let wrap=$('#vibraAdminExtras');if(!wrap){wrap=document.createElement('section');wrap.id='vibraAdminExtras';wrap.className='section-card';wrap.innerHTML='<h3>Tarifas, complementos y promociones</h3>';pane.append(wrap)}if(original.parentNode!==wrap)wrap.append(original)}
+   }
+ }
+ const observer=new MutationObserver(()=>{if(updating)return;updating=true;requestAnimationFrame(()=>{updating=false;attach()})});
+ document.addEventListener('DOMContentLoaded',()=>{observer.observe(document.body,{childList:true,subtree:true});attach()});
 })();
 </script>
 </body>
