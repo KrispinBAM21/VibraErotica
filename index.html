@@ -1,52 +1,9 @@
 <!DOCTYPE html>
-<!--
-REGISTRO DE CAMBIOS — VibraErótica
-(a) Enlaces heredados: se corrigieron nombres de versión y almacenamiento de tema propios del proyecto; se conservan las CDN públicas necesarias.
-(b) Funciones propias: el tema de servicios ahora guarda los colores en la configuración central del catálogo; el componente complementario ya no sobrescribe variables globales.
-(c) Errores corregidos: conflicto entre catalog_settings y site_theme_v9, parpadeo inicial cuando existe tema local, nombre de almacenamiento legado, colores fijos del control administrativo.
-(d) PENDIENTE: requiere backend para sincronizar preferencias entre dispositivos; verificar en Supabase las políticas de catalog_settings y la publicación efectiva en GitHub Pages.
--->
-
-<!--
-VIBRAERÓTICA — REGISTRO DE AUDITORÍA DE INDEX.HTML
-(a) Referencias heredadas: se normalizaron los nombres del sistema de comida anterior
-    en variables, comentarios, metadatos y espacios de almacenamiento hacia VibraErotica.
-    No se encontraron referencias literales al dominio GitHub Pages de origen en este archivo.
-(b) Funciones propias: se conserva la implementación integrada de catálogo, perfil,
-    diseño, formularios, autenticación, carrito y módulos administrativos para no romper
-    comportamiento que ya funciona. Se normalizaron los identificadores heredados.
-(c) Errores comprobados: los bloques de JavaScript fueron verificados individualmente
-    con el analizador sintáctico de Node.js; se mantiene la estructura original,
-    incluidos sus 26 bloques, sin sustituirla por una maqueta simplificada.
-(d) PENDIENTE: requiere backend — autenticación Google/correo, roles, sincronización
-    Supabase, pagos, reservas compartidas, chat y notificaciones en tiempo real.
-    Estas funciones no pueden ser seguras ni multiusuario solamente con localStorage.
-    PENDIENTE: servicios externos — CARTO / proveedor de rutas para cartografía real.
-    La URL pública y la clave publishable de Supabase existentes se conservan por
-    pertenecer al proyecto activo; nunca se debe incluir una service_role en el HTML.
-Librerías públicas externas existentes con versión fija: Leaflet 1.9.4; XLSX 0.18.5;
-QRCode.js 1.0.0; jsPDF 2.5.1; jspdf-autotable 3.8.2; Supabase JS 2.58.0;
-Google Fonts (fuentes tipográficas). No se incluyen scripts del dominio de origen.
--->
-
 <html lang="es-MX">
 <head>
 <meta charset="UTF-8" />
 <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-<script id="vibra-theme-first-paint">
-document.documentElement.classList.add("vibra-initial-loading");
-/* Carga temprana: evita el parpadeo de colores del tema predeterminado. */
-try {
- const saved=JSON.parse(localStorage.getItem('vibraEroticaRestored_v1')||'null');
- const d=saved?.config?.design;
- if(d){
-  const root=document.documentElement.style;
-  const props={primary:'--primary',secondary:'--secondary',accent:'--accent',text:'--text',card:'--card',siteBg:'--site-bg',iconColor:'--product-icon-color'};
-  for(const [key,name] of Object.entries(props))if(typeof d[key]==='string'&&d[key])root.setProperty(name,d[key]);
-  if(d.font)root.setProperty('--font',JSON.stringify(d.font)+',sans-serif');
- }
-} catch(error){console.warn('No se pudo restaurar el diseño guardado:',error)}
-</script>
+<script id="vibra-theme-first-paint">document.documentElement.classList.add("vibra-initial-loading");</script>
 <title>VibraErótica — Boutique y reservas</title>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
@@ -422,9 +379,9 @@ function supabaseConfigured(){
 const STORE='vibraEroticaRestored_v1';
 const VIBRA_PENDING_CONFIG='vibraerotica.config.pending.v1';
 const VIBRA_SYNC_STATUS='vibraerotica.config.sync-status.v1';
-function vibraPending(){try{return JSON.parse(localStorage.getItem(VIBRA_PENDING_CONFIG)||'null')}catch{return null}}
-function vibraMarkDirty(){try{localStorage.setItem(VIBRA_PENDING_CONFIG,JSON.stringify({config:state.config,at:Date.now()}));localStorage.setItem(VIBRA_SYNC_STATUS,'pending')}catch(e){console.warn('No se pudo guardar la configuración local',e)}}
-function vibraAckConfig(){localStorage.removeItem(VIBRA_PENDING_CONFIG);localStorage.setItem(VIBRA_SYNC_STATUS,'saved')}
+function vibraPending(){return null}
+function vibraMarkDirty(){}
+function vibraAckConfig(){}
 
 const defaults={
  config:{
@@ -443,13 +400,13 @@ const defaults={
  cart:{},orders:[],folioSeq:1
 };
 let state=load();
-try{const pending=vibraPending();if(pending?.config)state.config=merge(state.config,pending.config)}catch(e){console.warn(e)}
+
 let currentCategory='Todos',searchTerm='',customerMarker=null,clientMap=null,originMap=null,originMarker=null,tripMap=null,tripOriginMarker=null,tripDestMarker=null,tripRouteLayer=null,lastPdfBlob=null,lastPdfName='',lastOrderId=null;
 let checkout={delivery:'pickup',address:'',lat:null,lng:null,distance:0,shipping:0,name:'',phone:'',notes:'',paymentId:'',proofFile:null,proofUrl:'',proofName:''};
 function deepClone(o){return JSON.parse(JSON.stringify(o));}
-function load(){try{const x=JSON.parse(localStorage.getItem(STORE)||'null');return x?merge(defaults,x):deepClone(defaults)}catch(e){return deepClone(defaults)}}
+function load(){try{const x=JSON.parse(localStorage.getItem(STORE)||'null');if(x&&typeof x==='object')delete x.config;return x?merge(defaults,x):deepClone(defaults)}catch(e){return deepClone(defaults)}}
 function merge(base,extra){if(Array.isArray(base))return Array.isArray(extra)?extra:base; if(base&&typeof base==='object'){const out={...base};for(const k in extra)out[k]=k in base?merge(base[k],extra[k]):extra[k];return out}return extra??base}
-function saveLocal(){try{localStorage.setItem(STORE,JSON.stringify(state))}catch(error){console.error('Guardado local:',error);if(typeof toast==='function')toast('Almacenamiento lleno: reduce el tamaño de imágenes antes de guardar.','error')}}
+function saveLocal(){try{const snapshot={...state};delete snapshot.config;localStorage.setItem(STORE,JSON.stringify(snapshot))}catch(error){console.error('Guardado local:',error);if(typeof toast==='function')toast('Almacenamiento lleno: reduce el tamaño de imágenes antes de guardar.','error')}}
 function save(){
   saveLocal();
   if(adminSession&&supabaseClient){
@@ -460,6 +417,7 @@ function save(){
 function publicConfigForCloud(){
   const cfg=deepClone(state.config);
   delete cfg.adminPin;
+  if(cfg.map)delete cfg.map.apiKey;
   return cfg;
 }
 
@@ -493,7 +451,7 @@ async function loadPublicCloudState(){
     supabaseClient.from('products').select('*').order('sort_order',{ascending:true}).order('name',{ascending:true})
   ]);
   if(se)throw se;if(pe)throw pe;
-  if(settings?.data){const pending=vibraPending();state.config=pending?.config?merge(merge(defaults.config,settings.data),pending.config):merge(defaults.config,settings.data);}
+  if(settings?.data){state.config=merge(defaults.config,settings.data);if(state.config.map)state.config.map.apiKey='';}
   if(Array.isArray(products))state.products=products.map(rowToProduct);
   saveLocal();applyDesign();renderHeader();renderCategories();renderCatalog();
 }
@@ -638,14 +596,14 @@ function cartoTileUrl(){
   const m=mapSettings();
   const key=(m.apiKey||'').trim();
   const style=['voyager','light_all','dark_all'].includes(m.style)?m.style:'voyager';
-  if(!key)return '';
-  return `https://basemaps.cartocdn.com/rastertiles/${style}/{z}/{x}/{y}{r}.png?key=${encodeURIComponent(key)}`;
+  if(!/^https:\/\/.+\.supabase\.co$/i.test(SUPABASE_URL))return '';
+  return `${SUPABASE_URL}/functions/v1/carto-tiles/${style}/{z}/{x}/{y}.png`;
 }
 function mapConfigured(){return !!cartoTileUrl()}
 function showMapConfigNeeded(containerId){
   const el=document.getElementById(containerId);
   if(!el)return;
-  el.innerHTML=`<div class="empty-state" style="height:100%;min-height:220px;display:grid;place-items:center;padding:24px;text-align:center"><div>${UI.map}<strong style="display:block;margin:8px 0">Falta configurar CARTO</strong><span class="small muted">En Administración, Negocio, CARTO pega tu API key para activar los mapas.</span></div></div>`;
+  el.innerHTML=`<div class="empty-state" style="height:100%;min-height:220px;display:grid;place-items:center;padding:24px;text-align:center"><div>${UI.map}<strong style="display:block;margin:8px 0">Falta configurar CARTO</strong><span class="small muted">El administrador debe guardar una clave CARTO y desplegar la función carto-tiles.</span></div></div>`;
 }
 function addConfiguredTileLayer(map,containerId){
   const url=cartoTileUrl();
@@ -701,7 +659,7 @@ function closeModal(id){document.getElementById(id).classList.remove('show');if(
 ============================== */
 const adminTabs=[
 ['dashboard','Dashboard',UI.dashboard],
-['products','Productos',UI.products],
+['products','Productos y servicios',UI.products],
 ['design','Personalización',UI.palette],
 ['business','Negocio',UI.business],
 ['trip','Calculadora de viajes (heredado)',UI.calc],
@@ -3245,7 +3203,7 @@ width:20px!important;height:20px!important;min-width:20px!important;flex:0 0 20p
 (function(){
 'use strict';
 const I={route:`<svg viewBox="0 0 24 24"><circle cx="5" cy="18" r="2"/><circle cx="19" cy="6" r="2"/><path d="M7 18h4a3 3 0 0 0 3-3V9a3 3 0 0 1 3-3"/></svg>`,delivery:`<svg viewBox="0 0 24 24"><path d="M3 6h11v10H3zM14 9h4l3 3v4h-7z"/><circle cx="7" cy="18" r="2"/><circle cx="18" cy="18" r="2"/></svg>`,pin:`<svg viewBox="0 0 24 24"><path d="M12 21s7-5.8 7-12a7 7 0 1 0-14 0c0 6.2 7 12 7 12z"/><circle cx="12" cy="9" r="2.3"/></svg>`,done:`<svg viewBox="0 0 24 24"><path d="m5 12 4 4 10-10"/></svg>`};
-if(!adminTabs.some(t=>t[0]==='delivery')){const i=Math.max(0,adminTabs.findIndex(t=>t[0]==='orders')+1);adminTabs.splice(i,0,['delivery','Rutas y entregas',I.delivery])}
+if(!adminTabs.some(t=>t[0]==='delivery')){const i=Math.max(0,adminTabs.findIndex(t=>t[0]==='orders')+1);adminTabs.splice(i,0,['delivery','Reservas a domicilio',I.delivery])}
 const oldCan=panelCan;panelCan=id=>id==='delivery'?oldCan('orders'):oldCan(id);
 async function api(action,payload={}){if(!supabaseClient||!adminSession)throw Error('Inicia sesión en administración.');const {data,error}=await supabaseClient.rpc('catalog_delivery',{p_action:action,p_payload:payload});if(error)throw error;if(data?.error)throw Error(data.error);return data}
 const num=v=>{const x=Number(v);return Number.isFinite(x)?x:null},id=o=>String(o.order_id||o.id||o.public_id||o.folio||''),la=o=>num(o.delivery_lat??o.lat??o.latitude),ln=o=>num(o.delivery_lng??o.lng??o.longitude);
@@ -3256,7 +3214,7 @@ function origin(){const o=state.config.origin||{},a=num(o.lat),b=num(o.lng);retu
 let map,markers,routeLayer,all=[],mine=[],here=null,activeRoute=[],activeStart=null;
 function markerIcon(n,m){return L.divIcon({className:'',html:`<div style="width:32px;height:32px;border-radius:50%;display:grid;place-items:center;background:${m?'#c62828':'#16324f'};color:#fff;border:3px solid #fff;box-shadow:0 2px 9px #0005;font:bold 13px sans-serif">${n||'•'}</div>`,iconSize:[32,32],iconAnchor:[16,16],popupAnchor:[0,-18]})}
 function pop(o){const k=id(o),mineOne=!!o.mine,p=isPaid(o)?'Pagado':(isCash(o)?'Cobrar en efectivo':'Pago pendiente');return `<div class="v13-map-popup"><h4>Pedido ${esc(o.public_id||o.folio||k)}</h4><p>${esc(o.customer_name||o.customer||'Cliente')}</p><p>${esc(o.delivery_address||o.address||'Domicilio')}</p><p><strong>${p}</strong> · ${money(Number(o.total)||0)}</p>${mineOne?`<button onclick="window.v13DeliverOrder('${esc(k)}')">${isCash(o)&&!isPaid(o)?'Cobrar y marcar entregado':'Marcar como entregado'}</button>`:(!o.assigned_to?`<button onclick="window.v13AcceptOrder('${esc(k)}')">Aceptar viaje</button>`:'<p>Asignado a otro repartidor</p>')}</div>`}
-function initMap(){const el=document.getElementById('v13DeliveryMap');if(!el||map)return;const o=origin()||{lat:19.1138,lng:-104.3385};map=L.map(el).setView([o.lat,o.lng],12);L.tileLayer('https://{s}.basemaps.cartocdn.com/light_all/{z}/{x}/{y}{r}.png',{attribution:'&copy; OpenStreetMap &copy; CARTO',maxZoom:20}).addTo(map);markers=L.layerGroup().addTo(map);routeLayer=L.layerGroup().addTo(map);setTimeout(()=>map.invalidateSize(),80)}
+function initMap(){const el=document.getElementById('v13DeliveryMap');if(!el||map)return;const o=origin()||{lat:19.1138,lng:-104.3385};map=L.map(el).setView([o.lat,o.lng],12);L.tileLayer(`${SUPABASE_URL}/functions/v1/carto-tiles/light_all/{z}/{x}/{y}.png`,{attribution:'&copy; OpenStreetMap &copy; CARTO',maxZoom:20}).addTo(map);markers=L.layerGroup().addTo(map);routeLayer=L.layerGroup().addTo(map);setTimeout(()=>map.invalidateSize(),80)}
 function paint(){if(!map)return;markers.clearLayers();routeLayer.clearLayers();const b=[],o=origin();if(o){L.marker([o.lat,o.lng]).addTo(markers).bindPopup('<strong>Salida · '+esc(state.config.businessName)+'</strong>');b.push([o.lat,o.lng])}const ms=new Set(mine.map(id));all.forEach(x=>{const a=la(x),c=ln(x);if(a==null||c==null)return;L.marker([a,c],{icon:markerIcon(ms.has(id(x))?mine.findIndex(y=>id(y)===id(x))+1:'',ms.has(id(x)))}).addTo(markers).bindPopup(pop(x));b.push([a,c])});if(here){L.circleMarker([here.lat,here.lng],{radius:7,weight:3}).addTo(markers).bindPopup('Mi ubicación actual');b.push([here.lat,here.lng])}if(b.length>1)map.fitBounds(b,{padding:[30,30],maxZoom:15});else if(b.length===1)map.setView(b[0],14)}
 function paintRoute(r,s){if(!map)return;routeLayer.clearLayers();const pts=[];if(s)pts.push([s.lat,s.lng]);r.forEach((x,i)=>{pts.push([la(x),ln(x)]);L.marker([la(x),ln(x)],{icon:markerIcon(i+1,true),zIndexOffset:1000}).addTo(routeLayer).bindPopup(pop(x))});if(pts.length>1)L.polyline(pts,{weight:4,dashArray:'10,7'}).addTo(routeLayer);if(pts.length)map.fitBounds(pts,{padding:[35,35],maxZoom:15})}
 function card(o,m=false){const k=id(o),p=isPaid(o)?'<span class="v13-payment-badge paid">Pagado</span>':(isCash(o)?'<span class="v13-payment-badge cash">Cobrar efectivo</span>':'<span class="v13-payment-badge">Pago pendiente</span>');return `<article class="v13-trip-card ${m?'mine':''}"><div class="v13-trip-head"><div><h4>${esc(o.public_id||o.folio||('Pedido '+k))}</h4><p>${esc(o.customer_name||o.customer||'Cliente')}</p></div>${p}</div><p>${I.pin} ${esc(o.delivery_address||o.address||'Domicilio')}</p><p><strong>${money(Number(o.total)||0)}</strong></p><div class="v13-trip-actions">${m?`<button class="btn" data-d="${esc(k)}">${I.done}<span>${isCash(o)&&!isPaid(o)?'Cobrar y entregar':'Entregado'}</span></button>`:(!o.assigned_to?`<button class="btn" data-a="${esc(k)}">${I.delivery}<span>Aceptar viaje</span></button>`:'<span class="small muted">Ya asignado</span>')}<button class="btn secondary" data-f="${esc(k)}">${I.pin}<span>Ver pin</span></button></div></article>`}
@@ -3268,8 +3226,8 @@ function geolocate(){return new Promise(r=>{if(!navigator.geolocation)return r(n
 function showRoute(r){const h=document.getElementById('v13RouteList');if(!h)return;if(!r.length){h.innerHTML='<div class="v12-empty">Acepta uno o más viajes y pulsa “Optimizar ruta”.</div>';return}let total=0;r.forEach(x=>total+=Number(x._legKm)||0);h.innerHTML=`<div class="v13-route-summary"><strong>${r.length} entregas · aprox. ${total.toFixed(1)} km entre paradas</strong><div class="small muted">Orden por cercanía; el tráfico real puede cambiar la mejor ruta.</div></div><div class="v13-route-list">${r.map((x,i)=>`<div class="v13-route-stop"><span class="v13-route-number">${i+1}</span><div><strong>${esc(x.public_id||x.folio||id(x))}</strong><div class="small muted">${esc(x.delivery_address||x.address||'Domicilio')}</div></div><span>${Number(x._legKm||0).toFixed(1)} km</span></div>`).join('')}</div>`}
 async function optimize(useHere){if(!mine.length)return toast('Primero acepta al menos un viaje.','info');let s=null;if(useHere){s=await geolocate();if(s)here=s}s=s||here||origin();if(!s)return toast('Configura el pin del negocio o permite tu ubicación.','error');activeRoute=routeSort(mine,s);activeStart=s;showRoute(activeRoute);paintRoute(activeRoute,s)}
 function nav(){if(!activeRoute.length)return toast('Optimiza la ruta primero.','info');const pts=activeRoute.slice(0,9),last=pts.at(-1),q=new URLSearchParams({api:'1',destination:`${la(last)},${ln(last)}`,travelmode:'driving'});if(activeStart)q.set('origin',`${activeStart.lat},${activeStart.lng}`);const wp=pts.slice(0,-1).map(x=>`${la(x)},${ln(x)}`).join('|');if(wp)q.set('waypoints',wp);window.open('https://www.google.com/maps/dir/?'+q.toString(),'_blank','noopener');if(activeRoute.length>9)toast('La vista interna conserva todas las paradas; Maps abrió las primeras 9.','info')}
-async function render(c){c.innerHTML=`<section class="section-card"><div class="v12-section-title"><div><h3>Rutas y entregas</h3><p class="small muted"><span class="v13-live-dot"></span>Cada domicilio pendiente aparece como pin.</p></div><button class="btn secondary" id="v13Reload">${UI.refresh}<span>Actualizar</span></button></div><div class="v13-route-toolbar"><button class="btn" id="v13Business">${I.route}<span>Optimizar desde negocio</span></button><button class="btn secondary" id="v13Here">${I.pin}<span>Desde mi ubicación</span></button><button class="btn secondary" id="v13Nav">${UI.map}<span>Abrir navegación</span></button></div><div id="v13RouteList"></div></section><div class="v13-delivery-layout"><section class="section-card"><div id="v13DeliveryMap" class="v13-delivery-map"></div></section><aside class="v13-delivery-side"><section class="section-card"><h3>Mis viajes aceptados</h3><div id="v13MyTrips"></div></section><section class="section-card"><h3>Entregas disponibles</h3><div id="v13AvailableTrips"></div></section></aside></div>`;map=null;initMap();document.getElementById('v13Reload').onclick=e=>panelRun(e.currentTarget,load);document.getElementById('v13Business').onclick=()=>optimize(false);document.getElementById('v13Here').onclick=()=>optimize(true);document.getElementById('v13Nav').onclick=nav;await load()}
-const oldPane=renderAdminPane;renderAdminPane=async function(k){if(k!=='delivery')return oldPane(k);if(!panelCan(k))return toast('Sin permiso para gestionar entregas.','error');activeAdmin=k;const epoch=++panelEpoch;document.querySelectorAll('.tab-btn').forEach(b=>b.classList.toggle('active',b.dataset.tab===k));const c=document.getElementById('adminContent');c.innerHTML='<p>Cargando mapa de entregas…</p>';try{await render(c)}catch(e){if(epoch===panelEpoch)c.innerHTML='<div class="notice">Instala la migración V13 para habilitar rutas y entregas.<br>'+esc(e.message)+'</div>'}};
+async function render(c){c.innerHTML=`<section class="section-card"><div class="v12-section-title"><div><h3>Reservas a domicilio</h3><p class="small muted"><span class="v13-live-dot"></span>Cada domicilio pendiente aparece como pin.</p></div><button class="btn secondary" id="v13Reload">${UI.refresh}<span>Actualizar</span></button></div><div class="v13-route-toolbar"><button class="btn" id="v13Business">${I.route}<span>Optimizar desde negocio</span></button><button class="btn secondary" id="v13Here">${I.pin}<span>Desde mi ubicación</span></button><button class="btn secondary" id="v13Nav">${UI.map}<span>Abrir navegación</span></button></div><div id="v13RouteList"></div></section><div class="v13-delivery-layout"><section class="section-card"><div id="v13DeliveryMap" class="v13-delivery-map"></div></section><aside class="v13-delivery-side"><section class="section-card"><h3>Mis viajes aceptados</h3><div id="v13MyTrips"></div></section><section class="section-card"><h3>Entregas disponibles</h3><div id="v13AvailableTrips"></div></section></aside></div>`;map=null;initMap();document.getElementById('v13Reload').onclick=e=>panelRun(e.currentTarget,load);document.getElementById('v13Business').onclick=()=>optimize(false);document.getElementById('v13Here').onclick=()=>optimize(true);document.getElementById('v13Nav').onclick=nav;await load()}
+const oldPane=renderAdminPane;renderAdminPane=async function(k){if(k!=='delivery')return oldPane(k);if(!panelCan(k))return toast('Sin permiso para gestionar entregas.','error');activeAdmin=k;const epoch=++panelEpoch;document.querySelectorAll('.tab-btn').forEach(b=>b.classList.toggle('active',b.dataset.tab===k));const c=document.getElementById('adminContent');c.innerHTML='<p>Cargando mapa de entregas…</p>';try{await render(c)}catch(e){if(epoch===panelEpoch)c.innerHTML='<div class="notice">Este módulo requiere la función catalog_delivery de Supabase.<br>'+esc(e.message)+'</div>'}};
 })();
 </script>
 
@@ -4650,7 +4608,6 @@ setTimeout(reconcileSession,1500);
 })();
 </script>
 
-<!-- VibraErotica: autorización de panel por roles reales de Supabase -->
 <script id="vibra-admin-role-fix">
 (function(){
   'use strict';
@@ -4878,11 +4835,12 @@ wrap.querySelectorAll('[data-site]').forEach(b=>b.onclick=()=>{selected=b.datase
 const loc=active.find(x=>x.id===selected);const map=el('#v9Map');if(!loc){map.innerHTML='<p class="v9muted">El mapa se mostrará cuando exista una sede publicada.</p>';el('#v9Directions').disabled=true;el('#v9OpenMap').removeAttribute('href');return}
 el('#v9Directions').disabled=false;el('#v9PlaceInfo').textContent=loc.name+' — '+loc.address;
 // CARTO light tiles delivered by an iframe (Leaflet loaded inside iframe via srcdoc; no key is needed for public CARTO basemap).
-const lat=Number(loc.latitude),lng=Number(loc.longitude);const html=`<!doctype html><html><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1"><link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css"><style>html,body,#map{height:100%;margin:0} .label{font:700 13px system-ui;color:#fff;background:#251b37;padding:5px 10px;border-radius:9px}</style></head><body><div id="map"></div><script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"><\/script><script>const map=L.map('map').setView([${lat},${lng}],15);L.tileLayer('https://{s}.basemaps.cartocdn.com/light_all/{z}/{x}/{y}{r}.png',{attribution:'&copy; OpenStreetMap &copy; CARTO',subdomains:'abcd',maxZoom:19}).addTo(map);L.marker([${lat},${lng}]).addTo(map).bindPopup(${JSON.stringify(loc.name)}).openPopup();<\/script></body></html>`;
+const lat=Number(loc.latitude),lng=Number(loc.longitude);const html=`<!doctype html><html><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1"><link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css"><style>html,body,#map{height:100%;margin:0} .label{font:700 13px system-ui;color:#fff;background:#251b37;padding:5px 10px;border-radius:9px}</style></head><body><div id="map"></div><script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"><\/script><script>const map=L.map('map').setView([${lat},${lng}],15);L.tileLayer('${SUPABASE_URL}/functions/v1/carto-tiles/light_all/{z}/{x}/{y}.png',{attribution:'&copy; OpenStreetMap &copy; CARTO',subdomains:'abcd',maxZoom:19}).addTo(map);L.marker([${lat},${lng}]).addTo(map).bindPopup(${JSON.stringify(loc.name)}).openPopup();<\/script>
+</body></html>`;
 map.replaceChildren();const iframe=document.createElement('iframe');iframe.title='Mapa CARTO: '+loc.name;iframe.loading='lazy';iframe.srcdoc=html;map.append(iframe);
-el('#v9OpenMap').href=`https://www.google.com/maps/search/?api=1&query=${lat}%2C${lng}`;
+el('#v9OpenMap').removeAttribute('href');el('#v9OpenMap').hidden=true;
 }
-function route(){const site=locations.find(x=>x.id===selected);if(!site)return;const target=el('#v9GeoState');target.textContent='Solicitando permiso de ubicación precisa…';if(!navigator.geolocation){target.textContent='Tu navegador no permite geolocalización.';return}navigator.geolocation.getCurrentPosition(p=>{const {latitude,longitude,accuracy}=p.coords;target.textContent=`Precisión aproximada del dispositivo: ${Math.round(accuracy)} m. La ruta se abrirá en Google Maps.`;const u=`https://www.google.com/maps/dir/?api=1&origin=${latitude}%2C${longitude}&destination=${site.latitude}%2C${site.longitude}&travelmode=driving`;window.open(u,'_blank','noopener,noreferrer')},e=>target.textContent='No se pudo obtener tu ubicación: '+e.message,{enableHighAccuracy:true,timeout:20000,maximumAge:0})}
+function route(){const site=locations.find(x=>x.id===selected);if(!site)return;const target=el('#v9GeoState');target.textContent='Solicitando permiso de ubicación precisa…';if(!navigator.geolocation){target.textContent='Tu navegador no permite geolocalización.';return}navigator.geolocation.getCurrentPosition(p=>{const {latitude,longitude,accuracy}=p.coords;target.textContent=`Precisión aproximada del dispositivo: ${Math.round(accuracy)} m. Tu punto de partida se localizó; la navegación por carretera requiere el motor de rutas.`;},e=>target.textContent='No se pudo obtener tu ubicación: '+e.message,{enableHighAccuracy:true,timeout:20000,maximumAge:0})}
 function renderStaff(){const w=el('#v9Professionals');if(!w)return;const active=staff.filter(p=>p.active!==false);w.innerHTML=active.length?active.map(p=>{const enabled=modes.filter(x=>x.practitioner_id===p.id&&x.enabled).map(x=>x.mode);const m=media.find(x=>x.practitioner_id===p.id&&x.media_type==='image');const url=m?db()?.storage.from('catalog-media').getPublicUrl(m.object_path).data.publicUrl:'';
 return `<article class="v9site"><div class="v9staff">${url?`<img class="v9staff-photo" src="${esc(url)}" alt="Foto profesional">`:`<div class="v9staff-photo" style="display:grid;place-items:center">${ic('spa')}</div>`}<div><h3>${esc(p.display_name)}</h3><p>${esc(p.bio)}</p><p class="v9small">${enabled.length?enabled.join(' · '):'Modalidades por confirmar'}</p><p class="v9small">${hours.filter(h=>h.practitioner_id===p.id).map(h=>['Dom','Lun','Mar','Mié','Jue','Vie','Sáb'][h.weekday]+' '+h.start_time.slice(0,5)+'–'+h.end_time.slice(0,5)).join(', ')||'Sin horarios publicados'}</p>${p.contact_phone?`<p><a href="tel:${esc(p.contact_phone)}">Contactar</a></p>`:''}</div></div><button class="v9action" data-p="${p.id}">Reservar</button></article>`}).join(''):'<p class="v9muted">Aún no se publican perfiles profesionales. Se mostrarán cuando los configure el administrador.</p>';
 w.querySelectorAll('[data-p]').forEach(b=>b.onclick=()=>{const id=b.dataset.p;el('#v9Modalities').hidden=false;el('#v9Mode').innerHTML=modes.filter(x=>x.practitioner_id===id&&x.enabled).map(m=>`<option value="${esc(m.mode)}">${esc(m.mode)}</option>`).join('');el('#v9Modalities').dataset.practitioner=id;el('#v9ModesText').textContent=staff.find(x=>x.id===id)?.display_name||'';el('#v9Modalities').scrollIntoView({behavior:'smooth',block:'nearest'})})}
@@ -4919,7 +4877,7 @@ async function saveModes(){if(!admin)return;const id=el('#v9Practitioner').value
 function pricingData(){return {enabled:el('#v9TravelEnabled').value==='true',vehicle_name:el('#v9Vehicle').value.trim()||'Automóvil',km_per_liter:Number(el('#v9Consumption').value),fuel_price_per_liter:Number(el('#v9Fuel').value),fixed_departure_fee:Number(el('#v9Fixed').value),extra_per_km:Number(el('#v9PerKm').value)}}
 function calc(){const p=pricingData(),km=Number(el('#v9Distance').value);if(!el('#v9Distance').value||km<0||p.km_per_liter<=0||Object.values(p).some(x=>typeof x==='number'&&(!Number.isFinite(x)||x<0)))return el('#v9CostResult').textContent='Verifica km y precios no negativos, así como rendimiento mayor que cero.';const fuel=km/p.km_per_liter*p.fuel_price_per_liter,total=p.fixed_departure_fee+fuel+km*p.extra_per_km;el('#v9CostResult').textContent=`Gasolina estimada: $${fuel.toFixed(2)} MXN · Total estimado: $${total.toFixed(2)} MXN (para ${km.toFixed(1)} km de ruta introducidos)`;}
 async function saveTravel(){if(!admin)return;const p=pricingData();if(p.km_per_liter<=0||Object.values(p).some(x=>typeof x==='number'&&(!Number.isFinite(x)||x<0)))return setMsg('Revisa los datos del vehículo.');const r=await db().from('travel_pricing').upsert({id:1,...p});setMsg(r.error?r.error.message:'Cotizador guardado en Supabase.');if(!r.error)price=p}
-function applyTheme(){if(!theme)return;document.body.dataset.v9Template=theme.background_template;document.documentElement.style.setProperty('--v9-primary',theme.primary_color);document.querySelectorAll('.v9action:not(.secondary)').forEach(x=>x.style.background=theme.primary_color)}
+function applyTheme(){if(!theme)return;document.body.dataset.v9Template=theme.background_template;document.querySelectorAll('.v9action:not(.secondary)').forEach(x=>x.style.background='var(--primary)')}
 async function saveTheme(){
  if(!admin)return setMsg('Se requiere sesión administrativa.');
  const p={id:1,primary_color:el('#v9Primary').value,secondary_color:el('#v9Secondary').value,background_template:el('#v9Template').value};
@@ -4961,7 +4919,7 @@ window.addEventListener('focus',()=>{if(db())load()});
 'use strict';
 const $=(s,root=document)=>root.querySelector(s);
 const esc=s=>String(s??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
-const db=()=>window.supabaseClient||null;
+const db=()=>typeof supabaseClient!=='undefined' ? supabaseClient : null;
 let rate=800, items=[], professionals=[], promotions=[];
 let available=false, admin=false;
 const money=n=>new Intl.NumberFormat('es-MX',{style:'currency',currency:'MXN'}).format(Number(n)||0);
@@ -5082,13 +5040,53 @@ window.addEventListener('focus',()=>{if(block()&&db())load().catch(console.warn)
   const observer=new MutationObserver(()=>{
     const btn=$('#saveMapConfig');if(btn&&!$('#v11SaveStatus')){const line=document.createElement('p');line.id='v11SaveStatus';line.className='small muted';line.style.marginTop='12px';line.textContent='La clave se guarda en Supabase, no solo en este navegador.';btn.insertAdjacentElement('afterend',line);fetchSettings();}
     const v9=$('#v9Admin');if(v9&&!v9.dataset.v11Compact){v9.dataset.v11Compact='1';v9.classList.add('v11-compact');}
-    document.querySelectorAll('[data-admin-tab="deliveries"],[data-admin-tab="routes"]').forEach(x=>{if(x.textContent.includes('entrega'))x.textContent=x.textContent.replace(/Rutas y entregas/gi,'Rutas de servicios').replace(/Entregas y seguimiento/gi,'Desplazamientos de servicios');});
+    document.querySelectorAll('[data-admin-tab="deliveries"],[data-admin-tab="routes"],[data-admin-tab="delivery"]').forEach(x=>{x.textContent=x.textContent.replace(/Rutas y entregas|Rutas de servicios|Entregas y seguimiento/gi,'Reservas a domicilio');});
   });
   observer.observe(document.documentElement,{childList:true,subtree:true});
   document.addEventListener('visibilitychange',()=>{if(!document.hidden){lastFetched=0;fetchSettings();}});
   setTimeout(fetchSettings,2000);
 })();
 
+</script>
+
+<style id="vibra-integracion-2026">
+#v9Section .v9panel,#v10Panel,#v9Admin{background:var(--card)!important;color:var(--text)!important;border-color:var(--line)!important}
+#v9Section .v9panel h2,#v9Section .v9panel h3,#v9Admin h2,#v9Admin h3,#v9Admin label,#v10Panel h2,#v10Panel h3{color:var(--text)!important}
+#v9Section .v9muted,#v9Admin .v9muted{color:var(--muted)!important}
+#v9Admin input,#v9Admin select{background:var(--card)!important;color:var(--text)!important;border:1px solid var(--line)!important}
+#v9Section .v9action:not(.secondary),#v9Admin .v9action:not(.secondary){background:var(--primary)!important}
+#v9Section .v9site{background:var(--card)!important;color:var(--text)!important;border-color:var(--line)!important}
+#v9Section .v9site p{color:var(--muted)!important}
+#v9Admin{display:none!important}
+#adminContent #vibraSedesAdmin #v9Admin{display:block!important;margin:0!important;max-width:100%;padding:10px!important}
+#vibraSedesAdmin .v9fields{display:grid;grid-template-columns:repeat(auto-fit,minmax(180px,1fr));gap:12px}
+</style>
+<script id="vibra-reparaciones-2026">
+(()=>{
+  const q=s=>document.querySelector(s);
+  const insertSedes=()=>{
+    const parent=q('#adminContent');const site=q('#v9Admin');
+    if(!parent||!site||!q('#adminModal.show'))return;
+    const active=typeof activeAdmin!=='undefined'?activeAdmin:'';
+    if(active!=='business'){const here=q('#vibraSedesAdmin');if(here)here.remove();return;}
+    let wrapper=q('#vibraSedesAdmin');
+    if(!wrapper){wrapper=document.createElement('section');wrapper.id='vibraSedesAdmin';wrapper.className='section-card';wrapper.innerHTML='<h3>Sedes oficiales y modalidades</h3>';parent.append(wrapper)}
+    if(site.parentNode!==wrapper){wrapper.append(site);site.classList.add('visible');}
+  };
+  const rename=()=>{
+    document.querySelectorAll('#adminTabs button').forEach(b=>{
+      const t=b.dataset.tab;
+      if(t==='products')b.querySelector('span')?.replaceChildren(document.createTextNode('Productos y servicios'));
+      if(t==='delivery')b.querySelector('span')?.replaceChildren(document.createTextNode('Reservas a domicilio'));
+    });
+  };
+  let scheduled=false;
+  const observer=new MutationObserver(()=>{
+    if(scheduled)return;scheduled=true;
+    requestAnimationFrame(()=>{scheduled=false;rename();insertSedes();});
+  });
+  document.addEventListener('DOMContentLoaded',()=>{observer.observe(document.body,{subtree:true,childList:true});rename();insertSedes();});
+})();
 </script>
 </body>
 </html>
