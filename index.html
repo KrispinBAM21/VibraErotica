@@ -3,16 +3,13 @@
 <head>
 <meta charset="UTF-8" />
 <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-<script id="vibra-theme-first-paint">document.documentElement.classList.add("vibra-initial-loading");</script>
+
 <title>VibraErótica — Boutique y reservas</title>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&family=Nunito:wght@400;600;700;800&family=Poppins:wght@400;500;600;700&family=Roboto:wght@400;500;700&display=swap" rel="stylesheet">
 <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css">
-<style id="vibra-no-legacy-flash">
-html.vibra-initial-loading body { visibility:hidden !important; }
-html.vibra-initial-loading::after { content:""; position:fixed; inset:0; background:#0d1119; z-index:2147483647; }
-</style>
+
 <style>
 :root{
   --primary:#c62828; --secondary:#fff3f3; --accent:#ffb300; --text:#232323; --card:#ffffff;
@@ -1019,7 +1016,7 @@ setTimeout(async()=>{
   }finally{
     clearTimeout(pendingTimeout);
     applyDesign();renderHeader();renderCategories();renderCatalog();
-    requestAnimationFrame(()=>requestAnimationFrame(()=>document.documentElement.classList.remove('vibra-initial-loading')));
+    
   }
 },0);
 </script>
