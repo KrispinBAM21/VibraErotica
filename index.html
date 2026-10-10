@@ -5195,7 +5195,7 @@ const escText=s=>String(s??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>
 let lastServices='';
 function updateServices(){
   const grid=$('#catalogGrid'),source=$('#v9Professionals');if(!grid||!source)return;
-  let wrap=$('#vibraServiceCatalog');if(!wrap){wrap=document.createElement('section');wrap.id='vibraServiceCatalog';wrap.className='vibra-services-inline';grid.append(wrap)}
+  let wrap=$('#vibraServiceCatalog');if(!wrap){wrap=document.createElement('section');wrap.id='vibraServiceCatalog';wrap.className='vibra-services-inline';grid.append(wrap);lastServices='';}
   if(wrap.parentElement!==grid)grid.append(wrap);
   const cards=[...source.querySelectorAll('article[data-p],article.v9site')];
   const category=typeof currentCategory==='string'?currentCategory:'Todos';
@@ -5207,7 +5207,7 @@ function updateServices(){
     const ps=[...c.querySelectorAll('p')].map(x=>x.textContent).filter(Boolean);
     return `<article class="vibra-service-card"><div>${img?`<img class="vibra-service-photo" src="${escText(img.getAttribute('src'))}" alt="${escText(title)}">`:`<div class="vibra-service-photo" style="display:grid;place-items:center;color:var(--primary)">${typeof UI!=='undefined'?UI.business:''}</div>`}</div><div class="vibra-service-content"><h3>${escText(title)}</h3><p>${escText(desc)}</p>${ps.slice(1,3).map(x=>`<p>${escText(x)}</p>`).join('')}</div><button class="btn" data-vibra-book="${escText(id)}">Reservar</button></article>`;
   }).join(''):'';
-  if(html!==lastServices){wrap.innerHTML=html;lastServices=html;}
+  if(html!==lastServices||(html&&!wrap.childElementCount)){wrap.innerHTML=html;lastServices=html;}
   wrap.hidden=!html;
   if(html){grid.querySelectorAll(':scope > .section-card').forEach(n=>{if(n.textContent.includes('No hay productos para mostrar'))n.style.display='none'});}
   wrap.querySelectorAll('[data-vibra-book]').forEach(b=>b.onclick=()=>{
