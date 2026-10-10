@@ -206,7 +206,35 @@ html,body{background:#0d1015}html body{visibility:visible!important}html.vibra-h
 .hero-card:after{content:"";position:absolute;width:35%;aspect-ratio:1;border:1px solid #ffffff29;border-radius:50%;right:-9%;top:-90%;box-shadow:0 0 0 45px #ffffff09,0 0 0 90px #ffffff08;pointer-events:none}.hero-card h2{font-family:'Poppins','Nunito',sans-serif;letter-spacing:-.045em;font-weight:800;font-size:clamp(2rem,4.4vw,3.8rem);line-height:1.04;position:relative;z-index:1}.hero-card p{font-family:'Nunito',sans-serif;font-size:clamp(.95rem,1.5vw,1.18rem);letter-spacing:.012em;line-height:1.6;max-width:690px;position:relative;z-index:1}
 #foodRouteInformation #foodCalculate,#foodRouteInformation #foodGoCart,#foodRouteInfo .toolbar:empty{display:none!important}
 .vibra-media-stage{margin:12px 0;padding:14px;border:1px solid var(--line);border-radius:16px;background:var(--secondary)}.vibra-media-head{display:flex;justify-content:space-between;gap:12px;align-items:center;flex-wrap:wrap;margin-bottom:12px}.vibra-media-list{display:grid;grid-template-columns:repeat(auto-fill,minmax(120px,1fr));gap:12px}.vibra-media-tile{position:relative;border:1px solid var(--line);padding:7px;border-radius:13px;background:var(--card);min-width:0}.vibra-media-tile img,.vibra-media-tile video{width:100%;height:120px;object-fit:cover;border-radius:9px;background:#10131a}.vibra-media-tile button{min-height:32px;padding:6px 9px;font-size:.8rem}.vibra-media-tile .vibra-media-controls{display:flex;justify-content:space-between;gap:4px;margin-top:7px}.vibra-media-tile[draggable=true]{cursor:grab}.vibra-media-tile.vibra-drag-over{outline:2px solid var(--primary)}.vibra-media-tile small{display:block;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;margin-top:5px}.vibra-media-stage .vibra-media-note{font-size:.78rem;color:var(--muted);margin:0 0 12px}
-</style></head>
+</style><style id="vibra-tema-uniforme-v1">
+body.dark-mode{
+ --text:#f3f4f6!important;--muted:#abb6c7!important;
+ --card:#161a20!important;--site-bg:#0d1015!important;
+ --secondary:#242a33!important;--line:#303743!important;
+ background:#0d1015!important;color:var(--text)!important;color-scheme:dark;
+}
+body:not(.dark-mode){color-scheme:light}
+body.dark-mode::before{background:#0d1015!important}
+body.dark-mode .topbar{background:rgba(22,26,32,.96)!important;border-bottom-color:var(--line)!important}
+body.dark-mode .hero-card{color:#fff}
+body.dark-mode .product-card,body.dark-mode .section-card,body.dark-mode .review-card,
+body.dark-mode .followup-card,body.dark-mode .payment-item,body.dark-mode .flash-offer,
+body.dark-mode .modal,body.dark-mode .drawer,body.dark-mode .toast,
+body.dark-mode .chip,body.dark-mode .palette-card,body.dark-mode .icon-option,
+body.dark-mode .search-wrap input,body.dark-mode .input,body.dark-mode .select,
+body.dark-mode .textarea,body.dark-mode .address-suggestion{
+ background-color:var(--card)!important;color:var(--text)!important;border-color:var(--line)!important;
+}
+body.dark-mode .chip.active,body.dark-mode .btn:not(.secondary):not(.ghost):not(.danger):not(.success){background-color:var(--primary)!important;color:#fff!important}
+body.dark-mode .desc,body.dark-mode .meta,body.dark-mode .muted,body.dark-mode .small.muted{color:var(--muted)!important}
+body.dark-mode .radio-card,body.dark-mode .payment-choice{border-color:var(--line);color:var(--text)}
+body.dark-mode .radio-card:has(input:checked),body.dark-mode .payment-choice.selected{background:var(--secondary)!important}
+body.dark-mode .leaflet-container{background:#171b21!important}
+#adminModal{color-scheme:dark}
+#adminModal .ticket-preview,#adminModal .ticket-canvas-preview,#adminModal .ticket-preview svg{color-scheme:light}
+@media(prefers-reduced-motion:reduce){.topbar,.product-card{transition:none!important}}
+</style>
+</head>
 <body>
 <div class="topbar"><div class="container header">
   <div class="brand">
@@ -559,8 +587,9 @@ function applyPublicTheme(){
   document.body.classList.toggle('dark-mode',publicThemeMode==='dark');
   const b=document.getElementById('themeBtn');
   if(b){
-    b.innerHTML=(publicThemeMode==='dark'?UI.sun:UI.moon)+`<span class="theme-switch-label">${publicThemeMode==='dark'?'Predeterminado':'Oscuro'}</span>`;
-    b.setAttribute('aria-label',publicThemeMode==='dark'?'Usar tema predeterminado':'Usar tema oscuro');
+    b.innerHTML=(publicThemeMode==='dark'?UI.moon:UI.sun)+`<span class="theme-switch-label">${publicThemeMode==='dark'?'Oscuro':'Predeterminado'}</span>`;
+    b.setAttribute('aria-label',publicThemeMode==='dark'?'Modo oscuro activo. Cambiar a predeterminado':'Modo predeterminado activo. Cambiar a oscuro');
+    b.setAttribute('aria-pressed',String(publicThemeMode==='dark'));
     if(window.innerWidth>=720)b.style.width='auto',b.style.padding='0 12px'; else b.style.width='44px',b.style.padding='0';
   }
 }
