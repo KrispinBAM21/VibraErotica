@@ -4,7 +4,7 @@
 <meta charset="UTF-8" />
 <meta name="viewport" content="width=device-width, initial-scale=1.0" />
 
-<title>VibraErótica</title>
+<title>VibraErótica</title><script id="vibra-published-prepaint">(function(){try{const raw=localStorage.getItem('vibra.published.snapshot.v2');if(!raw)return;const obj=JSON.parse(raw);if(!obj||!obj.config||!obj.config.design)return;const d=obj.config.design,r=document.documentElement.style;for(const [k,v] of Object.entries({'--primary':d.primary,'--secondary':d.secondary,'--accent':d.accent,'--text':d.text,'--card':d.card,'--site-bg':d.siteBg,'--font':d.font?"'"+d.font+"',sans-serif":null})){if(v)r.setProperty(k,v)}document.documentElement.style.background=d.siteBg||'#0d1015';if(obj.config.businessName)document.title=obj.config.businessName;}catch(e){}})();</script>
 <link id="vibraDynamicFavicon" rel="icon" type="image/png" href="">
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
@@ -234,7 +234,7 @@ body.dark-mode .leaflet-container{background:#171b21!important}
 #adminModal .ticket-preview,#adminModal .ticket-canvas-preview,#adminModal .ticket-preview svg{color-scheme:light}
 @media(prefers-reduced-motion:reduce){.topbar,.product-card{transition:none!important}}
 </style>
-<script id="vibra-prepaint-theme">(function(){try{const dark=localStorage.getItem('vibraerotica.theme.mode')==='dark';document.documentElement.dataset.vibraMode=dark?'dark':'default';if(dark)document.documentElement.classList.add('vibra-dark-first');}catch(e){}})();</script><style id="vibra-prepaint-colors">html.vibra-dark-first,html.vibra-dark-first body{background:#0d1015!important;color:#f3f4f6}html.vibra-dark-first body:not(.dark-mode)>.topbar,html.vibra-dark-first .topbar{background:#161a20!important}html.vibra-dark-first .hero-card{background:linear-gradient(125deg,#be058c,#4d0a45)!important}</style></head>
+<script id="vibra-prepaint-theme">(function(){try{const dark=localStorage.getItem('vibraerotica.theme.mode')==='dark';document.documentElement.dataset.vibraMode=dark?'dark':'default';if(dark)document.documentElement.classList.add('vibra-dark-first');}catch(e){}})();</script><style id="vibra-prepaint-colors">html.vibra-dark-first,html.vibra-dark-first body{background:#0d1015!important;color:#f3f4f6}html.vibra-dark-first body:not(.dark-mode)>.topbar,html.vibra-dark-first .topbar{background:#161a20!important}</style></head>
 <body>
 <div class="topbar"><div class="container header">
   <div class="brand">
@@ -449,6 +449,7 @@ const defaults={
  cart:{},orders:[],folioSeq:1
 };
 let state=load();
+try{const snap=JSON.parse(localStorage.getItem('vibra.published.snapshot.v2')||'null');if(snap&&snap.config&&Array.isArray(snap.products)&&Date.now()-Number(snap.savedAt||0)<86400000){state.config=merge(defaults.config,snap.config);state.products=snap.products;}}catch(e){}
 
 let currentCategory='Todos',searchTerm='',customerMarker=null,clientMap=null,originMap=null,originMarker=null,tripMap=null,tripOriginMarker=null,tripDestMarker=null,tripRouteLayer=null,lastPdfBlob=null,lastPdfName='',lastOrderId=null;
 let checkout={delivery:'pickup',address:'',lat:null,lng:null,distance:0,shipping:0,name:'',phone:'',notes:'',paymentId:'',proofFile:null,proofUrl:'',proofName:''};
@@ -502,6 +503,7 @@ async function loadPublicCloudState(){
   if(se)throw se;if(pe)throw pe;
   if(settings?.data){state.config=merge(defaults.config,settings.data);if(state.config.map)state.config.map.apiKey='';}
   if(Array.isArray(products))state.products=products.map(rowToProduct);
+  try{const safeConfig=publicConfigForCloud();localStorage.setItem('vibra.published.snapshot.v2',JSON.stringify({config:safeConfig,products:state.products,savedAt:Date.now()}));}catch(e){}
   saveLocal();applyDesign();renderHeader();renderCategories();renderCatalog();
 }
 async function syncAdminStateToCloud(){
@@ -666,10 +668,18 @@ function addConfiguredTileLayer(map,containerId){
     let failures=0;
     tiles.on('tileerror',async()=>{
       if(++failures!==2)return;
-      let detail='No fue posible descargar las teselas CARTO.';
+      if(!map._vibraFallbackTiles){
+        try{
+          map.removeLayer(tiles);
+          map._vibraFallbackTiles=L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png',{
+            maxZoom:19,subdomains:'abc',attribution:'&copy; OpenStreetMap contributors'
+          }).addTo(map);
+        }catch(fallbackError){console.warn('Mapa alternativo:',fallbackError)}
+      }
+      let detail='No fue posible descargar las teselas CARTO; se intentó usar OpenStreetMap como respaldo.';
       try{const probe=url.replace('{z}','4').replace('{x}','3').replace('{y}','7');const response=await fetch(probe);if(!response.ok)detail+=' HTTP '+response.status+': '+(await response.text()).slice(0,180)}catch(error){detail+=' '+error.message}
       const host=document.getElementById(containerId);
-      if(host&&!host.querySelector('.vibra-map-error')){const note=document.createElement('div');note.className='vibra-map-error';note.textContent=detail;host.append(note)}
+      if(host&&!host.querySelector('.vibra-map-error')&&!map._vibraFallbackTiles){const note=document.createElement('div');note.className='vibra-map-error';note.textContent=detail;host.append(note)}
     });
     return true;
   }catch(e){
@@ -5590,5 +5600,18 @@ body.dark-mode .hero-card{background:linear-gradient(135deg,var(--primary),#4d0a
 #vsmGallery .vsm-comment{border-bottom:1px solid #414755;padding:8px 0;font-size:.82rem;overflow-wrap:anywhere}#vsmGallery .vsm-viewer-interact button:disabled{opacity:.6}
 </style>
 <script id="vibra-product-card-backgrounds-20261011">(()=>{const grid=document.getElementById('catalogGrid');if(!grid)return;let pending=false;const decorate=()=>{if(pending)return;pending=true;requestAnimationFrame(()=>{pending=false;try{const products=typeof state!=='undefined'?state.products:[];for(const card of grid.querySelectorAll('.product-card')){const id=card.querySelector('[data-view-product]')?.dataset.viewProduct;if(!id)continue;const p=products.find(v=>String(v.id)===String(id));const color=p?.backgroundColor;if(color&&/^#[0-9a-fA-F]{6}$/.test(color)){card.style.setProperty('background-color',color,'important');card.style.setProperty('color','#fff','important')}else{card.style.removeProperty('background-color');card.style.removeProperty('color')}}}catch(e){console.warn('Fondo de productos:',e)}})};new MutationObserver(decorate).observe(grid,{childList:true,subtree:true});decorate();})();</script>
-</body>
+
+<style id="vibra-service-viewer-polish-20261011">
+#vsmGallery .vsm-dialog{box-shadow:0 32px 100px #0009;border:1px solid #3b4352;border-radius:22px;overflow:hidden}
+#vsmGallery .vsm-viewer-sidebar{background:linear-gradient(150deg,#242936,#171a23)!important;border:1px solid #383d4b;padding:24px!important}
+#vsmGallery .vsm-viewer-sidebar h3{color:#fff;font-size:1.24rem;letter-spacing:-.02em}
+#vsmGallery #vsmProfileInfo{display:grid;gap:8px}#vsmGallery #vsmProfileInfo p{margin:0!important;padding:9px 11px;border-radius:9px;background:#ffffff08;line-height:1.5}
+#vsmGallery #vsmProfileInfo a{color:#ff80dc;display:inline-block;padding:7px 4px;text-underline-offset:3px}
+#vsmGallery .vsm-viewer-interact{display:flex;flex-wrap:wrap;gap:8px;padding-block:12px;border-top:1px solid #ffffff20}
+#vsmGallery .vsm-viewer-interact button{flex:1 1 95px;min-height:40px;border:1px solid #555e70;background:#303643;color:#fff;border-radius:10px;font-weight:700}
+#vsmGallery .vsm-viewer-interact button[data-active="1"]{color:#ff65cb;border-color:#f052b5}
+#vsmGallery .vsm-viewer-stage{background:#08090b;border-radius:12px;overflow:hidden}
+#vsmGallery .vsm-viewer-stage img,#vsmGallery .vsm-viewer-stage video{display:block;object-fit:contain;max-width:100%;max-height:67dvh;margin:auto}
+@media(max-width:760px){#vsmGallery .vsm-viewer-body{grid-template-columns:1fr!important;overflow:auto;max-height:78dvh}#vsmGallery .vsm-viewer-sidebar{max-height:none!important;padding:15px!important}#vsmGallery .vsm-viewer-stage img,#vsmGallery .vsm-viewer-stage video{max-height:43dvh}}
+</style></body>
 </html>
