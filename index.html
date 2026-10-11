@@ -234,7 +234,32 @@ body.dark-mode .leaflet-container{background:#171b21!important}
 #adminModal .ticket-preview,#adminModal .ticket-canvas-preview,#adminModal .ticket-preview svg{color-scheme:light}
 @media(prefers-reduced-motion:reduce){.topbar,.product-card{transition:none!important}}
 </style>
-<script id="vibra-prepaint-theme">(function(){try{const dark=localStorage.getItem('vibraerotica.theme.mode')==='dark';document.documentElement.dataset.vibraMode=dark?'dark':'default';if(dark)document.documentElement.classList.add('vibra-dark-first');}catch(e){}})();</script><style id="vibra-prepaint-colors">html.vibra-dark-first,html.vibra-dark-first body{background:#0d1015!important;color:#f3f4f6}html.vibra-dark-first body:not(.dark-mode)>.topbar,html.vibra-dark-first .topbar{background:#161a20!important}</style></head>
+<script id="vibra-prepaint-theme">(function(){try{const dark=localStorage.getItem('vibraerotica.theme.mode')==='dark';document.documentElement.dataset.vibraMode=dark?'dark':'default';if(dark)document.documentElement.classList.add('vibra-dark-first');}catch(e){}})();</script><style id="vibra-prepaint-colors">html.vibra-dark-first,html.vibra-dark-first body{background:#0d1015!important;color:#f3f4f6}html.vibra-dark-first body:not(.dark-mode)>.topbar,html.vibra-dark-first .topbar{background:#161a20!important}</style>
+<style id="vibra-refinamiento-servicios-mapa-20261011">
+#vibraServiceCatalog .vsm-media-button{display:flex;justify-content:center;align-items:center;gap:8px;min-height:42px;padding:8px 10px;border:1px solid var(--line);border-radius:12px;background:var(--secondary);color:var(--primary);font-size:.88rem;font-weight:800;line-height:1.1}
+#vibraServiceCatalog .vsm-media-button svg{height:18px;width:18px;flex:none;stroke:currentColor;fill:none}
+#vibraServiceCatalog .vsm-media-button small{font-size:.68rem;color:var(--muted);font-weight:600}
+#vsmGallery .vsm-viewer-sidebar{background:var(--card)!important;color:var(--text)!important;border:1px solid var(--line)!important;border-radius:16px;box-shadow:none}
+#vsmGallery .vsm-viewer-sidebar h3{color:var(--text);font-size:1.05rem;letter-spacing:-.015em}
+#vsmGallery #vsmProfileInfo>div,#vsmGallery .vsm-viewer-sidebar .vsm-info-row{background:var(--secondary)!important;color:var(--text)!important;border:1px solid var(--line);border-radius:11px}
+#vsmGallery #vsmProfileInfo strong{color:var(--text)}
+#vsmGallery .vsm-viewer-social{display:flex;flex-wrap:wrap;gap:8px;margin:12px 0}
+#vsmGallery .vsm-viewer-social a{color:var(--primary);border:1px solid var(--line);background:var(--secondary);border-radius:9px;padding:7px 10px;text-decoration:none;font-size:.84rem}
+#vsmGallery .vsm-viewer-interact{display:flex;flex-wrap:wrap;gap:7px}
+#vsmGallery .vsm-viewer-interact button{background:var(--secondary)!important;color:var(--text)!important;border:1px solid var(--line)!important;border-radius:10px;padding:9px 12px}
+#vsmGallery .vsm-viewer-interact button:hover,#vsmGallery .vsm-viewer-interact button:focus-visible{border-color:var(--primary)!important;color:var(--primary)!important}
+#vsmGallery .vsm-viewer-header{background:var(--card);color:var(--text);border-bottom:1px solid var(--line)}
+#vsmGallery .vsm-close{color:var(--primary)!important;background:var(--secondary)!important;border:1px solid var(--line)!important;border-radius:12px!important}
+#foodDeliveryPlanner{display:block!important;width:min(1120px,calc(100% - 28px));margin:18px auto 30px!important}
+#foodDeliveryPlanner>.section-card{margin:0!important;min-width:0;max-width:100%;padding:16px!important}
+#foodDeliveryPlanner>aside{display:none!important}
+#foodDeliveryPlanner #foodPublicMap{height:310px!important;max-height:42vh;min-height:230px;width:100%;border-radius:14px}
+#foodDeliveryPlanner .address-picker-row{margin:10px 0}
+#foodDeliveryPlanner .section-card>h2{font-size:1.12rem;margin:5px 0 8px}
+#foodDeliveryPlanner .section-card>p.small:last-child{margin:8px 0 0}
+@media(max-width:700px){#foodDeliveryPlanner{width:calc(100% - 20px)}#foodDeliveryPlanner #foodPublicMap{height:265px!important;max-height:none}#foodDeliveryPlanner>.section-card{padding:12px!important}#vsmGallery .vsm-viewer-interact button{flex:1 1 110px}}
+</style>
+</head>
 <body>
 <div class="topbar"><div class="container header">
   <div class="brand">
@@ -5382,7 +5407,7 @@ q('#vsmShowComments').onclick=()=>{comments.hidden=!comments.hidden};q('#vsmSend
 renderFeedback();
 drawGallery();}
 function enhanceCards(){qa('#vibraServiceCatalog .vibra-service-card').forEach(card=>{const id=q('[data-vibra-book]',card)?.dataset.vibraBook;if(!id)return;const s=allServices.find(x=>x.id===serviceLinks.find(y=>y.practitioner_id===id)?.service_id);let price=q('.vsm-price',card);if(s&&!price){price=document.createElement('p');price.className='vsm-price';q('.vibra-service-content',card)?.append(price);}if(price&&s)price.textContent=`${s.name} · Tarifa: $${Number(s.hourly_price).toLocaleString('es-MX',{minimumFractionDigits:2})} MXN`;
- const items=allMedia.filter(x=>x.practitioner_id===id&&x.object_path);if(items.length){const photo=q('.vibra-service-photo',card);if(photo&&!photo.closest('.vsm-view-trigger')){const b=document.createElement('button');b.className='vsm-view-trigger';b.type='button';b.setAttribute('aria-label','Ver servicio completo y galería');photo.replaceWith(b);b.append(photo);b.onclick=()=>showViewer(id);}if(!q('.vsm-media-button',card)){const b=document.createElement('button');b.type='button';b.className='btn secondary vsm-media-button';b.textContent='Ver servicio · Fotos y videos ('+items.length+')';b.onclick=()=>showViewer(id);q('.vibra-service-content',card)?.append(b);}}});}
+ const items=allMedia.filter(x=>x.practitioner_id===id&&x.object_path);if(items.length){const photo=q('.vibra-service-photo',card);if(photo&&!photo.closest('.vsm-view-trigger')){const b=document.createElement('button');b.className='vsm-view-trigger';b.type='button';b.setAttribute('aria-label','Ver servicio completo y galería');photo.replaceWith(b);b.append(photo);b.onclick=()=>showViewer(id);}if(!q('.vsm-media-button',card)){const b=document.createElement('button');b.type='button';b.className='btn secondary vsm-media-button';b.innerHTML='<svg aria-hidden="true" viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="11" cy="11" r="7"/><path d="m16 16 4 4"/><path d="M8 11h6m-3-3v6"/></svg><span>Ver servicio</span><small>Fotos y videos ('+items.length+')</small>';b.onclick=()=>showViewer(id);q('.vibra-service-content',card)?.append(b);}}});}
 let scheduled=false;const observe=new MutationObserver(m=>{if(scheduled)return;const admin=m.some(x=>x.target.id==='adminContent'||x.target.closest?.('#adminContent'));const catalog=m.some(x=>x.target.id==='catalogGrid'||x.target.closest?.('#vibraServiceCatalog'));if(!admin&&!catalog)return;scheduled=true;requestAnimationFrame(()=>{scheduled=false;if(admin)attach();if(catalog)enhanceCards()});});
 const vsmPreviousRender=renderProductsAdmin;renderProductsAdmin=function(c){vsmPreviousRender(c);queueMicrotask(attach)};
 function init(){observe.observe(document.body,{subtree:true,childList:true});attach();load();document.addEventListener('keydown',e=>{if(!q('#vsmGallery.open'))return;if(e.key==='Escape')closeViewer();if(e.key==='ArrowRight')drawGallery(1);if(e.key==='ArrowLeft')drawGallery(-1)});}
