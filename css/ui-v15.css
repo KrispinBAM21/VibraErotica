@@ -1,0 +1,96 @@
+/* Módulo: css/ui-v15.css | Función: estilos originales del bloque 18 | Depende de: css anterior (cascada) | Expone: selectores CSS originales. */
+
+/* ===== V15: encabezado, categorías visibles, calificación visible y pin personalizable ===== */
+
+/* Encabezado: evita iconos/labels fuera de sus cuadros */
+.topbar .header{
+  display:flex!important;
+  align-items:center!important;
+  flex-wrap:nowrap!important;
+  gap:10px!important;
+  min-height:72px;
+}
+.topbar .header .brand{min-width:0;flex:1 1 auto}
+.topbar .header>.icon-btn,
+.topbar .header>.theme-btn,
+.topbar .header>.account-labelled{
+  flex:0 0 auto!important;
+  height:48px!important;
+  min-height:48px!important;
+  border-radius:14px!important;
+  display:inline-flex!important;
+  align-items:center!important;
+  justify-content:center!important;
+  flex-direction:row!important;
+  gap:8px!important;
+  padding:0 13px!important;
+  overflow:hidden!important;
+  white-space:nowrap!important;
+  line-height:1!important;
+}
+.topbar .header>.icon-btn:not(.theme-btn):not(.account-labelled){
+  width:48px!important;
+  padding:0!important;
+}
+.topbar .header>.theme-btn{width:auto!important;min-width:48px!important}
+.topbar .header>.account-labelled{width:auto!important;max-width:180px!important}
+.topbar .header>.theme-btn span,
+.topbar .header>.account-labelled span{
+  display:block!important;
+  line-height:1!important;
+  margin:0!important;
+  white-space:nowrap!important;
+  overflow:hidden!important;
+  text-overflow:ellipsis!important;
+}
+.topbar .header svg{
+  width:21px!important;height:21px!important;min-width:21px!important;flex:0 0 21px!important;
+  margin:0!important;transform:none!important;
+}
+.badge-count{z-index:2}
+@media(max-width:780px){
+  .topbar .header{flex-wrap:wrap!important}
+  .topbar .header .brand{flex:1 1 100%}
+  .topbar .header>.theme-btn span,
+  .topbar .header>.account-labelled span{display:none!important}
+  .topbar .header>.theme-btn,
+  .topbar .header>.account-labelled{width:46px!important;padding:0!important}
+}
+
+/* Accesos que deben ser evidentes */
+.v15-experience-card{
+  display:grid;grid-template-columns:minmax(0,1fr) auto;gap:14px;align-items:center;
+  border:1px solid var(--line);border-radius:16px;background:var(--card);padding:14px 16px;margin-top:12px
+}
+.v15-experience-card h3{margin:0 0 4px}.v15-experience-card p{margin:0;color:var(--muted);font-size:.84rem}
+.v15-experience-actions{display:flex;gap:8px;flex-wrap:wrap;justify-content:flex-end}
+.v15-rating-summary{display:flex;gap:8px;align-items:center;flex-wrap:wrap;margin-top:7px;font-size:.8rem}
+.v15-stars-text{color:#ffb300;letter-spacing:1px;font-weight:900}
+@media(max-width:700px){.v15-experience-card{grid-template-columns:1fr}.v15-experience-actions{justify-content:flex-start}}
+
+/* Categorías admin */
+.v15-category-banner{
+  border:1px solid var(--primary);border-radius:14px;padding:13px;background:color-mix(in srgb,var(--primary) 7%,var(--card));margin:12px 0
+}
+.v15-category-banner h3{margin:0 0 5px}.v15-category-banner p{margin:0 0 10px;font-size:.82rem;color:var(--muted)}
+.v15-product-category{min-width:175px;max-width:240px}
+.v15-category-table{display:grid;gap:8px}
+.v15-category-row{display:grid;grid-template-columns:minmax(160px,1fr) auto auto;gap:8px;align-items:center;padding:10px;border:1px solid var(--line);border-radius:12px}
+.v15-category-members{margin-top:7px;font-size:.76rem;color:var(--muted)}
+@media(max-width:650px){.v15-category-row{grid-template-columns:1fr}.v15-product-category{max-width:none;width:100%}}
+
+/* Pin de negocio */
+.v15-pin-picker{display:grid;grid-template-columns:repeat(6,minmax(0,1fr));gap:8px;margin:10px 0}
+.v15-pin-option{border:1px solid var(--line);border-radius:12px;background:var(--card);color:var(--primary);height:72px;display:grid;place-items:center}
+.v15-pin-option.selected{border:2px solid var(--primary);background:var(--secondary)}
+.v15-pin-option svg{width:38px;height:38px;stroke:currentColor;fill:none;stroke-width:1.8}
+.v15-pin-preview{display:flex;align-items:center;gap:12px;border:1px solid var(--line);border-radius:12px;padding:12px;margin-top:10px}
+.v15-pin-bubble{width:52px;height:52px;border-radius:50% 50% 50% 0;transform:rotate(-45deg);display:grid;place-items:center;box-shadow:0 4px 12px #0003}
+.v15-pin-bubble>span{transform:rotate(45deg);display:grid;place-items:center}
+.v15-pin-bubble svg{width:27px;height:27px;stroke:#fff;fill:none;stroke-width:2}
+.v15-business-pin{position:relative;width:54px;height:64px;display:grid;place-items:start center}
+.v15-business-pin .bubble{width:46px;height:46px;border-radius:50% 50% 50% 0;transform:rotate(-45deg);display:grid;place-items:center;box-shadow:0 4px 12px #0004;border:3px solid white}
+.v15-business-pin .bubble>span{transform:rotate(45deg);display:grid;place-items:center}
+.v15-business-pin svg{width:25px;height:25px;stroke:#fff;fill:none;stroke-width:2}
+.v15-business-pin .label{position:absolute;top:-24px;padding:3px 7px;border-radius:6px;color:#fff;font:bold 11px Arial;white-space:nowrap}
+@media(max-width:700px){.v15-pin-picker{grid-template-columns:repeat(3,1fr)}}

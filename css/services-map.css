@@ -1,0 +1,24 @@
+/* Módulo: css/services-map.css | Función: estilos originales del bloque 12 | Depende de: css anterior (cascada) | Expone: selectores CSS originales. */
+
+#vibraServiceCatalog .vsm-media-button{display:flex;justify-content:center;align-items:center;gap:8px;min-height:42px;padding:8px 10px;border:1px solid var(--line);border-radius:12px;background:var(--secondary);color:var(--primary);font-size:.88rem;font-weight:800;line-height:1.1}
+#vibraServiceCatalog .vsm-media-button svg{height:18px;width:18px;flex:none;stroke:currentColor;fill:none}
+#vibraServiceCatalog .vsm-media-button small{font-size:.68rem;color:var(--muted);font-weight:600}
+#vsmGallery .vsm-viewer-sidebar{background:var(--card)!important;color:var(--text)!important;border:1px solid var(--line)!important;border-radius:16px;box-shadow:none}
+#vsmGallery .vsm-viewer-sidebar h3{color:var(--text);font-size:1.05rem;letter-spacing:-.015em}
+#vsmGallery #vsmProfileInfo>div,#vsmGallery .vsm-viewer-sidebar .vsm-info-row{background:var(--secondary)!important;color:var(--text)!important;border:1px solid var(--line);border-radius:11px}
+#vsmGallery #vsmProfileInfo strong{color:var(--text)}
+#vsmGallery .vsm-viewer-social{display:flex;flex-wrap:wrap;gap:8px;margin:12px 0}
+#vsmGallery .vsm-viewer-social a{color:var(--primary);border:1px solid var(--line);background:var(--secondary);border-radius:9px;padding:7px 10px;text-decoration:none;font-size:.84rem}
+#vsmGallery .vsm-viewer-interact{display:flex;flex-wrap:wrap;gap:7px}
+#vsmGallery .vsm-viewer-interact button{background:var(--secondary)!important;color:var(--text)!important;border:1px solid var(--line)!important;border-radius:10px;padding:9px 12px}
+#vsmGallery .vsm-viewer-interact button:hover,#vsmGallery .vsm-viewer-interact button:focus-visible{border-color:var(--primary)!important;color:var(--primary)!important}
+#vsmGallery .vsm-viewer-header{background:var(--card);color:var(--text);border-bottom:1px solid var(--line)}
+#vsmGallery .vsm-close{color:var(--primary)!important;background:var(--secondary)!important;border:1px solid var(--line)!important;border-radius:12px!important}
+#foodDeliveryPlanner{display:block!important;width:min(1120px,calc(100% - 28px));margin:18px auto 30px!important}
+#foodDeliveryPlanner>.section-card{margin:0!important;min-width:0;max-width:100%;padding:16px!important}
+#foodDeliveryPlanner>aside{display:none!important}
+#foodDeliveryPlanner #foodPublicMap{height:310px!important;max-height:42vh;min-height:230px;width:100%;border-radius:14px}
+#foodDeliveryPlanner .address-picker-row{margin:10px 0}
+#foodDeliveryPlanner .section-card>h2{font-size:1.12rem;margin:5px 0 8px}
+#foodDeliveryPlanner .section-card>p.small:last-child{margin:8px 0 0}
+@media(max-width:700px){#foodDeliveryPlanner{width:calc(100% - 20px)}#foodDeliveryPlanner #foodPublicMap{height:265px!important;max-height:none}#foodDeliveryPlanner>.section-card{padding:12px!important}#vsmGallery .vsm-viewer-interact button{flex:1 1 110px}}

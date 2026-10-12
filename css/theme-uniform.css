@@ -1,0 +1,28 @@
+/* Módulo: css/theme-uniform.css | Función: estilos originales del bloque 10 | Depende de: css anterior (cascada) | Expone: selectores CSS originales. */
+
+body.dark-mode{
+ --text:#f3f4f6!important;--muted:#abb6c7!important;
+ --card:#161a20!important;--site-bg:#0d1015!important;
+ --secondary:#242a33!important;--line:#303743!important;
+ background:#0d1015!important;color:var(--text)!important;color-scheme:dark;
+}
+body:not(.dark-mode){color-scheme:light}
+body.dark-mode::before{background:#0d1015!important}
+body.dark-mode .topbar{background:rgba(22,26,32,.96)!important;border-bottom-color:var(--line)!important}
+body.dark-mode .hero-card{color:#fff}
+body.dark-mode .product-card,body.dark-mode .section-card,body.dark-mode .review-card,
+body.dark-mode .followup-card,body.dark-mode .payment-item,body.dark-mode .flash-offer,
+body.dark-mode .modal,body.dark-mode .drawer,body.dark-mode .toast,
+body.dark-mode .chip,body.dark-mode .palette-card,body.dark-mode .icon-option,
+body.dark-mode .search-wrap input,body.dark-mode .input,body.dark-mode .select,
+body.dark-mode .textarea,body.dark-mode .address-suggestion{
+ background-color:var(--card)!important;color:var(--text)!important;border-color:var(--line)!important;
+}
+body.dark-mode .chip.active,body.dark-mode .btn:not(.secondary):not(.ghost):not(.danger):not(.success){background-color:var(--primary)!important;color:#fff!important}
+body.dark-mode .desc,body.dark-mode .meta,body.dark-mode .muted,body.dark-mode .small.muted{color:var(--muted)!important}
+body.dark-mode .radio-card,body.dark-mode .payment-choice{border-color:var(--line);color:var(--text)}
+body.dark-mode .radio-card:has(input:checked),body.dark-mode .payment-choice.selected{background:var(--secondary)!important}
+body.dark-mode .leaflet-container{background:#171b21!important}
+#adminModal{color-scheme:dark}
+#adminModal .ticket-preview,#adminModal .ticket-canvas-preview,#adminModal .ticket-preview svg{color-scheme:light}
+@media(prefers-reduced-motion:reduce){.topbar,.product-card{transition:none!important}}

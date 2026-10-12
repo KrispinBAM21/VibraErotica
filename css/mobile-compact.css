@@ -1,0 +1,15 @@
+/* Módulo: css/mobile-compact.css | Función: estilos originales del bloque 41 | Depende de: css anterior (cascada) | Expone: selectores CSS originales. */
+
+@media(max-width:760px){
+ #catalogGrid{align-items:start!important;grid-auto-rows:max-content!important;align-content:start!important}
+ #catalogGrid>.product-card,#catalogGrid .product-card{height:auto!important;min-height:0!important;align-self:start!important;grid-row:auto!important}
+ #catalogGrid .product-card .product-body{flex:0 0 auto!important;min-height:0!important}
+ #catalogGrid .product-card .desc{flex:0 0 auto!important;margin:6px 0 8px!important}
+ #catalogGrid .product-card .qty-row{margin-top:10px!important}
+ #vibraServiceCatalog .vibra-service-card{height:auto!important;min-height:0!important;align-self:start!important}
+ #vibraServiceCatalog .vibra-service-content{flex:0 0 auto!important}
+ #vibraServiceCatalog .vibra-service-content p{line-height:1.35!important}
+ #vibraServiceCatalog .vsm-media-button{margin-top:8px!important}
+}
+.v18-business-chip svg,.v16-meta-chip svg,.v18-business-actions svg,#vsmProfileSocial svg{width:16px;height:16px;vertical-align:middle;stroke:currentColor;flex:none}
+#vsmProfileSocial a{display:inline-flex;align-items:center;gap:5px}

@@ -1,0 +1,2 @@
+/* Módulo: css/billing.css | Función: estilos originales del bloque 7 | Depende de: css anterior (cascada) | Expone: selectores CSS originales. */
+.subscription-notice{margin-top:16px}.billing-method,.billing-payment{padding:16px 0;border-bottom:1px solid var(--line);overflow-wrap:anywhere}.billing-method .toolbar,.billing-payment .toolbar{flex-wrap:wrap}.billing-payment h4{margin:0 0 8px}.subscription-notice p{margin:0 0 12px}

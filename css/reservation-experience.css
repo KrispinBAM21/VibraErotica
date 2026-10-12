@@ -1,0 +1,53 @@
+/* Módulo: css/reservation-experience.css | Función: estilos originales del bloque 44 | Depende de: css anterior (cascada) | Expone: selectores CSS originales. */
+
+#vibraReserveShell{width:min(1120px,calc(100vw - 24px))!important;max-height:94dvh!important;padding:0!important;overflow:hidden!important;border-radius:24px!important;background:linear-gradient(180deg,#171b23 0%,#131720 100%)!important}
+#vibraReserveTop{position:sticky;top:0;z-index:4;padding:18px 22px!important;border-bottom:1px solid rgba(255,255,255,.08);background:linear-gradient(180deg,rgba(18,22,30,.98),rgba(18,22,30,.92));backdrop-filter:blur(8px)}
+#vibraReserveTop strong{font-size:1.45rem;letter-spacing:-.02em}
+#vibraReserveClose{display:grid;place-items:center;padding:0!important}
+#vibraReserveClose svg{width:18px;height:18px;stroke:currentColor;fill:none;stroke-width:2}
+#vibraReserveBody{padding:22px 24px 26px;overflow:auto;overscroll-behavior:contain}
+#vibraReserveBody .v9panel{border:0!important;background:transparent!important;box-shadow:none!important;padding:0!important}
+#vibraReserveBody .v9small{line-height:1.45}
+#vibraReserveBody .v9fields{gap:14px!important;align-items:start}
+#vibraReserveBody .v9fields label{display:grid;gap:8px;align-content:start;min-width:0}
+#vibraReserveBody .v9fields label>input,#vibraReserveBody .v9fields label>select,#vibraReserveBody .v9fields label>textarea{min-height:52px;border-radius:14px;border:1px solid rgba(255,255,255,.1);background:#10141c;color:#fff;padding:0 14px;font-weight:600}
+#vibraReserveBody .v9action{min-height:50px;border-radius:14px;font-weight:800;box-shadow:0 12px 22px rgba(229,0,145,.18)}
+#vibraReserveBody #v9Booking{margin-top:20px!important;padding-top:10px!important;display:block!important}
+#vibraReserveBody #v9Booking[hidden]{display:none!important}
+#vibraReserveBody #v9Modalities{display:block!important}
+#vibraReserveBody .vibra-mode-field{display:grid;gap:8px;background:linear-gradient(180deg,rgba(255,255,255,.035),rgba(255,255,255,.02));border:1px solid rgba(255,255,255,.08);border-radius:18px;padding:16px 18px;margin:8px 0 14px;max-width:420px}
+#vibraReserveBody .vibra-mode-title{font-size:.82rem;text-transform:uppercase;letter-spacing:.12em;color:#c6d0e1;font-weight:800}
+#vibraReserveBody .vibra-mode-caption{font-size:.84rem;color:#98a3b7;margin-top:-1px}
+#vibraReserveBody #v9Mode{appearance:none;-webkit-appearance:none;background:#242a36 url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='18' height='18' viewBox='0 0 24 24' fill='none' stroke='%23f1f5f9' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='m6 9 6 6 6-6'/%3E%3C/svg%3E") no-repeat right 14px center/16px;border:1px solid rgba(255,255,255,.1);border-radius:14px;color:#fff;font-weight:800;letter-spacing:.01em;padding:0 42px 0 14px;text-transform:none;box-shadow:inset 0 1px 0 rgba(255,255,255,.03)}
+#vibraReserveBody .vibra-mode-shell{display:flex;align-items:center;gap:12px;flex-wrap:wrap;margin-bottom:8px}
+#vibraReserveBody .vibra-mode-badge{display:inline-flex;align-items:center;gap:8px;padding:8px 12px;border-radius:999px;background:rgba(229,0,145,.12);border:1px solid rgba(229,0,145,.3);font-size:.83rem;font-weight:700;color:#ffd3f1}
+#vibraRoomPreviewPanel{margin-top:16px;padding:16px;border-radius:18px;border:1px solid rgba(255,255,255,.08);background:linear-gradient(180deg,rgba(255,255,255,.04),rgba(255,255,255,.025))}
+#vibraRoomPreviewPanel[hidden]{display:none!important}
+#vibraRoomPreviewPanel h3{margin:0 0 4px;font-size:1.02rem}
+#vibraRoomPreviewPanel p{margin:0;color:#d8ddea}
+.vibra-room-preview-head{display:flex;justify-content:space-between;align-items:flex-start;gap:12px;flex-wrap:wrap;margin-bottom:10px}
+.vibra-room-preview-meta{display:grid;grid-template-columns:repeat(auto-fit,minmax(160px,1fr));gap:10px;margin:12px 0}
+.vibra-room-preview-chip{padding:11px 12px;border-radius:14px;background:#202634;border:1px solid rgba(255,255,255,.08)}
+.vibra-room-preview-chip strong{display:block;margin-bottom:4px;font-size:.78rem;letter-spacing:.05em;text-transform:uppercase;color:#bdc8da}
+.vibra-room-description{font-size:.92rem;line-height:1.55;color:#eef2ff!important}
+.vibra-room-photo-strip{display:grid;grid-template-columns:repeat(auto-fill,minmax(120px,1fr));gap:10px;margin-top:10px}
+.vibra-room-thumb{padding:0;border:1px solid rgba(255,255,255,.1);border-radius:14px;background:#0c1016;overflow:hidden;cursor:pointer;min-height:110px}
+.vibra-room-thumb img{display:block;width:100%;height:110px;object-fit:cover}
+.vibra-room-empty{padding:14px;border-radius:14px;background:#1e2530;border:1px dashed rgba(255,255,255,.12);color:#c4cede}
+.vibra-ghost-btn{display:inline-flex;align-items:center;gap:8px;min-height:42px;padding:0 14px;border-radius:12px;border:1px solid rgba(255,255,255,.1);background:#242b38;color:#fff;font-weight:700;cursor:pointer}
+.vibra-ghost-btn svg{width:16px;height:16px;stroke:currentColor;fill:none;stroke-width:2}
+#v10BookingExtras{margin-top:18px;padding:16px;border-radius:18px;border:1px solid rgba(238,92,180,.35);background:linear-gradient(180deg,rgba(74,15,65,.22),rgba(44,13,39,.18))}
+#v10BookingExtras h3{margin:0 0 12px}
+#v10BookingExtras .v10orderline{display:flex;align-items:center;justify-content:space-between;gap:10px;padding:10px 12px;border:1px solid rgba(255,255,255,.08);border-radius:12px;background:rgba(10,12,18,.35);margin-bottom:9px}
+#v10BookingExtras input[type="number"],#v10BookingExtras input[type="text"],#v10BookingExtras input:not([type]){min-height:40px;border-radius:11px;border:1px solid rgba(255,255,255,.08);background:#0d1118;color:#fff;padding:0 12px}
+#v10Quote{margin-top:14px;color:#ff79d0;font-weight:800}
+#v15Experience.vibra-experience-balanced{grid-template-columns:minmax(0,1.35fr) auto!important;gap:28px!important;padding:18px 30px!important;align-items:center!important}
+#v15Experience.vibra-experience-balanced>div:first-child{display:grid;gap:10px;max-width:780px}
+#v15Experience.vibra-experience-balanced h3{font-size:1.07rem;margin:0!important}
+#v15Experience.vibra-experience-balanced p{font-size:1rem!important;line-height:1.55!important;color:#f1f5f9!important}
+#v15Experience.vibra-experience-balanced .v15-rating-summary{margin-top:2px!important;font-size:.94rem!important}
+#v15Experience.vibra-experience-balanced .v15-experience-actions{display:flex;gap:10px;justify-content:center;align-items:center;align-self:center;flex-wrap:wrap}
+#v15Experience.vibra-experience-balanced .v15-experience-actions .btn{min-height:48px;border-radius:14px;padding-inline:16px;font-weight:800}
+#v15Experience .v15-experience-actions svg{width:18px;height:18px;stroke:currentColor;fill:none}
+@media(max-width:980px){#v15Experience.vibra-experience-balanced{grid-template-columns:1fr!important}#v15Experience.vibra-experience-balanced .v15-experience-actions{justify-content:flex-start}}
+@media(max-width:760px){#vibraReserveBody{padding:18px 16px 22px}#vibraReserveTop{padding:16px}#vibraReserveTop strong{font-size:1.18rem}#vibraReserveBody .v9fields{grid-template-columns:1fr!important}#vibraReserveBody .vibra-mode-field{max-width:none}#v10BookingExtras .v10orderline{flex-direction:column;align-items:stretch}#v15Experience.vibra-experience-balanced{padding:16px 18px!important}}

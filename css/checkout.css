@@ -1,0 +1,17 @@
+/* Módulo: css/checkout.css | Función: estilos originales del bloque 32 | Depende de: css anterior (cascada) | Expone: selectores CSS originales. */
+
+#catalogGrid .product-card .qty-row{display:flex;align-items:center;gap:10px}
+#catalogGrid .product-card .qty-row .qty-control{display:none!important}
+#catalogGrid .product-card .qty-row>.btn{width:100%;flex:1;min-height:44px;color:#fff;background:var(--primary)}
+#catalogGrid .product-card .stock-out{width:100%;text-align:center}
+#catalogGrid .product-card .meta [data-vibra-stock]{font-weight:700}
+.ticket-footer-icons{display:flex!important;gap:8px;flex-wrap:wrap;max-height:200px;overflow:auto}
+.ticket-footer-icons label{width:70px!important;height:65px!important;display:grid;place-items:center}
+.ticket-footer-icons label svg{width:25px!important;height:25px!important;max-width:25px!important;max-height:25px!important}
+#v15PinSection .v15-pin-option{background:transparent!important;box-shadow:none!important;border:1px solid var(--line)}
+#v15PinSection .v15-pin-option svg{width:28px;height:28px}
+.v15-business-pin .bubble{background:transparent!important;border:0!important;box-shadow:none!important;transform:none!important}
+.v15-business-pin .bubble>span{transform:none!important}
+.v15-business-pin .bubble svg{stroke:var(--primary)!important;filter:drop-shadow(0 1px 2px #0008)}
+.v15-business-pin .label{background:transparent!important;border:0!important;text-shadow:0 1px 3px #0009}
+#catalogPreparation{display:none!important}

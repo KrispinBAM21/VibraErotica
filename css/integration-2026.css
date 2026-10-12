@@ -1,0 +1,12 @@
+/* Módulo: css/integration-2026.css | Función: estilos originales del bloque 26 | Depende de: css anterior (cascada) | Expone: selectores CSS originales. */
+
+#v9Section .v9panel,#v10Panel,#v9Admin{background:var(--card)!important;color:var(--text)!important;border-color:var(--line)!important}
+#v9Section .v9panel h2,#v9Section .v9panel h3,#v9Admin h2,#v9Admin h3,#v9Admin label,#v10Panel h2,#v10Panel h3{color:var(--text)!important}
+#v9Section .v9muted,#v9Admin .v9muted{color:var(--muted)!important}
+#v9Admin input,#v9Admin select{background:var(--card)!important;color:var(--text)!important;border:1px solid var(--line)!important}
+#v9Section .v9action:not(.secondary),#v9Admin .v9action:not(.secondary){background:var(--primary)!important}
+#v9Section .v9site{background:var(--card)!important;color:var(--text)!important;border-color:var(--line)!important}
+#v9Section .v9site p{color:var(--muted)!important}
+#v9Admin{display:none!important}
+#adminContent #vibraSedesAdmin #v9Admin{display:block!important;margin:0!important;max-width:100%;padding:10px!important}
+#vibraSedesAdmin .v9fields{display:grid;grid-template-columns:repeat(auto-fit,minmax(180px,1fr));gap:12px}

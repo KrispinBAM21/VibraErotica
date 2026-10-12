@@ -1,0 +1,10 @@
+/* Módulo: css/ui-v19.css | Función: estilos originales del bloque 22 | Depende de: css anterior (cascada) | Expone: selectores CSS originales. */
+
+/* Solo mostrar la herramienta administrativa después de comprobar permisos. */
+#adminBtn[hidden], #adminBtn:not([data-authorized="true"]){display:none!important}
+#brandLogo.v19-logo-action{cursor:pointer;border-radius:12px;outline-offset:4px}
+#brandLogo.v19-logo-action:focus-visible{outline:3px solid var(--primary)}
+.v19-logo-reuse{margin:12px 0 16px;display:flex;align-items:center;gap:9px}
+.v19-logo-reuse input{accent-color:var(--primary)}
+.v18-business-avatar{object-fit:cover}
+@media(max-width:760px){#brandLogo.v19-logo-action{touch-action:manipulation}}

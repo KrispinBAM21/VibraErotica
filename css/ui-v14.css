@@ -1,0 +1,40 @@
+/* Módulo: css/ui-v14.css | Función: estilos originales del bloque 17 | Depende de: css anterior (cascada) | Expone: selectores CSS originales. */
+
+/* ===== VibraErotica v14: comunidad, perfil, categorías y UX ===== */
+.v14-ripple-host{position:relative;overflow:hidden}
+.v14-ripple{position:absolute;border-radius:50%;pointer-events:none;background:currentColor;opacity:.18;transform:scale(0);animation:v14Ripple .48s ease-out forwards}
+@keyframes v14Ripple{to{transform:scale(4);opacity:0}}
+.btn,.icon-btn,.chip,.v12-social-btn,.v12-menu-item,.v12-bottom-nav button{transition:transform .15s ease,box-shadow .15s ease,filter .15s ease}
+.btn:active,.icon-btn:active,.chip:active,.v12-social-btn:active,.v12-menu-item:active,.v12-bottom-nav button:active{transform:scale(.965)}
+@media(hover:hover){.btn:hover,.chip:hover,.v12-social-btn:hover{box-shadow:0 7px 18px #0002;filter:brightness(1.04)}}
+
+.v14-profile{margin-top:14px;border:1px solid var(--line);border-radius:18px;overflow:hidden;background:var(--card)}
+.v14-cover{height:170px;background:linear-gradient(135deg,var(--primary),color-mix(in srgb,var(--primary) 55%,#111));background-size:cover;background-position:center}
+.v14-profile-body{display:grid;grid-template-columns:auto minmax(0,1fr) auto;gap:14px;align-items:center;padding:0 18px 16px}
+.v14-avatar{width:88px;height:88px;border-radius:50%;border:5px solid var(--card);margin-top:-42px;background:var(--secondary);object-fit:cover}
+.v14-profile-copy h2{margin:8px 0 3px}.v14-profile-copy p{margin:0;color:var(--muted)}
+.v14-social-links{display:flex;gap:7px;flex-wrap:wrap;margin-top:9px}
+.v14-social-links a{display:inline-flex;align-items:center;gap:6px;border:1px solid var(--line);border-radius:999px;padding:7px 10px;color:var(--text);text-decoration:none;font-size:.76rem;font-weight:800}
+.v14-follow-box{text-align:right}.v14-follow-count{font-size:1.3rem;font-weight:900;color:var(--primary)}
+.v14-goals{display:grid;gap:8px;padding:0 18px 18px}.v14-goal{border:1px solid var(--line);border-radius:12px;padding:10px}
+.v14-goal-head{display:flex;justify-content:space-between;gap:8px;font-size:.8rem;font-weight:800}.v14-goal-bar{height:9px;border-radius:999px;background:var(--secondary);overflow:hidden;margin-top:7px}.v14-goal-bar span{display:block;height:100%;background:var(--primary)}
+.v14-stars{display:flex;gap:5px}.v14-star{border:0;background:transparent;color:#9ca3af;font-size:1.8rem;padding:2px;line-height:1}.v14-star.on{color:#ffb300}
+.v14-review-grid{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:10px}.v14-score{border:1px solid var(--line);border-radius:12px;padding:10px;text-align:center}.v14-score strong{display:block;font-size:1.4rem;color:var(--primary)}
+.v14-notice-card{border:1px solid var(--line);border-radius:13px;padding:13px;background:var(--card);margin-bottom:9px}.v14-notice-card h4{margin:0 0 5px}.v14-notice-card p{margin:0 0 9px;color:var(--muted);font-size:.83rem}
+.v14-category-card{border:1px solid var(--line);border-radius:13px;padding:12px;margin-bottom:10px}.v14-category-head{display:flex;align-items:center;justify-content:space-between;gap:10px}.v14-category-products{display:grid;gap:7px;margin-top:10px}.v14-category-product{display:grid;grid-template-columns:minmax(0,1fr) 220px;gap:8px;align-items:center;padding:8px 0;border-top:1px solid var(--line)}
+.v14-payment-history{margin-top:16px}.v14-reject-form{display:grid;gap:11px}
+.v14-receipt-modal{width:min(980px,96vw);height:min(92dvh,880px);max-height:92dvh}.v14-receipt-modal .modal-body{height:calc(92dvh - 70px);max-height:none;padding:12px;display:grid;place-items:center;overflow:hidden}.v14-receipt-modal img,.v14-receipt-modal iframe{width:100%;height:100%;object-fit:contain;border:0;border-radius:10px;background:#111}
+.product-viewer{width:min(1180px,97vw)!important;height:min(94dvh,900px)!important;max-height:94dvh!important}
+.product-viewer .modal-body{max-height:none!important;height:calc(94dvh - 70px);display:grid!important;grid-template-columns:minmax(0,1.35fr) minmax(320px,.65fr);grid-auto-rows:min-content;gap:10px 16px;overflow:hidden!important}
+.product-viewer .product-large-view{grid-column:1;grid-row:1/20;height:100%!important;max-height:none!important;min-height:0!important;overflow:hidden!important;display:grid!important;place-items:center;background:#111827}
+.product-viewer .product-large-view #productZoomImage{width:100%!important;height:100%!important;min-height:0!important;display:grid!important;place-items:center!important}
+.product-viewer .product-large-view img{max-width:100%!important;max-height:100%!important;width:auto!important;height:auto!important;object-fit:contain!important}
+.product-viewer .product-large-view svg{max-width:80%!important;max-height:70%!important}
+.product-viewer .modal-body>.field,.product-viewer .modal-body>h3,.product-viewer .modal-body>p,.product-viewer .modal-body>.v11-unit-badge,.product-viewer .modal-body>.v11-customizer-grid,.product-viewer .modal-body>.notice,.product-viewer .modal-body>.btn,.product-viewer .modal-body>#v12ProductSocial{grid-column:2}
+.product-viewer .modal-body>.v11-customizer-grid,.product-viewer .modal-body>#v12ProductSocial{overflow:auto;max-height:34dvh}
+@media(max-width:820px){
+ .v14-profile-body{grid-template-columns:auto 1fr}.v14-follow-box{grid-column:1/-1;text-align:left}.v14-cover{height:120px}.v14-avatar{width:72px;height:72px;margin-top:-34px}
+ .v14-category-product{grid-template-columns:1fr}.v14-review-grid{grid-template-columns:1fr}
+ .product-viewer{height:94dvh!important}.product-viewer .modal-body{display:block!important;overflow:auto!important;height:calc(94dvh - 70px)}
+ .product-viewer .product-large-view{height:44dvh!important;max-height:44dvh!important;margin-bottom:10px}.product-viewer .modal-body>.v11-customizer-grid,.product-viewer .modal-body>#v12ProductSocial{max-height:none}
+}
