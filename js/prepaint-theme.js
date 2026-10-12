@@ -1,2 +1,0 @@
-/* Módulo: js/prepaint-theme.js | Función: lógica original del bloque 2 | Depende de: scripts anteriores en orden de carga | Expone: declaraciones y efectos globales originales, cuando corresponda. */
-(function(){try{const dark=localStorage.getItem('vibraerotica.theme.mode')==='dark';document.documentElement.dataset.vibraMode=dark?'dark':'default';if(dark)document.documentElement.classList.add('vibra-dark-first');}catch(e){}})();
