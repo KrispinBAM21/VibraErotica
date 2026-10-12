@@ -614,6 +614,7 @@ const THEME_STORE='vibraerotica.theme.mode';
 let publicThemeMode=localStorage.getItem(THEME_STORE)||'default';
 function applyPublicTheme(){
   document.documentElement.dataset.vibraMode=publicThemeMode==='dark'?'dark':'default';document.body.classList.toggle('dark-mode',publicThemeMode==='dark');document.documentElement.classList.toggle('vibra-dark-first',publicThemeMode==='dark');
+  if(publicThemeMode==='dark') document.body.style.background='#0d1015';
   const b=document.getElementById('themeBtn');
   if(b){
     b.innerHTML=(publicThemeMode==='dark'?UI.moon:UI.sun)+`<span class="theme-switch-label">${publicThemeMode==='dark'?'Oscuro':'Predeterminado'}</span>`;
@@ -1339,7 +1340,7 @@ async function renderSubscription(c,epoch){await refreshSiteStatus();const histo
 const v4Catalog=renderCatalog;renderCatalog=function(){if(siteStatus&&!siteStatus.active&&!siteStatus.master){document.getElementById('catalogGrid').replaceChildren();return}v4Catalog()};
 state.orders=[];saveLocal();
 // Inicialización pública: el mapa no depende de iniciar sesión ni de guardar un domicilio.
-const foodPublic=document.createElement('section');foodPublic.id='foodDeliveryPlanner';foodPublic.className='food-delivery-planner';foodPublic.innerHTML=`<div class="section-card"><span class="eyebrow">UBICACIÓN DEL LOCAL</span><h2>Cómo llegar al local</h2><p class="small muted" id="foodOriginLabel">${esc(state.config.origin.address)}</p><div id="foodSavedAddresses"></div><div class="address-picker-row"><label class="field">Calle o dirección de entrega<input class="input" id="foodDestination" placeholder="Busca una calle o marca tu destino en el mapa"></label>${panelButton('foodSearchDestination','Buscar',UI.search,'secondary')}${panelButton('foodGpsDestination','Mi ubicación',UI.pin,'secondary')}</div><div class="map" id="foodPublicMap"></div><p class="small muted">El marcador Local indica el punto de salida. Ajusta el marcador de entrega a la entrada.</p></div><aside class="section-card"><h3>Información de la ruta</h3><div id="foodQuote">Utiliza tu ubicación para localizar el establecimiento.</div><div id="foodSocials" class="toolbar"></div></aside>`;document.getElementById('catalogGrid').after(foodPublic);document.getElementById('foodGoCart')?.addEventListener('click',openDrawer);document.getElementById('foodCalculate')?.addEventListener('click',e=>panelRun(e.currentTarget,()=>quoteFoodRoute()));document.getElementById('foodDestination').oninput=e=>{checkout.address=e.target.value;checkout.savedAddressId=''};document.getElementById('foodSearchDestination').onclick=e=>panelRun(e.currentTarget,async()=>{const p=await foodSearch(document.getElementById('foodDestination').value);checkout.address=p.address;document.getElementById('foodDestination').value=p.address;await chooseFoodDestination(p.lat,p.lng)});document.getElementById('foodGpsDestination').onclick=e=>panelRun(e.currentTarget,async()=>{const p=await foodGps();checkout.address=document.getElementById('foodDestination').value||'Ubicación actual';await chooseFoodDestination(p.coords.latitude,p.coords.longitude);if(p.coords.accuracy>100)toast('Precisión GPS aproximada: ±'+Math.round(p.coords.accuracy)+' metros. Ajusta el pin manualmente.');});renderAccountButton();renderSavedAddressShortcut();setTimeout(initFoodPublicMap,200);const v4Cloud=loadPublicCloudState;loadPublicCloudState=async function(){await v4Cloud();const o=state.config.origin;document.getElementById('foodOriginLabel').textContent=o.address;publicFoodOrigin?.setLatLng([o.lat,o.lng]);renderSavedAddressShortcut()};
+const foodPublic=document.createElement('section');foodPublic.id='foodDeliveryPlanner';foodPublic.className='food-delivery-planner';foodPublic.innerHTML=`<div class="section-card"><span class="eyebrow">UBICACIÓN DEL LOCAL</span><p class="small muted" id="foodOriginLabel">${esc(state.config.origin.address)}</p><div id="foodSavedAddresses"></div><div class="address-picker-row"><label class="field">Calle o dirección de entrega<input class="input" id="foodDestination" placeholder="Busca una calle o marca tu destino en el mapa"></label>${panelButton('foodSearchDestination','Buscar',UI.search,'secondary')}${panelButton('foodGpsDestination','Mi ubicación',UI.pin,'secondary')}</div><div class="map" id="foodPublicMap"></div><p class="small muted">El marcador Local indica el punto de salida. Ajusta el marcador de entrega a la entrada.</p></div><aside class="section-card"><h3>Información de la ruta</h3><div id="foodQuote">Utiliza tu ubicación para localizar el establecimiento.</div><div id="foodSocials" class="toolbar"></div></aside>`;document.getElementById('catalogGrid').after(foodPublic);document.getElementById('foodGoCart')?.addEventListener('click',openDrawer);document.getElementById('foodCalculate')?.addEventListener('click',e=>panelRun(e.currentTarget,()=>quoteFoodRoute()));document.getElementById('foodDestination').oninput=e=>{checkout.address=e.target.value;checkout.savedAddressId=''};document.getElementById('foodSearchDestination').onclick=e=>panelRun(e.currentTarget,async()=>{const p=await foodSearch(document.getElementById('foodDestination').value);checkout.address=p.address;document.getElementById('foodDestination').value=p.address;await chooseFoodDestination(p.lat,p.lng)});document.getElementById('foodGpsDestination').onclick=e=>panelRun(e.currentTarget,async()=>{const p=await foodGps();checkout.address=document.getElementById('foodDestination').value||'Ubicación actual';await chooseFoodDestination(p.coords.latitude,p.coords.longitude);if(p.coords.accuracy>100)toast('Precisión GPS aproximada: ±'+Math.round(p.coords.accuracy)+' metros. Ajusta el pin manualmente.');});renderAccountButton();renderSavedAddressShortcut();setTimeout(initFoodPublicMap,200);const v4Cloud=loadPublicCloudState;loadPublicCloudState=async function(){await v4Cloud();const o=state.config.origin;document.getElementById('foodOriginLabel').textContent=o.address;publicFoodOrigin?.setLatLng([o.lat,o.lng]);renderSavedAddressShortcut()};
 setInterval(()=>{if(!document.hidden&&supabaseClient){refreshSiteStatus().catch(()=>{});if(customerSession)panelVerify().catch(()=>{})}},30000);
 
 /* Estructura del panel y ticket basada en el index de maniobras adjunto. */
@@ -6001,4 +6002,22 @@ if(document.readyState==='loading') document.addEventListener('DOMContentLoaded'
 #adminModal .modal-body,#vibraReserveBody{scroll-behavior:auto!important;overscroll-behavior:contain}
 </style>
 
+
+<style id="vibra-only-theme-contrast-20261012">
+/* Corrección de contraste sin alterar estructura, dimensiones ni distribución. */
+html[data-vibra-mode="default"] #v15Experience.vibra-experience-balanced p,
+body:not(.dark-mode) #v15Experience.vibra-experience-balanced p{color:#374151!important}
+html[data-vibra-mode="dark"] #v15Experience.vibra-experience-balanced p,
+body.dark-mode #v15Experience.vibra-experience-balanced p{color:#d8dfeb!important}
+html[data-vibra-mode="default"] #v15Experience .v15-rating-summary,
+body:not(.dark-mode) #v15Experience .v15-rating-summary{color:#374151!important}
+html[data-vibra-mode="dark"] #v15Experience .v15-rating-summary,
+body.dark-mode #v15Experience .v15-rating-summary{color:#d8dfeb!important}
+html[data-vibra-mode="default"] #v15Experience{background:#fff!important;color:#171b23!important;border-color:#e2e5ea!important}
+html[data-vibra-mode="dark"] #v15Experience{background:#161a20!important;color:#f3f4f6!important;border-color:#303743!important}
+body.dark-mode #foodDeliveryPlanner .section-card,
+body.dark-mode #foodDeliveryPlanner .field,
+body.dark-mode #foodDeliveryPlanner .address-picker-row{color:#f2f4f8}
+body:not(.dark-mode) #foodDeliveryPlanner .section-card{color:#17202c}
+</style>
 </html>
