@@ -1209,8 +1209,7 @@ panelTicket=async function(c,epoch,initialDraft){let draft=ticketConfig(initialD
  const ids={tvTitle:'title',tvFooter:'footer',tvWidth:'width',tvLayout:'layout',tvFont:'font',tvFontSize:'fontSize',tvTitleSize:'titleSize',tvMargin:'margin',tvQrUrl:'qrUrl'};for(const[id,key]of Object.entries(ids))document.getElementById(id).value=draft[key];
  async function paint(){const serial=++previewSerial;try{const qr=await ticketQr(draft);if(serial!==previewSerial||epoch!==panelEpoch)return;document.getElementById('tvPreview').innerHTML=ticketSvg(ticketSample(),draft,qr);document.getElementById('tvStatus').textContent='Cambios de diseño sin guardar.'}catch(e){if(epoch===panelEpoch)document.getElementById('tvStatus').textContent=e.message}}
  for(const[id,key]of Object.entries(ids))document.getElementById(id).oninput=e=>{draft=ticketConfig({...draft,[key]:e.target.value});paint()};c.querySelectorAll('[data-ticket-color]').forEach(el=>el.oninput=()=>{draft[el.dataset.ticketColor]=el.value;paint()});c.querySelectorAll('[data-ticket-show]').forEach(el=>el.onchange=()=>{draft[el.dataset.ticketShow]=el.checked;paint()});c.querySelectorAll('[data-ticket-preset]').forEach(el=>el.onclick=()=>{Object.assign(draft,TICKET_PRESETS[Number(el.dataset.ticketPreset)]);c.querySelectorAll('[data-ticket-color]').forEach(x=>x.value=draft[x.dataset.ticketColor]);paint()});c.querySelectorAll('[data-ticket-icon]').forEach(el=>el.onclick=()=>{draft.icon=el.dataset.ticketIcon;c.querySelectorAll('[data-ticket-icon]').forEach(x=>x.classList.toggle('selected',x===el));paint()});document.getElementById('tvIconSearch').oninput=e=>{const term=e.target.value.toLowerCase();c.querySelectorAll('[data-ticket-icon]').forEach(x=>x.hidden=!(x.dataset.ticketIcon+' '+x.title).toLowerCase().includes(term))};document.getElementById('tvImage').onchange=async e=>{try{if(e.target.files[0])draft.image=await panelReadImage(e.target.files[0]);paint()}catch(error){toast(error.message,'error')}};document.getElementById('tvImageRemove').onclick=()=>{draft.image='';paint()};document.getElementById('tvSave').onclick=e=>panelRun(e.currentTarget,async()=>{if(draft.showQR&&(!draft.qrUrl||!/^https:\/\//i.test(draft.qrUrl)))throw Error('Configura un enlace HTTPS para el QR o desactívalo.');await panelCall('ticket_save',draft);state.config.ticket=deepClone(draft);saveLocal();document.getElementById('tvStatus').textContent='Diseño guardado para todos los dispositivos.'},'Diseño guardado.');document.getElementById('tvPdf').onclick=e=>panelRun(e.currentTarget,async()=>ticketDownload(await panelBuildTicket(ticketSample(),draft),'ticket-muestra.pdf'));document.getElementById('tvJpg').onclick=e=>panelRun(e.currentTarget,async()=>downloadTicketImages(ticketSample(),draft));document.getElementById('tvPrint').onclick=()=>ticketPrint(ticketSample(),draft);document.getElementById('tvReset').onclick=()=>{if(confirm('¿Restablecer el diseño? Pulsa Guardar para aplicarlo.')){panelTicket(c,epoch,deepClone(TICKET_DEFAULT))}};installTicketOptions(c,()=>draft,paint);await paint();};
-function ticketPrint(order,d){const win=window.open('','_blank');if(!win)return toast('Permite ventanas emergentes para imprimir.','error');win.document.write('<!doctype html><html lang="es"><head><title>Ticket</title><style>@page{margin:0;size:'+ (d.width==='a4'?'A4':d.width+'mm auto')+'}body{margin:0}svg{width:100%;height:auto;display:block}</style></head><body><p>Preparando impresión…</p><style id="vibra-mobile-service-discovery">@media(max-width:760px){#vibraServiceCatalog .vsm-media-button{display:flex!important;align-items:center;justify-content:center;gap:8px;min-height:44px;width:100%;font-size:.87rem}#vibraServiceCatalog .vibra-service-card{display:flex;flex-direction:column!important}#vibraServiceCatalog .vibra-service-card .btn{min-height:44px}}#vibraReserveShell #v9Booking .v9fields{grid-template-columns:repeat(auto-fit,minmax(165px,1fr))}#vibraReserveShell #v9Modalities{margin:0;padding:6px}#vibraReserveShell select,#vibraReserveShell input{max-width:100%}</style></body>
-</html>');win.document.close();ticketQr(d).then(qr=>{win.document.body.innerHTML=ticketSvg(order,d,qr);const images=[...win.document.images];return Promise.all(images.map(img=>img.complete?Promise.resolve():new Promise(resolve=>{img.onload=img.onerror=resolve}))).then(()=>{win.focus();win.print()})}).catch(e=>{win.document.body.textContent=e.message})}
+function ticketPrint(order,d){const win=window.open('','_blank');if(!win)return toast('Permite ventanas emergentes para imprimir.','error');win.document.write('<!doctype html><html lang="es"><head><title>Ticket</title><style>@page{margin:0;size:'+ (d.width==='a4'?'A4':d.width+'mm auto')+'}body{margin:0}svg{width:100%;height:auto;display:block}</style></head><body><p>Preparando impresión…</p></body></html>');win.document.close();ticketQr(d).then(qr=>{win.document.body.innerHTML=ticketSvg(order,d,qr);const images=[...win.document.images];return Promise.all(images.map(img=>img.complete?Promise.resolve():new Promise(resolve=>{img.onload=img.onerror=resolve}))).then(()=>{win.focus();win.print()})}).catch(e=>{win.document.body.textContent=e.message})}
 const ticketOriginalPost=renderPostConfirm;renderPostConfirm=function(order){ticketOriginalPost(order);const stack=document.querySelector('#summaryBody .stack')||document.getElementById('summaryBody');const row=document.createElement('div');row.className='toolbar';row.innerHTML=panelButton('orderJpeg','Descargar ticket JPEG',UI.download,'secondary')+panelButton('orderPrint','Imprimir ticket',UI.receipt,'secondary');stack.append(row);document.getElementById('orderJpeg').onclick=e=>panelRun(e.currentTarget,async()=>ticketDownload((await ticketRaster(order,ticketConfig(state.config.ticket),'image/jpeg')).url,'pedido-'+order.folio+'.jpg'));document.getElementById('orderPrint').onclick=()=>ticketPrint(order,ticketConfig(state.config.ticket))};
 const moreProducts=renderProductsAdmin;renderProductsAdmin=function(c){moreProducts(c);const picker=document.getElementById('iconPicker');if(picker&&!document.getElementById('productIconSearch')){picker.insertAdjacentHTML('beforebegin',panelField('productIconSearch','Buscar icono','','search'));document.getElementById('productIconSearch').oninput=e=>{const term=e.target.value.toLowerCase();picker.querySelectorAll('[data-icon]').forEach(el=>el.hidden=!(el.dataset.icon+' '+(EXTRA_LABELS[el.dataset.icon]||'')).toLowerCase().includes(term))}}};
 
@@ -1453,7 +1452,7 @@ let catalogPage=1,catalogFilter='',v6Pending=null,v6Restoring=true,v6Logout=fals
 function businessLabel(){return state.config.businessName||'VIBRAEROTICA'}
 couponRandom=function(){const prefix='VEROTICA';const chars='ABCDEFGHJKLMNPQRSTUVWXYZ23456789',bytes=new Uint8Array(8);crypto.getRandomValues(bytes);return prefix+'-'+Array.from(bytes,b=>chars[b%chars.length]).join('')};
 const v6DrawAuth=drawCustomerAuth;drawCustomerAuth=function(host){v6DrawAuth(host);const heading=host.querySelector('.auth-intro h3');if(heading&&['login','signup'].includes(customerAuthView))heading.textContent='Tu cuenta de '+businessLabel();const old=document.getElementById('foodGoogle');if(!old)return;const button=old.cloneNode(true);old.replaceWith(button);button.onclick=async()=>{button.disabled=true;const out=document.getElementById('foodAuthStatus');try{if(!supabaseClient)throw Error('Espera a que conecte el sitio.');persistCheckout();await storeProof();const response=await fetch(SUPABASE_URL+'/auth/v1/settings',{headers:{apikey:SUPABASE_ANON_KEY},signal:AbortSignal.timeout(10000)});if(!response.ok)throw Error('No se pudo comprobar el acceso con Google. Intenta de nuevo.');const settings=await response.json();if(settings.external?.google!==true)throw Error('El acceso con Google aún no está activado por el administrador. Puedes utilizar correo y contraseña.');const r=await supabaseClient.auth.signInWithOAuth({provider:'google',options:{redirectTo:location.origin+location.pathname,skipBrowserRedirect:true}});if(r.error)throw r.error;if(!r.data?.url)throw Error('No se pudo abrir Google.');location.assign(r.data.url)}catch(e){out.textContent=e.message}finally{vsmSaving=false;button.disabled=false;button.textContent="Guardar cambios y horarios"}}};
-const v6Catalog=renderCatalog;renderCatalog=function(){const filter=currentCategory+'|'+searchTerm;if(filter!==catalogFilter){catalogPage=1;catalogFilter=filter}v6Catalog();const grid=document.getElementById('catalogGrid');let pager=document.getElementById('catalogPages');if(!pager){pager=document.createElement('nav');pager.id='catalogPages';pager.className='container catalog-pages';pager.setAttribute('aria-label','Páginas del catálogo');grid.after(pager)}const cards=[...grid.querySelectorAll('.product-card')],pages=Math.max(1,Math.ceil(cards.length/15));catalogPage=Math.min(catalogPage,pages);cards.forEach((card,i)=>{if(i<(catalogPage-1)*15||i>=catalogPage*15){card.remove();return}const id=card.querySelector('[data-view-product]').dataset.viewProduct,p=state.products.find(p=>p.id===id),o=offerForProduct(p);if(o?.ends_at){const clock=document.createElement('small');clock.className='offer-countdown';clock.dataset.offerEnd=o.ends_at;card.querySelector('.offer-badge').append(clock)}else if(o){const t=document.createElement('small');t.textContent='Promoción sin fecha límite';card.querySelector('.offer-badge').append(t)}});pager.hidden=!cards.length;pager.innerHTML=cards.length?`<p>${cards.length} productos · Página ${catalogPage} de ${pages} · Máximo 15 por página</p>${pages>1?`<button class="btn secondary" data-page="${catalogPage-1}" ${catalogPage===1?'disabled':''} aria-label="Página anterior">${UI.arrowLeft}</button>${Array.from({length:pages},(_,i)=>`<button class="btn ${catalogPage===i+1?'active':'secondary'}" data-page="${i+1}" ${catalogPage===i+1?'aria-current="page"':''}>${i+1}</button>`).join('')}<button class="btn secondary" data-page="${catalogPage+1}" ${catalogPage===pages?'disabled':''} aria-label="Página siguiente">${UI.arrowRight}</button>`:''}`:'';pager.querySelectorAll('[data-page]').forEach(b=>b.onclick=()=>{catalogPage=Number(b.dataset.page);renderCatalog();grid.classList.remove('catalog-enter');void grid.offsetWidth;grid.classList.add('catalog-enter');grid.scrollIntoView?.({behavior:'smooth',block:'start'})});tickOfferCountdown()};
+const v6Catalog=renderCatalog;renderCatalog=function(){const filter=currentCategory+'|'+searchTerm;if(filter!==catalogFilter){catalogPage=1;catalogFilter=filter}v6Catalog();const grid=document.getElementById('catalogGrid');let pager=document.getElementById('catalogPages');if(!pager){pager=document.createElement('nav');pager.id='catalogPages';pager.className='container catalog-pages';pager.setAttribute('aria-label','Páginas del catálogo');grid.after(pager)}const cards=[...grid.querySelectorAll('.product-card')],pages=Math.max(1,Math.ceil(cards.length/15));catalogPage=Math.min(catalogPage,pages);cards.forEach((card,i)=>{if(i<(catalogPage-1)*15||i>=catalogPage*15){card.remove();return}const view=card.querySelector('[data-view-product]');if(!view)return;const id=view.dataset.viewProduct,p=state.products.find(p=>p.id===id);if(!p)return;const o=typeof offerForProduct==='function'?offerForProduct(p):null;const badge=card.querySelector('.offer-badge');if(o?.ends_at&&badge){const clock=document.createElement('small');clock.className='offer-countdown';clock.dataset.offerEnd=o.ends_at;badge.append(clock)}else if(o&&badge){const t=document.createElement('small');t.textContent='Promoción sin fecha límite';badge.append(t)}});pager.hidden=!cards.length;pager.innerHTML=cards.length?`<p>${cards.length} productos · Página ${catalogPage} de ${pages} · Máximo 15 por página</p>${pages>1?`<button class="btn secondary" data-page="${catalogPage-1}" ${catalogPage===1?'disabled':''} aria-label="Página anterior">${UI.arrowLeft}</button>${Array.from({length:pages},(_,i)=>`<button class="btn ${catalogPage===i+1?'active':'secondary'}" data-page="${i+1}" ${catalogPage===i+1?'aria-current="page"':''}>${i+1}</button>`).join('')}<button class="btn secondary" data-page="${catalogPage+1}" ${catalogPage===pages?'disabled':''} aria-label="Página siguiente">${UI.arrowRight}</button>`:''}`:'';pager.querySelectorAll('[data-page]').forEach(b=>b.onclick=()=>{catalogPage=Number(b.dataset.page);renderCatalog();grid.classList.remove('catalog-enter');void grid.offsetWidth;grid.classList.add('catalog-enter');grid.scrollIntoView?.({behavior:'smooth',block:'start'})});tickOfferCountdown()};
 function tickOfferCountdown(){document.querySelectorAll('[data-offer-end]').forEach(el=>{let seconds=Math.max(0,Math.ceil((new Date(el.dataset.offerEnd).getTime()-Date.now()-offerClockOffset)/1000));const days=Math.floor(seconds/86400);seconds%=86400;const hours=Math.floor(seconds/3600);seconds%=3600;const mins=Math.floor(seconds/60),secs=seconds%60;el.textContent=days+ ' días '+String(hours).padStart(2,'0')+' h '+String(mins).padStart(2,'0')+' min '+String(secs).padStart(2,'0')+' s';if(!days&&!hours&&!mins&&!secs)el.textContent='Oferta finalizada'})}
 setInterval(()=>{if(!document.hidden)tickOfferCountdown()},1000);
 function checkoutDetails(){return{street:checkout.street||'',number:checkout.number||'',colony:checkout.colony||'',postal_code:checkout.postalCode||'',municipality:checkout.municipality||'',state:checkout.addressState||'',references:checkout.deliveryReferences||''}}
@@ -4664,59 +4663,10 @@ panelVerify=async function(){
   syncAdminVisibility();return false;
 };
 
-// The single menu entry lets visitors read opinions AND submit a rating.
-const previousOpenMore=v12OpenMore;
-v12OpenMore=function(){
-  previousOpenMore();
-  const modal=document.getElementById('v12MoreModal');
-  const list=modal?.querySelector('.v12-menu-list');
-  if(!list)return;
-  list.querySelector('[data-v14-rating]')?.remove();
-  const reviews=list.querySelector('[data-v12-menu="reviews"]');
-  if(reviews){
-    reviews.innerHTML=V12I.comment+'<span>Opiniones y calificar</span>';
-    reviews.onclick=()=>{closeModal('v12MoreModal');openRateBusinessModal()};
-  }
-};
 })();
 </script>
 
-<style id="vc-v20-conditional-prompts">#v12GuestCallout[hidden],#v15Experience[hidden]{display:none!important}</style>
-<script id="vc-v20-conditional-prompts">
-(function(){
-'use strict';
-let reviewOwner=null,reviewComplete=false,reviewLoading=false;
-function syncPrompts(){
- const guest=document.getElementById('v12GuestCallout');
- if(guest&&customerSession?.user?.id)guest.remove();
- const experience=document.getElementById('v15Experience');
- if(experience)experience.hidden=!!customerSession?.user?.id&&reviewOwner===customerSession.user.id&&reviewComplete;
-}
-async function checkReview(){
- const id=customerSession?.user?.id||null;
- if(!id){reviewOwner=null;reviewComplete=false;syncPrompts();return}
- if(reviewOwner===id||reviewLoading)return;
- reviewLoading=true;
- try{
-   const {data,error}=await supabaseClient.from('business_reviews').select('id,comment').eq('user_id',id).eq('active',true).limit(1);
-   if(error)throw error;
-   if(customerSession?.user?.id!==id)return;
-   reviewOwner=id;reviewComplete=!!data?.some(r=>typeof r.comment==='string'&&r.comment.trim().length>=3);
- }catch(e){console.warn('No se pudo comprobar la opinión:',e.message)}
- finally{reviewLoading=false;syncPrompts()}
-}
-let paintExperience=window.vibraPaintExperience||function(){};
-const oldPaint=paintExperience;
-paintExperience=function(){oldPaint();syncPrompts();checkReview()};
-window.vibraPaintExperience=paintExperience;
-const oldAuth=customerAuthChanged;
-customerAuthChanged=async function(session){const previous=customerSession?.user?.id;await oldAuth(session);if(previous!==customerSession?.user?.id){reviewOwner=null;reviewComplete=false}syncPrompts();checkReview()};
-const oldRefresh=refreshExperience;
-refreshExperience=async function(){await oldRefresh();reviewOwner=null;reviewComplete=false;checkReview()};
-new MutationObserver(()=>syncPrompts()).observe(document.body,{subtree:true,childList:true});
-syncPrompts();checkReview();
-})();
-</script>
+
 <script id="vc-v22-auth-ui">
 /* Reflejar inmediatamente el acceso sin esperar consultas de perfil ni permisos. */
 (function(){
@@ -5876,7 +5826,7 @@ async function render(){
 const $=s=>document.querySelector(s), $$=s=>Array.from(document.querySelectorAll(s));
 const esc=v=>String(v??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
 const db=()=>typeof supabaseClient!=='undefined'?supabaseClient:null;
-const roomCache=new Map();
+const roomCache=new Map();let lastRoomPreviewKey='';
 let couponsAvailable=null, lastEnhanceKey='';
 const icon={
   close:'<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M6 6l12 12M18 6 6 18"/></svg>',
@@ -5952,9 +5902,10 @@ async function renderRoomPreview(){
   if(!booking || booking.hidden || !terms || !roomSel) return;
   let panel=$('#vibraRoomPreviewPanel');
   if(!panel){ panel=document.createElement('section'); panel.id='vibraRoomPreviewPanel'; terms.closest('label')?.insertAdjacentElement('afterend',panel); }
-  if(mode!=='local'){ panel.hidden=true; return; }
+  if(mode!=='local'){ panel.hidden=true; lastRoomPreviewKey=''; return; }
   panel.hidden=false;
   const roomId=roomSel.value;
+  if(lastRoomPreviewKey===roomId && panel.dataset.loaded==='1')return;lastRoomPreviewKey=roomId;panel.dataset.loaded='0';
   if(!roomId){ panel.innerHTML='<div class="vibra-room-empty">Selecciona una habitación para ver sus fotografías y detalles.</div>'; return; }
   panel.innerHTML='<div class="vibra-room-empty">Cargando información de la habitación…</div>';
   try{
@@ -5962,6 +5913,7 @@ async function renderRoomPreview(){
     const photos=Array.isArray(info.photos)?info.photos.filter(Boolean):[];
     const stateLabel=info.status==='occupied'?'Ocupada':info.status==='pending'?'Pendiente':'Libre';
     panel.innerHTML=`<div class="vibra-room-preview-head"><div><h3>Habitación seleccionada</h3><p>${esc(info.name||'Habitación')}</p></div><button type="button" class="vibra-ghost-btn" id="vibraRoomOpenViewer">${icon.gallery}<span>Ver a detalle</span></button></div><p class="vibra-room-description">${esc(info.description||'Conoce el espacio, sus servicios y cortesías antes de confirmar la reserva.')}</p><div class="vibra-room-preview-meta"><div class="vibra-room-preview-chip"><strong>Estado</strong><span>${esc(stateLabel)}</span></div><div class="vibra-room-preview-chip"><strong>Servicios</strong><span>${esc((info.amenities||[]).join(' · ')||'Sin datos')}</span></div><div class="vibra-room-preview-chip"><strong>Cortesía</strong><span>${esc(info.courtesy||'No especificada')}</span></div><div class="vibra-room-preview-chip"><strong>Me gusta</strong><span>${esc(info.likes||0)} personas</span></div></div><div class="vibra-room-photo-strip">${photos.length?photos.map((src,i)=>`<button type="button" class="vibra-room-thumb" data-room-thumb="${i}" aria-label="Abrir fotografía ${i+1}"><img loading="lazy" src="${esc(src)}" alt="Fotografía de ${esc(info.name||'la habitación')}"></button>`).join(''):'<div class="vibra-room-empty">La habitación aún no tiene fotografías publicadas.</div>'}</div>`;
+    panel.dataset.loaded='1';
     $('#vibraRoomOpenViewer')?.addEventListener('click',()=>window.vibraOpenRoomViewer?.(roomId));
     panel.querySelectorAll('[data-room-thumb]').forEach(btn=>btn.addEventListener('click',()=>window.vibraOpenRoomViewer?.(roomId)));
   }catch(e){ panel.innerHTML='<div class="vibra-room-empty">No se pudo cargar la información de la habitación: '+esc(e.message)+'</div>'; }
@@ -6010,22 +5962,5 @@ if(document.readyState==='loading') document.addEventListener('DOMContentLoaded'
 #vibraRoomAdminList .vroom-thumbs{display:flex;gap:8px;flex-wrap:wrap}
 #adminModal .modal-body,#vibraReserveBody{scroll-behavior:auto!important;overscroll-behavior:contain}
 </style>
-<script id="vibra-admin-permission-wait-20261012">
-(()=>{'use strict';let verifying=null;
-const prior=renderAdminPane;
-renderAdminPane=async function(id){
- if(adminSession&&!panelCan(id)){
-   const pane=document.getElementById('adminContent');
-   if(pane)pane.innerHTML='<section class="section-card"><h3>Verificando permisos</h3><p role="status" class="muted">Comprobando la autorización de tu cuenta en Supabase…</p></section>';
-   try{
-     if(!verifying)verifying=panelVerify().finally(()=>{verifying=null});
-     await verifying;
-     if(!adminSession)return;
-     if(!panelCan(id)){if(pane)pane.innerHTML='<section class="section-card"><h3>Acceso no confirmado</h3><p>No se pudo verificar el permiso de este módulo. Comprueba la conexión a Supabase y vuelve a intentarlo.</p><button type="button" class="btn" id="vibraRetryAccess">Volver a verificar</button></section>';document.getElementById('vibraRetryAccess')?.addEventListener('click',()=>renderAdminPane(id));return;}
-   }catch(e){if(pane)pane.textContent='Error verificando permisos: '+e.message;return;}
- }
- return prior(id);
-};
-})();
-</script>
+
 </html>
