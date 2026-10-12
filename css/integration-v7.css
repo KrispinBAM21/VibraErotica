@@ -1,9 +1,0 @@
-/* Módulo: css/integration-v7.css | Función: estilos originales del bloque 23 | Depende de: css anterior (cascada) | Expone: selectores CSS originales. */
-
-[data-v12-view="best"],[data-v12-menu="best"]{display:none!important}
-.vibra-motif{position:fixed;inset:0;pointer-events:none;z-index:-1;opacity:.07;background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='180' height='180' viewBox='0 0 180 180'%3E%3Cg stroke='%23fa3698' fill='none' stroke-width='3'%3E%3Cpath d='M55 30c11-12 29-9 35 3 6-12 24-15 35-3 15 18 0 33-35 62-35-29-50-44-35-62Z'/%3E%3Cpath d='M55 125V98M125 125V98M70 98h40l5 48H65Z'/%3E%3C/g%3E%3C/svg%3E")}
-.vibra-v7-notice{font-size:13px;color:var(--muted);margin:12px 0}
-.vibra-custom-icons{display:flex;flex-wrap:wrap;gap:7px}
-.vibra-custom-icons label{display:inline-flex;gap:5px;align-items:center;padding:8px;border:1px solid var(--border);border-radius:10px}
-.vibra-custom-icons svg{width:25px;height:25px;color:var(--primary)}
-.vibra-map{height:270px;width:100%;border:0;border-radius:15px;background:#12151d}

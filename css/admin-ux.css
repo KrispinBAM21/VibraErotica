@@ -1,3 +1,0 @@
-/* Módulo: css/admin-ux.css | Función: estilos originales del bloque 30 | Depende de: css anterior (cascada) | Expone: selectores CSS originales. */
-
-#adminModal .section-card{border-radius:14px;padding:15px}#adminModal .toolbar{gap:9px}#adminModal .btn{min-height:40px;border-radius:11px}#adminModal .product-admin{border-radius:10px}#adminModal .section-card h3{letter-spacing:-.02em}#vsmPublishedList .vsm-profile{transition:opacity .16s ease}#categoryChips .chip{transition:background .15s ease,transform .15s ease}#catalogGrid .vibra-service-card{transition:transform .18s ease,box-shadow .18s ease}#catalogGrid .vibra-service-card:hover{transform:translateY(-2px)}
