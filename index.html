@@ -296,6 +296,32 @@ body.dark-mode #vsmGallery :is(.vsm-viewer-sidebar,.vsm-viewer-header){backgroun
 #customerProfileModal input[type=email]:focus,#foodAuthForm input[type=email]:focus{border-color:var(--primary)!important;box-shadow:0 0 0 3px color-mix(in srgb,var(--primary) 15%,transparent)}
 @media(max-width:740px){#productViewerModal.product-viewer .modal-body{display:flex;flex-direction:column;gap:12px}#productViewerModal.product-viewer .product-large-view{min-height:180px;max-height:38dvh;width:100%;flex:none}#productViewerModal.product-viewer .product-large-view #productZoomImage,#productViewerModal.product-viewer .product-large-view img{max-height:38dvh}#productViewerModal.product-viewer #v12ProductSocial{max-height:none;overflow:visible}#vibraReserveShell{max-height:96dvh!important}}
 </style>
+
+<style id="vibra-fixes-authorized-20261013">
+/* NUEVO: colores de alto contraste en superficies públicas de los dos temas */
+body:not(.dark-mode){--vfx-panel:#ffffff;--vfx-ink:#22212d;--vfx-sub:#566074;--vfx-stroke:#d7dce5;--vfx-field:#fff}
+body.dark-mode{--vfx-panel:#161a20;--vfx-ink:#f5f6fb;--vfx-sub:#c1c9d7;--vfx-stroke:#3c4656;--vfx-field:#10141b}
+body:not(.dark-mode) :is(.modal:not(#adminModal),.drawer,.product-card,.section-card,.followup-card){color:var(--vfx-ink)}
+body.dark-mode :is(.modal:not(#adminModal),.drawer,.product-card,.section-card,.followup-card){color:var(--vfx-ink)}
+body :is(.modal:not(#adminModal),.drawer,.product-card,.section-card) :is(p,.muted,.small,.desc,.meta){color:var(--vfx-sub)}
+body :is(.modal:not(#adminModal),.drawer,.section-card) :is(input:not([type=checkbox]):not([type=radio]),textarea,select){color:var(--vfx-ink);background:var(--vfx-field);border-color:var(--vfx-stroke)}
+body :is(.modal:not(#adminModal),.drawer,.section-card) :is(input,textarea)::placeholder{color:var(--vfx-sub);opacity:1}
+body :is(.modal:not(#adminModal),.drawer,.section-card) :is(button,a).btn.secondary,body :is(.modal:not(#adminModal),.drawer,.section-card) button.btn.ghost{color:var(--vfx-ink);border-color:var(--vfx-stroke)}
+body :is(.modal:not(#adminModal),.drawer,.section-card) :is(button,a):focus-visible{outline:3px solid var(--primary);outline-offset:2px}
+body.dark-mode :is(.btn:not(.secondary):not(.ghost):not(.danger):not(.success),.chip.active){color:white;background:var(--primary)}
+body:not(.dark-mode) :is(.btn:not(.secondary):not(.ghost):not(.danger):not(.success),.chip.active){color:white;background:var(--primary)}
+body:not(.dark-mode) #vsmGallery .vsm-viewer-sidebar,body:not(.dark-mode) #vsmGallery #vsmProfileInfo>div{color:#20202d!important;background:#fff!important}
+body.dark-mode #vsmGallery .vsm-viewer-sidebar,body.dark-mode #vsmGallery #vsmProfileInfo>div{color:#f5f6fb!important;background:#1d232d!important}
+body:not(.dark-mode) #vsmGallery .vsm-viewer-sidebar :is(p,small,span){color:#343a49!important}
+body.dark-mode #vsmGallery .vsm-viewer-sidebar :is(p,small,span){color:#e0e5ef!important}
+#vibraCartSuggest{margin-top:16px}
+#vibraCartSuggest .vfx-suggestions{display:grid;grid-template-columns:repeat(auto-fit,minmax(145px,1fr));gap:9px;margin-top:9px}
+#vibraCartSuggest .vfx-product{border:1px solid var(--vfx-stroke);padding:10px;border-radius:12px;background:var(--vfx-panel);min-width:0;color:var(--vfx-ink);text-align:left}
+#vibraCartSuggest .vfx-product img{height:100px;width:100%;object-fit:contain;border-radius:8px}
+#vibraCartSuggest .vfx-product strong{display:block;margin:7px 0;font-size:.84rem}
+#vibraCartSuggest .vfx-product .btn{width:100%;min-height:38px;padding:7px;font-size:.8rem}
+#adminModal #vfxAuditStatus{margin:12px 0}
+</style>
 </head>
 <body>
 <div class="topbar"><div class="container header">
@@ -1460,7 +1486,9 @@ async function addressCandidates(query){
  let backendError=null;
  if(supabaseClient){try{const {data,error}=await supabaseClient.functions.invoke('catalog-address',{body:{query}});if(!error&&!data?.error&&Array.isArray(data?.results))return data.results;backendError=error||data?.error;}catch(err){backendError=err;}}
  try{const url='https://nominatim.openstreetmap.org/search?format=jsonv2&addressdetails=1&limit=5&countrycodes=mx&q='+encodeURIComponent(query);const response=await fetch(url,{headers:{Accept:'application/json'},signal:AbortSignal.timeout(12000)});if(!response.ok)throw Error('El buscador público no respondió ('+response.status+').');const rows=await response.json();return rows.map(r=>({lat:Number(r.lat),lng:Number(r.lon),address:r.display_name,label:r.display_name,display_name:r.display_name}));}
- catch(e){throw Error('No fue posible buscar la dirección. La función catalog-address no está disponible y falló la búsqueda alternativa: '+e.message);}
+ catch(e){/* MODIFICADO: fuente geográfica adicional para predicciones en México */
+  try{const q=new URLSearchParams({q:query,limit:'8',lang:'es',lat:'19.05',lon:'-104.3'});const r=await fetch('https://photon.komoot.io/api/?'+q,{signal:AbortSignal.timeout(11000)});if(!r.ok)throw Error('Buscador alternativo no disponible');const j=await r.json();return (j.features||[]).filter(f=>f.properties?.countrycode==='MX'||String(f.properties?.country||'').toLowerCase().includes('méx')).map(f=>({lat:Number(f.geometry.coordinates[1]),lng:Number(f.geometry.coordinates[0]),address:[f.properties.name,f.properties.street,f.properties.housenumber,f.properties.district,f.properties.city,f.properties.state,'México'].filter(Boolean).join(', '),precision:'street'})).filter(x=>Number.isFinite(x.lat)&&Number.isFinite(x.lng));}catch(e2){throw Error('No fue posible consultar los proveedores de direcciones. Comprueba tu conexión o mueve el pin.');}
+ }
 }
 foodSearch=async function(query){const results=await addressCandidates(query);if(!results.length)throw Error('No encontramos esa dirección. Añade municipio o usa tu ubicación.');if(results.length>1)throw Error('Selecciona una dirección de las sugerencias.');return results[0]};
 function invalidateDestination(){checkout.lat=checkout.lng=null;checkout.distance=checkout.shipping=0;checkout.savedAddressId='';invalidateCommerceQuote();if(customerMarker&&clientMap){clientMap.removeLayer(customerMarker);customerMarker=null}if(publicFoodPin&&publicFoodMap){publicFoodMap.removeLayer(publicFoodPin);publicFoodPin=null}if(publicFoodRoute&&publicFoodMap){publicFoodMap.removeLayer(publicFoodRoute);publicFoodRoute=null}const info=document.getElementById('distanceInfo');if(info)info.textContent='Selecciona una dirección o marca la entrada.';document.getElementById('foodQuote').textContent='Confirma el nuevo destino para calcular el recorrido.';updateCommerceTotals()}
@@ -5813,6 +5841,45 @@ function start(){observer.observe(document.body,{subtree:true,childList:true});r
 if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',start,{once:true});else start();
 })();
 </script>
+
+<script id="vibra-authorized-functional-fixes">
+/* NUEVO: verificación administrativa sin vaciar permisos mientras se comprueba la misma sesión */
+(function(){
+ if(typeof panelVerify==='function'){
+  const originalVerify=panelVerify;let pending=null,verifiedUser=null,verifiedUntil=0;
+  panelVerify=async function(){
+   if(!supabaseClient)return false;
+   let session=null;try{const r=await supabaseClient.auth.getSession();session=r.data?.session||null;}catch{}
+   if(!session?.user){verifiedUser=null;verifiedUntil=0;panelAccess={owner:false,modules:[]};return false}
+   const uid=session.user.id;
+   if(verifiedUser===uid&&Date.now()<verifiedUntil&&(panelAccess.owner||panelAccess.modules?.length))return true;
+   if(pending)return pending;
+   const last=(verifiedUser===uid)?{owner:panelAccess.owner,modules:[...(panelAccess.modules||[])]}:null;
+   pending=(async()=>{try{const ok=await originalVerify();if(ok){verifiedUser=uid;verifiedUntil=Date.now()+45000;}else if(last&&(last.owner||last.modules.length)){panelAccess=last;verifiedUntil=Date.now()+8000;return true;}return ok;}finally{pending=null}})();
+   return pending;
+  };
+  if(supabaseClient?.auth?.onAuthStateChange)supabaseClient.auth.onAuthStateChange((event)=>{if(event==='SIGNED_OUT'){verifiedUser=null;verifiedUntil=0;panelAccess={owner:false,modules:[]}}});
+ }
+ /* NUEVO: navegar con permisos comprobados, evitando alertas durante la reconexión. */
+ const priorAdminPane=renderAdminPane;
+ renderAdminPane=async function(id){if(adminSession&&!panelCan(id)){try{await panelVerify()}catch(e){console.warn('Verificación de permisos',e)}}return priorAdminPane(id)};
+ /* NUEVO: recomendaciones únicamente para el carrito vacío; se derivan de publicaciones activas */
+ const previousCart=renderCart;
+ renderCart=function(){previousCart();const host=document.getElementById('cartBody');if(!host||cartItems().length||host.querySelector('#vibraCartSuggest'))return;
+  const items=(state.products||[]).filter(p=>p.active&&Number(p.stock)>0).slice(0,4);if(!items.length)return;
+  const section=document.createElement('section');section.id='vibraCartSuggest';section.className='section-card';
+  const h=document.createElement('h3');h.textContent='Tal vez te interese';section.append(h);
+  const grid=document.createElement('div');grid.className='vfx-suggestions';
+  for(const p of items){const cell=document.createElement('div');cell.className='vfx-product';if(p.image&&/^https?:|^data:image\//i.test(p.image)){const im=document.createElement('img');im.src=p.image;im.alt=p.name||'Producto';im.loading='lazy';cell.append(im)}const title=document.createElement('strong');title.textContent=p.name;const cost=document.createElement('p');cost.className='small';cost.textContent=money(p.price);const add=document.createElement('button');add.type='button';add.className='btn';add.textContent='Añadir al carrito';add.onclick=()=>{changeQty(p.id,1);renderCart()};cell.append(title,cost,add);grid.append(cell)}section.append(grid);host.append(section);
+ };
+ /* NUEVO: auditoría secundaria de cambios de configuración, sin sustituir el historial existente */
+ const oldAudit=renderAuditAdmin;
+ renderAuditAdmin=async function(c){await oldAudit(c);if(!supabaseClient||!c.isConnected)return;try{const {data,error}=await supabaseClient.from('vibra_config_audit').select('module,changed_at,actor').order('changed_at',{ascending:false}).limit(40);if(error)throw error;const s=document.createElement('section');s.className='section-card';s.innerHTML='<h3>Historial de configuración</h3>';if(!data?.length){s.insertAdjacentHTML('beforeend','<p class="small muted">Aún no hay modificaciones registradas.</p>')}else{const list=document.createElement('div');list.className='audit-list';for(const a of data){const row=document.createElement('div');row.className='audit-item';row.textContent=(a.module||'Configuración')+' · '+new Date(a.changed_at).toLocaleString('es-MX');list.append(row)}s.append(list)}c.append(s)}catch(e){const m=document.createElement('p');m.id='vfxAuditStatus';m.className='small muted';m.textContent='Auditoría de configuración: ejecuta el SQL incluido para habilitarla.';c.append(m)}};
+ /* NUEVO: aplicación de colores sincronizada al cambiar de modo */
+ function syncTheme(){const dark=document.body.classList.contains('dark-mode');document.documentElement.dataset.vibraMode=dark?'dark':'default';document.documentElement.classList.toggle('vibra-dark-first',dark);document.documentElement.style.colorScheme=dark?'dark':'light';}
+ if(document.body){syncTheme();new MutationObserver(syncTheme).observe(document.body,{attributes:true,attributeFilter:['class']})}
+})();
+</script>
 </body>
 <style id="vibra-sedes-vinculadas-css">
 #vibraAssignmentPanel{margin:16px 0;padding:16px;border:1px solid var(--line,#374151);border-radius:16px;background:var(--card,#161a20);color:var(--text,#fff)}
@@ -6103,8 +6170,36 @@ async function fetchRoute(from,to){const url='https://router.project-osrm.org/ro
 function links(latlng,from){const dest=latlng.join(',');const orig=from?from.join(','):'';return {google:'https://www.google.com/maps/dir/?api=1&destination='+encodeURIComponent(dest)+(orig?'&origin='+encodeURIComponent(orig):'')+'&travelmode=driving',apple:'https://maps.apple.com/?daddr='+encodeURIComponent(dest)+(orig?'&saddr='+encodeURIComponent(orig):'')+'&dirflg=d'};}
 function linkMarkup(){return '<div class="vscope-route-actions"><a data-link-google target="_blank" rel="noopener noreferrer" hidden>Google Maps</a><a data-link-apple target="_blank" rel="noopener noreferrer" hidden>Apple Maps</a></div>';}
 function setLinks(host,target,from){const urls=links(target,from);for(const kind of ['google','apple']){const a=host.querySelector('[data-link-'+kind+']');if(a){a.href=urls[kind];a.hidden=false;}}}
-function routeBox(){const anchor=one('#foodPublicMap'),button=one('#foodGpsDestination');if(!anchor||!button)return;let host=one('#vscopePrincipalRoute');if(!host){host=document.createElement('section');host.id='vscopePrincipalRoute';host.className='vscope-route-box';host.hidden=true;host.innerHTML='<strong>Ruta hacia una sede</strong><label>Elige la sede<select id="vscopePrincipalSite"></select></label><div class="vscope-route-actions"><button type="button" id="vscopeDrawRoute">Mostrar ruta aquí</button></div><div id="vscopeMainRouteMap" class="vscope-map"></div><p id="vscopeMainRouteStatus" class="vscope-status"></p>'+linkMarkup();anchor.after(host);}
-if(button.dataset.vscopeBound)return;button.dataset.vscopeBound='1';button.addEventListener('click',async e=>{e.preventDefault();e.stopImmediatePropagation();host.hidden=false;await getSites();const published=sites.filter(x=>x.is_active&&coords(x));const sel=one('#vscopePrincipalSite');sel.innerHTML=published.map(x=>'<option value="'+esc(x.id)+'">'+esc(x.name)+'</option>').join('')||'<option value="">Sin sedes con coordenadas</option>';const first=published[0];if(first&&window.L){if(!routeMap){routeMap=newMap(one('#vscopeMainRouteMap'),coords(first));}routeMap?.invalidateSize();}one('#vscopeDrawRoute').onclick=async()=>{const selected=published.find(x=>x.id===sel.value);if(!selected)return;const status=one('#vscopeMainRouteStatus'),dest=coords(selected);status.textContent='Calculando recorrido…';setLinks(host,dest);try{const from=await gps();routeOrigin=from;const path=await fetchRoute(from,dest);if(routeLine)routeMap.removeLayer(routeLine);routeLine=L.geoJSON(path.geometry,{style:{color:'#da0b91',weight:5}}).addTo(routeMap);routeMap.fitBounds(routeLine.getBounds(),{padding:[30,30]});status.textContent='Distancia: '+(path.distance/1000).toFixed(1)+' km · Tiempo estimado: '+Math.round(path.duration/60)+' min';setLinks(host,dest,from);}catch(err){status.textContent='No se pudo trazar la ruta aquí: '+err.message+'; puedes usar un mapa externo.'}};},{capture:true});}
+// MODIFICADO: una sola vista CARTO; usa el pin principal si no hay sedes publicadas.
+function routeBox(){
+ const anchor=one('#foodPublicMap'),button=one('#foodGpsDestination');if(!anchor||!button)return;
+ let host=one('#vscopePrincipalRoute');
+ if(!host){host=document.createElement('section');host.id='vscopePrincipalRoute';host.className='vscope-route-box';host.hidden=true;host.innerHTML='<div class="vscope-route-top"><strong>Ruta hacia tu destino</strong><label>Destino<select id="vscopePrincipalSite"></select></label></div><div class="vscope-route-actions"><button type="button" id="vscopeDrawRoute">Trazar en el mapa</button></div><p id="vscopeMainRouteStatus" class="vscope-status" role="status"></p>'+linkMarkup();anchor.after(host)}
+ one('#vscopeMainRouteMap')?.remove();
+ if(button.dataset.vscopeBound)return;button.dataset.vscopeBound='1';
+ button.addEventListener('click',async e=>{
+  e.preventDefault();e.stopImmediatePropagation();host.hidden=false;await getSites();
+  const published=sites.filter(x=>x.is_active&&coords(x));let fallback=null;
+  try{const origin=state?.config?.origin;const xy=origin&&coords(origin);if(xy)fallback={id:'vscope-origin',name:state?.config?.businessName||'Local principal',latitude:xy[0],longitude:xy[1]};}catch{}
+  const allSites=published.length?published:(fallback?[fallback]:[]);
+  const sel=one('#vscopePrincipalSite');sel.innerHTML=allSites.map(x=>'<option value="'+esc(x.id)+'">'+esc(x.name||'Sede')+'</option>').join('')||'<option value="">Sin ubicación configurada</option>';
+  const target=allSites[0]&&coords(allSites[0]);if(target)setLinks(host,target);
+  const run=async()=>{const site=allSites.find(x=>String(x.id)===sel.value),destination=coords(site),status=one('#vscopeMainRouteStatus');
+   if(!destination){status.textContent='Configura el pin de ubicación del negocio antes de solicitar la ruta.';return;}
+   status.textContent='Localizando tu posición y calculando la ruta…';setLinks(host,destination);
+   try{const from=await gps(),path=await fetchRoute(from,destination);setLinks(host,destination,from);
+    const map=typeof publicFoodMap!=='undefined'?publicFoodMap:null;
+    if(!map)throw Error('El mapa principal aún no está listo');
+    if(routeLine)map.removeLayer(routeLine);
+    routeLine=L.geoJSON(path.geometry,{style:{color:'#e50091',weight:5,opacity:.95}}).addTo(map);
+    map.fitBounds(routeLine.getBounds(),{padding:[36,36]});setTimeout(()=>map.invalidateSize(),100);
+    status.textContent='Ruta calculada: '+(path.distance/1000).toFixed(1)+' km · '+Math.round(path.duration/60)+' min aproximadamente. También puedes usar Google Maps o Apple Maps.';
+   }catch(err){status.textContent='No se pudo calcular aquí: '+err.message+'. Puedes utilizar Google Maps o Apple Maps.';}
+  };
+  one('#vscopeDrawRoute').onclick=run;sel.onchange=()=>{const item=allSites.find(x=>String(x.id)===sel.value);if(item)setLinks(host,coords(item))};
+  await run();
+ },{capture:true});
+}
 function hiddenInline(){const modal=one('#v9Modalities');const holder=one('#vibraReserveBody');if(modal&&modal.parentElement!==holder&&!one('#vibraReserveOverlay')?.classList.contains('open')){modal.style.display='none';}else if(modal){modal.style.removeProperty('display')}}
 function transportChoice(){const host=one('#vibraExternalTransport');if(!host||host.dataset.vscopeTransport)return;host.dataset.vscopeTransport='1';host.innerHTML='<strong>¿Quién organiza el traslado?</strong><div class="vscope-admin-fields"><label><input name="vscopeTransfer" type="radio" value="own" checked> Transporte del negocio (con cotización de ruta)</label><label><input name="vscopeTransfer" type="radio" value="uber"> Uber (lo solicita y paga el cliente)</label><label><input name="vscopeTransfer" type="radio" value="didi"> DiDi (lo solicita y paga el cliente)</label></div><p id="vscopeTransportNotice" class="vscope-status">El importe del negocio depende de la distancia calculada. No se contratará ni cobrará el viaje automáticamente.</p>';
 host.addEventListener('change',e=>{if(e.target.name==='vscopeTransfer'){one('#vscopeTransportNotice').textContent=e.target.value==='own'?'El negocio confirmará el coste de su transporte antes del pago.':'El usuario contratará y pagará directamente el traslado; no se sumará al cobro del negocio.';}});}
@@ -6126,104 +6221,50 @@ if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',
 })();
 </script>
 
-<style id="vibra-siete-correcciones-20261013">
-/* NUEVO: contraste consistente en temas, sin afectar la vista impresa del ticket ni Leaflet */
-body:not(.dark-mode){--vfix-ink:#202334;--vfix-muted:#475569;--vfix-surface:#fff;--vfix-outline:#cbd5e1}
-body.dark-mode{--vfix-ink:#f6f7fb;--vfix-muted:#c1ccda;--vfix-surface:#161a20;--vfix-outline:#4d5869}
-body :is(.v18-business-card,.vsm-viewer-sidebar,.vsm-info-row,.v18-address-suggestion,.vscope-route-box,.vscope-admin-box){color:var(--vfix-ink)!important}
-body :is(.v18-business-card,.vsm-viewer-sidebar,.vsm-info-row,.v18-address-suggestion,.vscope-route-box,.vscope-admin-box) :is(p,small,span){color:inherit}
-body :is(.modal,.drawer,#foodDeliveryPlanner) :is(input:not([type=checkbox]):not([type=radio]),select,textarea){border:1px solid var(--vfix-outline);color:var(--vfix-ink);background:var(--vfix-surface)}
-body :is(.modal,.drawer,#foodDeliveryPlanner) :is(input,textarea)::placeholder{color:var(--vfix-muted);opacity:1}
-body.dark-mode :is(.btn.secondary,.btn.ghost,.icon-btn,.v18-address-suggestion,.vsm-viewer-interact button){color:#f6f7fb!important;border-color:#536073!important}
-body:not(.dark-mode) :is(.btn.secondary,.btn.ghost,.icon-btn,.v18-address-suggestion,.vsm-viewer-interact button){color:#242336!important;border-color:#cbd5e1!important}
-body.dark-mode :is(.btn.secondary,.btn.ghost,.icon-btn){background:#313746!important}
-body:not(.dark-mode) :is(.btn.secondary,.btn.ghost,.icon-btn){background:#f0eef4!important}
-body :is(button,a,input,select,textarea):focus-visible{outline:2px solid var(--primary)!important;outline-offset:2px}
-body .btn:not(.secondary):not(.ghost):not(.danger):not(.success){color:#fff!important}
-body:not(.dark-mode) #adminModal{color-scheme:dark}
-body #adminModal :is(.btn.secondary,.btn.ghost,.icon-btn){color:#f3f4f6!important;background:#2a303b!important}
-/* NUEVO: mensajes, sugerencias y carrito vacío */
-.vfix-suggestions{position:relative;z-index:5;margin:7px 0;max-height:235px;overflow-y:auto;display:grid;gap:5px}
-.vfix-suggestions button{border:1px solid var(--line);background:var(--card);color:var(--text);border-radius:9px;padding:11px;text-align:left;line-height:1.4}
-.vfix-suggestions button:hover{border-color:var(--primary)}
-.vfix-suggestions small{display:block;color:var(--muted)}
-.vfix-cart-grid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:10px;margin:14px 0}
-.vfix-cart-item{padding:10px;background:var(--card);border:1px solid var(--line);border-radius:12px;display:flex;flex-direction:column;gap:7px;min-width:0}
-.vfix-cart-item img{width:100%;height:90px;object-fit:contain;background:var(--secondary);border-radius:8px}
-.vfix-cart-item strong{font-size:.82rem;overflow-wrap:anywhere}.vfix-cart-item .btn{font-size:.8rem;min-height:38px}
-@media(max-width:480px){.vfix-cart-grid{grid-template-columns:1fr 1fr}}
+<!-- NUEVO: controles exclusivos de los módulos autorizados -->
+<style id="vibra-nine-scope-final">
+/* NUEVO: mapa único, contraste claro/oscuro y controles de rutas */
+#vscopeMainRouteMap{display:none!important}#vscopePrincipalRoute{padding:14px!important}#vscopePrincipalRoute .vscope-route-top{display:flex;gap:12px;align-items:end;justify-content:space-between;flex-wrap:wrap}#vscopePrincipalRoute label{min-width:min(100%,280px);display:grid;gap:6px}#vscopePrincipalRoute button{background:var(--primary)!important;color:white!important;border-radius:11px;min-height:44px;font-weight:700}#vscopePrincipalRoute .vscope-route-actions{display:flex;flex-wrap:wrap;gap:8px;padding-top:10px}#vscopePrincipalRoute .vscope-status{margin:10px 0;color:var(--text)!important}
+body.dark-mode .btn.secondary,body.dark-mode .btn.ghost,body.dark-mode #vscopePrincipalRoute button,body.dark-mode #adminModal .tab-btn.active,body.dark-mode .vscope-route-box button{background:var(--primary)!important;color:white!important;border-color:var(--primary)!important}
+body:not(.dark-mode) .vscope-route-box button{background:#e50091!important;color:white!important}
+body:not(.dark-mode) .vsm-viewer-sidebar :is(p,span,small),body:not(.dark-mode) #vsmGallery #vsmProfileInfo p{color:#253148!important}
+body:not(.dark-mode) .vsm-viewer-interact button{background:#351630!important;color:#fff!important}
+/* NUEVO: navegación administrativa y módulos autorizados */
+#vscopeBusinessSubmenu{display:none;grid-column:1/-1;padding:4px 6px 6px 18px;gap:5px}#vscopeBusinessSubmenu.open{display:grid}#vscopeBusinessSubmenu .tab-btn{width:100%;font-size:.87rem;text-align:left;display:flex;gap:9px;justify-content:flex-start}#vscopeBusinessToggle{margin-left:auto;transition:transform .2s}#vscopeBusinessToggle.open{transform:rotate(180deg)}#vscopeBusinessToggle svg{width:17px;height:17px}
+#vscopeDestinationAutocomplete{position:absolute;left:0;right:0;z-index:200;background:var(--card);color:var(--text);border:1px solid var(--line);border-radius:12px;max-height:270px;overflow:auto;box-shadow:0 12px 28px #0003}#vscopeDestinationAutocomplete[hidden]{display:none!important}#vscopeDestinationAutocomplete button{display:block;width:100%;padding:11px 13px;background:transparent;text-align:left;color:var(--text);border:0;border-bottom:1px solid var(--line)}#vscopeDestinationAutocomplete button:hover,#vscopeDestinationAutocomplete button:focus-visible{background:var(--secondary)}#vscopeDestinationAutocomplete small{display:block;color:var(--muted);margin-top:3px}
+#vscopeTicketQrSocial{display:grid;gap:8px;margin:12px 0;padding:12px;border:1px solid var(--line);border-radius:12px;background:var(--secondary)}#vscopeTicketQrSocial select{width:100%;min-height:44px;background:var(--card);color:var(--text);border:1px solid var(--line);border-radius:10px;padding:8px}
+#vscopeTripQuick{margin:12px 0;padding:12px;border:1px solid var(--line);border-radius:12px;display:grid;gap:10px;background:var(--secondary)}#vscopeTripQuick select{min-height:43px;max-width:100%;background:var(--card);color:var(--text);border:1px solid var(--line);border-radius:10px}
+#vsmProfileSocial svg{width:18px;height:18px;vertical-align:middle;flex:none;stroke:currentColor;fill:none}#vsmProfileSocial a{display:inline-flex;gap:7px;align-items:center}
 </style>
+<script id="vibra-nine-scope-final-js">
+// NUEVO: integración no invasiva para los nueve apartados autorizados.
+(()=>{'use strict';
+const q=s=>document.querySelector(s),qa=s=>[...document.querySelectorAll(s)];
+const escape=s=>String(s??'').replace(/[&<>"']/g,ch=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[ch]));
+const pict={instagram:'<rect x="3" y="3" width="18" height="18" rx="5"/><circle cx="12" cy="12" r="4"/><circle cx="17.5" cy="6.5" r="1"/>',facebook:'<path d="M15 21v-8h3l.5-4H15V7c0-1 .5-1.5 1.5-1.5H19V2.2A22 22 0 0 0 16 2c-4 0-6 2-6 6v1H7v4h3v8"/>',tiktok:'<path d="M15 3c.7 3.5 2.5 5 5.5 5.2v4c-2.2-.1-4.1-.9-5.5-2.2v5.5a6.5 6.5 0 1 1-6.5-6.5c.5 0 1 0 1.5.2v4.2A2.3 2.3 0 1 0 11 15.5V3z"/>',arrow:'<path d="M5 12h14m-7-7 7 7-7 7"/>'};
+function svg(parts){return '<svg viewBox="0 0 24 24" aria-hidden="true" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round">'+parts+'</svg>'}
+function socialIcons(){qa('#vsmProfileSocial a').forEach(a=>{const name=a.textContent.trim().toLowerCase();const id=['instagram','facebook','tiktok'].find(x=>name.includes(x));if(!id||a.dataset.vscopeIcon)return;a.dataset.vscopeIcon='1';a.innerHTML=svg(pict[id])+'<span>'+id[0].toUpperCase()+id.slice(1)+'</span>'})}
+// NUEVO: submenu de negocio, sedes y habitaciones; reutiliza las pantallas independientes ya existentes.
+function adminSubmenu(){const tabs=q('#adminTabs'),business=qa('#adminTabs .tab-btn').find(b=>/^Negocio\s*$/i.test(b.textContent.trim()));const rooms=q('#vscopeRoomsAdminTab'),sites=q('#vscopeSitesAdminTab');if(!tabs||!business||!rooms||!sites)return;
+let host=q('#vscopeBusinessSubmenu');if(!host){host=document.createElement('div');host.id='vscopeBusinessSubmenu';business.after(host);const arrow=document.createElement('button');arrow.id='vscopeBusinessToggle';arrow.type='button';arrow.setAttribute('aria-label','Abrir submódulos de negocio');arrow.setAttribute('aria-expanded','false');arrow.innerHTML=svg('<path d="m6 9 6 6 6-6"/>');business.append(arrow);arrow.onclick=e=>{e.stopPropagation();const open=host.classList.toggle('open');arrow.classList.toggle('open',open);arrow.setAttribute('aria-expanded',String(open))};}
+for(const [button,title,symbol] of [[rooms,'Habitaciones','<path d="M3 9h18v11H3zM6 9V5h12v4M7 14h10"/>'],[sites,'Sedes','<path d="M12 21s7-7 7-12a7 7 0 0 0-14 0c0 5 7 12 7 12Z"/><circle cx="12" cy="9" r="2"/>']]){if(button.parentElement!==host)host.append(button);if(!button.dataset.vscopeLabel){button.innerHTML=svg(symbol)+'<span>'+title+'</span>';button.dataset.vscopeLabel='1'}}}
+// NUEVO: enlaces y selección de QR basados en redes ya guardadas.
+function ticketLinks(){const c=q('#adminContent');if(!c||!qa('#adminTabs .tab-btn.active').some(x=>/ticket/i.test(x.textContent)))return;if(q('#vscopeTicketQrSocial'))return;const field=q('#tvQrUrl')||q('#tvQRUrl')||q('#tvQrLink');if(!field)return;const box=document.createElement('label');box.id='vscopeTicketQrSocial';box.innerHTML='<strong>QR · enlace para compartir</strong><select><option value="">Enlace personalizado</option></select>';field.before(box);const list=box.querySelector('select');let socials={};try{socials=state.config?.socials||state.config?.business?.socials||{}}catch{};for(const [key,value] of Object.entries(socials)){if(typeof value==='string'&&/^https:\/\//i.test(value)){const opt=document.createElement('option');opt.textContent=key.charAt(0).toUpperCase()+key.slice(1);opt.value=value;list.append(opt)}}list.onchange=()=>{if(list.value){field.value=list.value;field.dispatchEvent(new Event('input',{bubbles:true}));field.dispatchEvent(new Event('change',{bubbles:true}))}}}
+// NUEVO: listado de ubicaciones registradas para calculadora de rutas existente.
+async function tripOrigins(){const c=q('#adminContent');if(!c||!qa('#adminTabs .tab-btn.active').some(x=>/viajes|calculadora/i.test(x.textContent)))return;if(q('#vscopeTripQuick'))return;const box=document.createElement('div');box.id='vscopeTripQuick';box.innerHTML='<strong>Consultar ubicaciones registradas</strong><label>Origen<select id="vscopeTripFrom"><option>Consultando…</option></select></label><label>Destino<select id="vscopeTripTo"><option>Consultando…</option></select></label><button class="btn" id="vscopeTripEstimate" type="button">Calcular distancia por carretera</button><p id="vscopeTripResult" role="status"></p>';c.querySelector('.admin-pane.active')?.prepend(box);if(!box.isConnected)return;const db=typeof supabaseClient!=='undefined'?supabaseClient:null;const locations=[];try{const main=state.config?.origin;if(main&&Number.isFinite(+main.lat)&&Number.isFinite(+main.lng))locations.push({name:'Local principal',lat:+main.lat,lon:+main.lng})}catch{}
+if(db){for(const [table,type] of [['service_locations','Sede'],['vibra_venues','Destino']]){try{const r=await db.from(table).select('*').limit(200);if(!r.error)for(const it of r.data||[]){const lat=Number(it.latitude),lon=Number(it.longitude);if(Number.isFinite(lat)&&Number.isFinite(lon)&&lat&&lon)locations.push({name:type+' · '+(it.name||it.address||'Ubicación'),lat,lon})}}catch{}}}
+const options=locations.map((x,i)=>'<option value="'+i+'">'+escape(x.name)+'</option>').join('');const from=q('#vscopeTripFrom'),to=q('#vscopeTripTo');if(!from||!to)return;from.innerHTML=to.innerHTML=options||'<option value="">Sin coordenadas registradas</option>';if(locations.length>1)to.value='1';q('#vscopeTripEstimate').onclick=async()=>{const a=locations[Number(from.value)],b=locations[Number(to.value)],out=q('#vscopeTripResult');if(!a||!b){out.textContent='Selecciona ubicaciones válidas.';return}out.textContent='Calculando recorrido…';try{const url='https://router.project-osrm.org/route/v1/driving/'+a.lon+','+a.lat+';'+b.lon+','+b.lat+'?overview=false';const response=await fetch(url,{signal:AbortSignal.timeout(14000)});if(!response.ok)throw Error('El servicio de rutas no respondió');const data=await response.json(),route=data.routes?.[0];if(!route)throw Error('No se encontró una ruta');out.textContent='Distancia '+(route.distance/1000).toFixed(2)+' km · Duración aproximada '+Math.round(route.duration/60)+' minutos. Aplica el costo establecido en la calculadora.'}catch(err){out.textContent=err.message}}}
+// NUEVO: sugerencias Nominatim de calles, colonias, municipios y estados sin librerías adicionales.
+let timer=0,seq=0;
+function addressSearch(){const input=q('#foodDestination');if(!input||input.dataset.vscopeSuggest)return;input.dataset.vscopeSuggest='1';const parent=input.closest('label')||input.parentElement;if(!parent)return;parent.style.position='relative';const panel=document.createElement('div');panel.id='vscopeDestinationAutocomplete';panel.hidden=true;parent.append(panel);
+const close=()=>{panel.hidden=true;panel.replaceChildren()};input.addEventListener('input',()=>{clearTimeout(timer);const value=input.value.trim();if(value.length<3){close();return;}const req=++seq;timer=setTimeout(async()=>{try{const params=new URLSearchParams({q:value+', Colima, México',format:'json',addressdetails:'1',limit:'6',countrycodes:'mx'});const r=await fetch('https://nominatim.openstreetmap.org/search?'+params,{signal:AbortSignal.timeout(9000)});if(!r.ok)throw Error('Búsqueda no disponible');const results=await r.json();if(req!==seq)return;panel.replaceChildren();for(const item of results){const b=document.createElement('button');b.type='button';const name=document.createElement('span');name.textContent=item.display_name;const detail=document.createElement('small');detail.textContent=[item.address?.road,item.address?.suburb,item.address?.city||item.address?.town,item.address?.state].filter(Boolean).join(' · ');b.append(name,detail);b.onclick=()=>{input.value=item.display_name;input.dispatchEvent(new Event('input',{bubbles:true}));close();if(typeof chooseFoodDestination==='function')chooseFoodDestination(Number(item.lat),Number(item.lon)).catch(console.warn)};panel.append(b)}panel.hidden=!results.length;}catch{if(req===seq)close()}},450)});
+document.addEventListener('click',e=>{if(!parent.contains(e.target))close()});input.addEventListener('keydown',e=>{if(e.key==='Escape')close()})}
+// NUEVO: selector de iconos SVG existentes filtrado para evitar motivos alimenticios en el ticket.
+function ticketIconTools(){const picker=q('#tvIconPicker');if(!picker||q('#vscopeTicketIconTools'))return;const card=document.createElement('section');card.id='vscopeTicketIconTools';card.className='vscope-ticket-tools';card.innerHTML='<strong>Iconos apropiados para boutique</strong><p class="small muted">Elige entre los iconos SVG existentes. Los motivos de alimentos y reparto se ocultan en esta biblioteca.</p><label class="field">Filtrar iconos<input class="input" type="search" placeholder="Buscar: corazón, estrella, regalo, ubicación…"></label>';picker.before(card);const input=card.querySelector('input');const forbidden=/utensils|burger|pizza|plate|taco|fries|coffee|drink|food|restaurant|motorcycle|delivery|chef|cake|icecream|fork|spoon/i;const filter=()=>{picker.querySelectorAll('[data-icon],[data-icon-key],.icon-option').forEach(item=>{const key=[item.dataset.icon,item.dataset.iconKey,item.title,item.getAttribute('aria-label'),item.textContent].join(' ');item.hidden=forbidden.test(key)||!!(input.value&&!key.toLocaleLowerCase('es').includes(input.value.toLocaleLowerCase('es')));})};input.oninput=filter;filter()}
 
-<script id="vibra-siete-correcciones-funciones">
-/* NUEVO: intervención acotada a permisos, ubicación, direcciones, auditoría, carga y carrito. */
-(function(){'use strict';
-const byId=id=>document.getElementById(id);
-const safe=t=>String(t??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
-/* MODIFICADO: el guardado del pin no depende del RPC ausente: escritura autorizada de la misma fila utilizada en la carga. */
-function installOriginSave(){const button=byId('foodOriginConfirm');if(!button||button.dataset.vfixOrigin==='1')return;button.dataset.vfixOrigin='1';button.onclick=async function(){if(button.disabled)return;button.disabled=true;try{
- const lat=Number(byId('foodOriginLat')?.value),lng=Number(byId('foodOriginLng')?.value);
- if(!Number.isFinite(lat)||!Number.isFinite(lng)||Math.abs(lat)>90||Math.abs(lng)>180)throw Error('Coordenadas inválidas');
- if(!supabaseClient||!adminSession||!(await panelVerify()))throw Error('Debes tener acceso administrativo confirmado para guardar.');
- const previous=await supabaseClient.from('catalog_settings').select('data').eq('id',1).maybeSingle();if(previous.error)throw previous.error;
- const data={...(previous.data?.data||{}),origin:{...(previous.data?.data?.origin||{}),lat,lng,address:byId('originAddress')?.value?.trim()||state.config.origin?.address||'',confirmed:true},deliveryEnabled:!!byId('deliveryEnabled')?.checked};
- const saved=await supabaseClient.from('catalog_settings').upsert({id:1,data,updated_at:new Date().toISOString()},{onConflict:'id'}).select('id').single();if(saved.error)throw saved.error;
- state.config.origin=data.origin;state.config.deliveryEnabled=data.deliveryEnabled;try{saveLocal()}catch{}
- if(typeof publicFoodOrigin!=='undefined'&&publicFoodOrigin)publicFoodOrigin.setLatLng([lat,lng]);if(typeof publicFoodMap!=='undefined'&&publicFoodMap)publicFoodMap.setView([lat,lng],16);
- if(byId('originSaveStatus'))byId('originSaveStatus').textContent='Punto guardado en Supabase.';
- toast('Punto de salida guardado.','ok');
- }catch(e){toast('No se guardó el punto: '+(e.message||e),'error')}finally{button.disabled=false}};}
-/* MODIFICADO: reconocimiento estable desde el servidor de propietario y módulos delegados. Nunca confiar en la caché local para autorizar. */
-let verifyPromise=null,verifiedId=null,lastValidAt=0;
-const originalVerify=typeof panelVerify==='function'?panelVerify:null;
-panelVerify=async function(){
- if(verifyPromise)return verifyPromise;
- verifyPromise=(async()=>{
- if(!supabaseClient)return false;
- const auth=await supabaseClient.auth.getUser();if(auth.error||!auth.data?.user){verifiedId=null;panelAccess={owner:false,master:false,modules:[]};syncAdminVisibility();return false}
- const uid=auth.data.user.id;const sesh=await supabaseClient.auth.getSession();if(sesh.error||sesh.data?.session?.user?.id!==uid)return false;
- adminSession=sesh.data.session;
- if(typeof customerSession!=='undefined')customerSession=sesh.data.session;
- let role=null,allowed=null;
- const [roles,panel]=await Promise.allSettled([supabaseClient.from('staff_roles').select('role').eq('user_id',uid).maybeSingle(),supabaseClient.rpc('catalog_panel',{p_action:'access',p_payload:{}})]);
- if(roles.status==='fulfilled'&&!roles.value.error)role=roles.value.data?.role;
- if(panel.status==='fulfilled'&&!panel.value.error&&panel.value.data&&typeof panel.value.data==='object')allowed=panel.value.data;
- const owner=role==='admin'||role==='owner'||allowed?.owner===true||allowed?.master===true;
- const modules=Array.isArray(allowed?.modules)?allowed.modules:[];
- if(!owner&&!modules.length&&role!=='manager'){if(verifiedId===uid&&Date.now()-lastValidAt<45000)return true;verifiedId=null;panelAccess={owner:false,master:false,modules:[]};syncAdminVisibility();return false}
- panelAccess={owner,master:owner,modules:owner?adminTabs.map(t=>t[0]):modules};verifiedId=uid;lastValidAt=Date.now();syncAdminVisibility();return true;
- })();try{return await verifyPromise}finally{verifyPromise=null}
-};
-syncAdminVisibility=function(){const button=byId('adminBtn');if(!button)return;const allowed=!!adminSession?.user?.id&&verifiedId===adminSession.user.id&&!!(panelAccess.owner||panelAccess.master||panelAccess.modules?.length);button.hidden=!allowed;button.style.display=allowed?'':'none';button.setAttribute('aria-hidden',String(!allowed))};
-/* MODIFICADO: un colaborador solo abre módulos delegados, el propietario tiene acceso completo. */
-const priorRenderPane=renderAdminPane;renderAdminPane=function(id){if(verifiedId&&adminSession?.user?.id===verifiedId){const authorized=panelAccess.owner||panelAccess.master||panelAccess.modules?.includes(id);if(!authorized){toast('Este módulo no está asignado a tu cuenta.','error');return}}priorRenderPane(id);if(id==='business')queueMicrotask(installOriginSave)};
-/* NUEVO: sugerencias con proveedor de calles Photon (OSM), alternativa Nominatim y elección explícita. */
-const geoCache=new Map();let queryTimer=null,requestController=null;
-async function searchMX(value){const query=value.trim();if(query.length<3)return[];const key=query.toLowerCase();if(geoCache.has(key))return geoCache.get(key);
- const out=[];const seen=new Set();function add(name,lat,lng){const k=Number(lat).toFixed(5)+':'+Number(lng).toFixed(5);if(Number.isFinite(Number(lat))&&Number.isFinite(Number(lng))&&!seen.has(k)){seen.add(k);out.push({name,lat:Number(lat),lng:Number(lng)})}}
- try{const params=new URLSearchParams({q:query,limit:'8',lang:'es',lat:'19.06',lon:'-104.31'});const r=await fetch('https://photon.komoot.io/api/?'+params,{signal:requestController.signal});if(r.ok){const d=await r.json();for(const f of d.features||[]){const p=f.properties||{};if(p.countrycode&&p.countrycode.toUpperCase()!=='MX')continue;add([p.name,p.street,p.housenumber,p.district,p.city,p.county,p.state].filter(Boolean).join(', '),f.geometry.coordinates[1],f.geometry.coordinates[0])}}}catch(e){if(e.name==='AbortError')return []}
- if(!out.length){try{const params=new URLSearchParams({q:query+', México',format:'jsonv2',limit:'7',countrycodes:'mx',addressdetails:'1'});const r=await fetch('https://nominatim.openstreetmap.org/search?'+params,{signal:requestController.signal,headers:{'Accept-Language':'es-MX,es'}});if(r.ok){const rows=await r.json();for(const p of rows)add(p.display_name,p.lat,p.lon)}}catch(e){if(e.name==='AbortError')return []}}
- geoCache.set(key,out);if(geoCache.size>80)geoCache.delete(geoCache.keys().next().value);return out;
-}
-function wireAddress(){const input=byId('foodDestination');if(!input||input.dataset.vfixGeo==='1')return;input.dataset.vfixGeo='1';const host=document.createElement('div');host.id='vfixPublicAddressSuggestions';host.className='vfix-suggestions';host.setAttribute('role','listbox');input.closest('.address-picker-row')?.after(host);
- input.addEventListener('input',()=>{clearTimeout(queryTimer);if(requestController)requestController.abort();host.replaceChildren();if(input.value.trim().length<3)return;queryTimer=setTimeout(async()=>{requestController=new AbortController();const typed=input.value;const rows=await searchMX(typed);if(typed!==input.value)return;host.replaceChildren();for(const item of rows){const b=document.createElement('button');b.type='button';b.textContent=item.name;b.onclick=async()=>{host.replaceChildren();input.value=item.name;checkout.address=item.name;await chooseFoodDestination(item.lat,item.lng)};host.append(b)}if(!rows.length){const note=document.createElement('small');note.textContent='Sin coincidencias en los proveedores públicos. Completa la colonia y municipio o marca el pin.';host.append(note)}},450)});
-}
-/* NUEVO: panel instantáneo de productos aprobados ya cargados; la nube continúa siendo fuente de verdad. */
-const oldProductsRender=renderProductsAdmin;renderProductsAdmin=function(host){oldProductsRender(host);if(Array.isArray(state.products)&&state.products.length&&host&&!host.querySelector('#vfixCloudState')){const msg=document.createElement('p');msg.id='vfixCloudState';msg.className='small muted';msg.textContent='Mostrando publicaciones cargadas; Supabase confirma los cambios en segundo plano.';host.prepend(msg)}};
-/* NUEVO: registro de auditoría real, sin reemplazar la tabla anterior de eventos de pedido. */
-const oldAudit=renderAuditAdmin;renderAuditAdmin=async function(host){await oldAudit(host);const current=byId('auditList');if(!current||!supabaseClient)return;const r=await supabaseClient.from('vibra_audit_events').select('created_at,action,entity,entity_id,actor_id,detail').order('created_at',{ascending:false}).limit(100);if(r.error){const info=document.createElement('div');info.className='notice';info.textContent='Auditoría ampliada: ejecuta la migración SQL para habilitar el historial de cambios administrativos.';current.append(info);return}const title=document.createElement('h3');title.textContent='Cambios administrativos';current.append(title);if(!r.data?.length){current.append(document.createTextNode('Aún no hay cambios administrativos registrados.'));return}for(const e of r.data){const item=document.createElement('div');item.className='audit-item';item.textContent=`${new Date(e.created_at).toLocaleString('es-MX')} · ${e.action} · ${e.entity} · ${e.entity_id||''}`;current.append(item)}};
-/* NUEVO: recomendaciones en carrito vacío sin introducir datos falsos ni afectar checkout. */
-const oldCartRender=renderCart;renderCart=function(){oldCartRender();const body=byId('cartBody');if(!body||cartItems().length||body.querySelector('#vfixCartRecs'))return;const section=document.createElement('section');section.id='vfixCartRecs';section.className='section-card';section.innerHTML='<h3>Explora el catálogo</h3><p class="small muted">Puedes agregar artículos publicados directamente aquí.</p>';const grid=document.createElement('div');grid.className='vfix-cart-grid';const products=state.products.filter(p=>p.active&&Number(p.stock)>0).slice(0,6);for(const p of products){const card=document.createElement('div');card.className='vfix-cart-item';const title=document.createElement('strong');title.textContent=p.name;card.append(title);const value=document.createElement('span');value.className='price';value.textContent=money(p.price);card.append(value);const btn=document.createElement('button');btn.className='btn';btn.innerHTML=UI.cart+'<span>Agregar</span>';btn.onclick=()=>{state.cart[p.id]=Math.min(Number(p.stock),(Number(state.cart[p.id])||0)+1);saveLocal();renderCart();renderCatalog();updateCartCount()};card.append(btn);grid.append(card)}if(!products.length){const span=document.createElement('p');span.textContent='Todavía no hay productos disponibles para recomendar.';section.append(span)}else section.append(grid);body.append(section)};
-function boot(){
- /* NUEVO: pintar de inmediato el último catálogo publicado mientras se verifica Supabase. */
- try{const raw=localStorage.getItem('vibra.published.snapshot.v2');if(raw&&(!state.products||!state.products.length)){
-  const snap=JSON.parse(raw);if(Array.isArray(snap.products)&&snap.products.length&&Number(snap.savedAt)>Date.now()-86400000){
-   state.products=snap.products.filter(p=>p&&typeof p.id==='string');renderCategories();renderCatalog();
-  }
- }}catch(e){console.warn('No se pudo usar la vista previa de catálogo publicado:',e)}
- wireAddress();if(byId('foodOriginConfirm'))installOriginSave()
-}
-if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',boot,{once:true});else boot();
-const adminHost=byId('adminContent');if(adminHost){new MutationObserver(()=>{if(activeAdmin==='business')installOriginSave();wireAddress()}).observe(adminHost,{childList:true,subtree:true})}
+function expensesLabel(){qa('#adminTabs .tab-btn').filter(x=>/Calculadora de viajes/i.test(x.textContent)).forEach(x=>{x.innerHTML=x.innerHTML.replace(/\s*\(heredado\)/ig,'')});qa('#adminTabs .tab-btn').filter(x=>/Gastos e insumos/i.test(x.textContent)).forEach(x=>x.title='Registro de gastos conectado a Supabase mediante catalog_expense')}
+function execute(){adminSubmenu();socialIcons();ticketLinks();ticketIconTools();tripOrigins().catch(console.warn);addressSearch();expensesLabel()}
+function start(){execute();let last='';const run=()=>{const state=[q('#adminModal')?.className,q('#adminTabs .tab-btn.active')?.textContent,q('#vsmGallery')?.className,q('#foodDestination')?.isConnected].join('|');if(state===last)return;last=state;execute()};document.addEventListener('click',e=>{if(e.target.closest('#adminTabs,.vsm-media-button,#adminModal .modal-head'))setTimeout(run,80)},true);const obs=new MutationObserver(ms=>{if(ms.some(m=>m.type==='childList'&&[...m.addedNodes].some(n=>n.nodeType===1&&(['adminTabs','vsmProfileSocial','foodDeliveryPlanner'].includes(n.id)||n.querySelector?.('#adminTabs,#vsmProfileSocial,#foodDestination')))))requestAnimationFrame(run)});obs.observe(document.body,{subtree:true,childList:true})}if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',start,{once:true});else start();
 })();
 </script>
 </html>
