@@ -358,6 +358,11 @@ body.dark-mode :is(.product-viewer,#productModal,#vsmGallery) .muted{color:#b4c0
 @keyframes vibra-wa-half-turn{0%,12%,72%,100%{transform:rotateY(0deg)}32%,52%{transform:rotateY(-180deg)}}
 @media(prefers-reduced-motion:reduce){.fab-whatsapp svg{animation:none}}
 </style>
+
+<style id="vibra-fix-login-contrast-20261014">/* MODIFICADO: contraste del título del acceso y portada */
+#vibraAccessGate .vibra-access-brand h2,#vibraAccessGate .vibra-access-brand h1{color:#fff!important;-webkit-text-fill-color:#fff!important;text-shadow:0 2px 14px #0009!important}
+.hero-card h2{color:#fff!important;-webkit-text-fill-color:#fff!important;text-shadow:0 2px 12px #0005!important}
+</style>
 </head>
 <body>
 <div class="topbar"><div class="container header">
@@ -1318,9 +1323,7 @@ function ticketPrint(order,d){
     win.document.close();win.focus();win.print();
   }catch(e){win.close();toast('No se pudo imprimir el ticket: '+e.message,'error');}
 }
-</script>
-
-</html>');win.document.close();ticketQr(d).then(qr=>{win.document.body.innerHTML=ticketSvg(order,d,qr);const images=[...win.document.images];return Promise.all(images.map(img=>img.complete?Promise.resolve():new Promise(resolve=>{img.onload=img.onerror=resolve}))).then(()=>{win.focus();win.print()})}).catch(e=>{win.document.body.textContent=e.message})}
+// MODIFICADO: se restaura la continuidad del script original; el contenido ya no se imprime en la página.
 const ticketOriginalPost=renderPostConfirm;renderPostConfirm=function(order){ticketOriginalPost(order);const stack=document.querySelector('#summaryBody .stack')||document.getElementById('summaryBody');const row=document.createElement('div');row.className='toolbar';row.innerHTML=panelButton('orderJpeg','Descargar ticket JPEG',UI.download,'secondary')+panelButton('orderPrint','Imprimir ticket',UI.receipt,'secondary');stack.append(row);document.getElementById('orderJpeg').onclick=e=>panelRun(e.currentTarget,async()=>ticketDownload((await ticketRaster(order,ticketConfig(state.config.ticket),'image/jpeg')).url,'pedido-'+order.folio+'.jpg'));document.getElementById('orderPrint').onclick=()=>ticketPrint(order,ticketConfig(state.config.ticket))};
 const moreProducts=renderProductsAdmin;renderProductsAdmin=function(c){moreProducts(c);const picker=document.getElementById('iconPicker');if(picker&&!document.getElementById('productIconSearch')){picker.insertAdjacentHTML('beforebegin',panelField('productIconSearch','Buscar icono','','search'));document.getElementById('productIconSearch').oninput=e=>{const term=e.target.value.toLowerCase();picker.querySelectorAll('[data-icon]').forEach(el=>el.hidden=!(el.dataset.icon+' '+(EXTRA_LABELS[el.dataset.icon]||'')).toLowerCase().includes(term))}}};
 
@@ -4496,7 +4499,8 @@ renderAdminPane=async function(id){v17EnsureCouponTab();if(id==='coupons'){if(!p
 const v17RenderAdminBase=renderAdmin;renderAdmin=function(){v17EnsureCouponTab();v17RenderAdminBase()};
 
 /* ---------- Tu experiencia: plegable y autocierre a 10 min ---------- */
-let paintExperience=window.vibraPaintExperience||function(){};
+/* MODIFICADO: evita declarar de nuevo paintExperience y bloquear el módulo de opiniones. */
+paintExperience=window.vibraPaintExperience||paintExperience;
 paintExperience=function(){
   let h=document.getElementById('v15Experience');if(!h){h=document.createElement('section');h.id='v15Experience';document.querySelector('.container.controls')?.before(h)}
   h.className='container v17-experience';const s=summary?.scores||{},avg=Number(s.overall||0);
