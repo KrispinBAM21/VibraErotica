@@ -5922,9 +5922,74 @@ body.pattern-on::after{background-image:var(--vibra-extra-pattern,none),url("dat
  function paint(){try{const d=state.config.design||{},name=d.patternGlyph||'none';const r=document.documentElement.style;if(!glyphs[name]){r.removeProperty('--vibra-extra-pattern');return;}const svg='<svg xmlns="http://www.w3.org/2000/svg" width="210" height="210" viewBox="0 0 210 210"><g fill="none" stroke="#818ca3" stroke-width="2.6" opacity=".8" transform="translate(78 78)">'+glyphs[name]+'</g></svg>';r.setProperty('--vibra-extra-pattern','url("data:image/svg+xml,'+encodeURIComponent(svg)+'")')}catch(e){console.warn('Patrón:',e)}}
  function control(){const pane=document.querySelector('#adminModal .admin-pane.active');if(!pane||!document.querySelector('#adminTabs .tab-btn.active')?.textContent?.includes('Personalización')||pane.querySelector('#vibraPatternGlyph'))return;const box=document.createElement('section');box.className='vibra-pattern-tools';box.innerHTML='<strong>Iconos SVG del fondo</strong><p class="small muted">Elige una figura; cada motivo queda centrado dentro de una cuadrícula separada.</p><label class="field">Motivo<select class="select" id="vibraPatternGlyph"><option value="none">Sin iconos adicionales</option><option value="heart">Corazón</option><option value="star">Estrella</option><option value="flower">Flor</option><option value="diamond">Diamante</option></select></label>';pane.append(box);const select=box.querySelector('select');select.value=state.config.design.patternGlyph||'none';select.addEventListener('change',()=>{state.config.design.patternGlyph=select.value;paint();if(typeof save==='function')save();});}
  const heroArt='<div class="vibra-hero-linearts" aria-hidden="true"><svg viewBox="0 0 100 145"><circle cx="50" cy="13" r="10"/><path d="M40 27Q18 46 33 71L46 86 28 119 5 130M59 28Q79 45 67 76L55 91 73 124 93 131M36 49Q50 58 64 49M35 63Q50 77 65 63M47 88 61 111 72 113M33 71 20 93"/></svg><svg viewBox="0 0 100 145"><circle cx="47" cy="15" r="10"/><path d="M37 28Q25 47 37 73L20 94 12 116M58 28Q73 48 62 72L78 93 91 116M38 51Q49 62 62 51M36 74Q50 90 64 73M34 80 41 109 27 135M65 80 60 111 74 137M31 104 50 114 68 103"/></svg></div>';
- function hero(){const c=document.querySelector('.hero-card');if(c&&!c.querySelector('.vibra-hero-linearts'))c.insertAdjacentHTML('beforeend',heroArt)}
+ function hero(){/* MODIFICADO: la portada ya no inserta figuras obligatorias; se administra desde Personalización. */}
  function setup(){paint();hero();control();const mo=new MutationObserver(()=>{if(document.querySelector('#adminModal.show'))control()});const admin=document.getElementById('adminModal');if(admin)mo.observe(admin,{childList:true,subtree:true});document.addEventListener('click',e=>{if(e.target.closest('#adminTabs'))setTimeout(control,100)});}
  if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',setup,{once:true});else setup();
+})();
+</script>
+
+<!-- NUEVO: editor independiente de portada y controles de ruta existentes -->
+<style id="vibra-portada-editor-css">
+.hero-card .vibra-custom-figures{position:absolute;inset:0;z-index:0;pointer-events:none;overflow:hidden}
+.hero-card .vibra-custom-figure{position:absolute;display:block;transform:translate(-50%,-50%);opacity:var(--hero-opacity,.7);width:var(--hero-size,110px);height:var(--hero-size,110px);pointer-events:none}
+.hero-card .vibra-custom-figure svg{width:100%;height:100%;overflow:visible}
+.vibra-figure-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(95px,1fr));gap:9px;margin:12px 0}
+.vibra-figure-pick{display:grid;justify-items:center;gap:6px;min-height:106px;padding:8px;background:var(--card);color:var(--text);border:1px solid var(--line);border-radius:11px;font-size:11px}
+.vibra-figure-pick svg{width:66px;height:75px}
+.vibra-figure-pick[aria-pressed=true]{border:2px solid var(--primary)}
+#vibraHeroCanvas{position:relative;height:230px;border-radius:15px;border:1px solid var(--line);overflow:hidden;background:linear-gradient(120deg,var(--primary),color-mix(in srgb,var(--primary) 65%,#170e26));touch-action:none}
+#vibraHeroCanvas .vibra-custom-figure{pointer-events:auto;cursor:grab;touch-action:none;outline:2px solid transparent}
+#vibraHeroCanvas .vibra-custom-figure.is-selected{outline:2px dashed white}
+#vibraHeroCanvas .vibra-custom-figure:active{cursor:grabbing}
+#vibraHeroCanvas .vibra-custom-figures{position:absolute;inset:0}
+#vibraHeroCanvas .vibra-custom-figure{position:absolute;transform:translate(-50%,-50%);width:var(--hero-size,110px);height:var(--hero-size,110px);opacity:var(--hero-opacity,.7)}
+#vibraHeroCanvas .vibra-custom-figure svg{height:100%;width:100%}
+.vibra-editor-actions{display:flex;flex-wrap:wrap;gap:8px;align-items:center;margin:12px 0}
+.vibra-editor-actions button{min-height:38px}
+.vibra-editor-actions label{display:flex;align-items:center;gap:6px}
+@media(max-width:640px){#vibraHeroCanvas{height:190px}.vibra-figure-grid{grid-template-columns:repeat(3,minmax(0,1fr))}}
+</style>
+<script id="vibra-portada-editor-js">
+// NUEVO: figuras SVG vectoriales editables, sin dependencias externas y sin fotografías.
+(()=>{'use strict';
+const $=s=>document.querySelector(s),active=()=>typeof state!=='undefined'&&state.config&&state.config.design;
+const names=['Reclinada, piernas elevadas','Reclinada, accesorio','Arrodillada, brazos arriba','Inclinada hacia delante','Pose de pasarela','Arrodillada, espalda arqueada','Mirada al hombro','Contrapposto','Caminando','Apoyada','Girando','Sentada en silla','Reclinada de lado','Sentada en el suelo','Boca abajo','Pose de baile','Con sombrero','Arqueada hacia atrás'];
+// La anatomía está simplificada como siluetas abstractas de moda, sin rasgos faciales.
+const skeleton=[
+ [28,76,[-68,-10],[-13,9],[-26,43],[20,39],-64],
+ [30,74,[-56,-22],[-10,8],[-18,45],[26,37],-38],
+ [51,37,[-28,-18],[-20,-42],[-11,42],[17,44],0],
+ [45,45,[12,28],[26,31],[-12,43],[24,40],58],
+ [51,40,[-14,29],[19,5],[-11,47],[20,47],-15],
+ [48,68,[-10,29],[20,27],[-38,17],[20,31],-44],
+ [51,39,[-16,23],[17,-18],[-10,48],[19,46],0],
+ [51,40,[-15,25],[20,19],[-12,45],[24,42],3],
+ [49,39,[-16,27],[22,4],[20,45],[-17,43],-8],
+ [49,39,[-12,12],[15,11],[-8,41],[18,34],-9],
+ [52,43,[-29,-14],[26,-23],[-21,43],[23,42],-8],
+ [51,63,[-15,15],[15,16],[-38,24],[28,24],-9],
+ [35,65,[-19,12],[19,-12],[-29,21],[25,24],-51],
+ [45,66,[-28,-7],[30,-7],[-16,31],[14,30],-69],
+ [47,71,[-24,13],[24,14],[-16,34],[15,35],-67],
+ [49,42,[-23,-32],[22,-31],[-20,35],[29,-17],-4],
+ [50,39,[-17,-15],[17,18],[-14,45],[16,45],0],
+ [48,48,[-19,-25],[19,-29],[-14,43],[17,44],-27]
+];
+function figureSVG(idx){const k=Math.max(0,Math.min(17,Number(idx)||0)),[x,y,a,b,l,r,tilt]=skeleton[k];let adorn='';if(k===11)adorn='<path d="M29 76H70V80H29Z M32 80V110 M67 80V110" stroke="#050505" stroke-width="5" fill="none"/>';if(k===16)adorn='<path d="M25 20Q50 6 75 20Q57 29 25 20Z" fill="#050505"/>';if(k===1)adorn='<circle cx="16" cy="108" r="4" fill="#d82127"/>';return '<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 100 145" role="img" aria-label="'+names[k]+'"><g transform="rotate('+tilt+' 50 70)"><circle cx="'+x+'" cy="'+(y-23)+'" r="11" fill="#050505"/><path d="M'+(x-8)+' '+(y-15)+' Q'+(x-18)+' '+(y+6)+' '+(x-15)+' '+(y+25)+' Q'+x+' '+(y+38)+' '+(x+15)+' '+(y+25)+' Q'+(x+19)+' '+(y+5)+' '+(x+8)+' '+(y-15)+'Z" fill="#050505"/><path d="M'+(x-12)+' '+(y-8)+'q-10 -15 -13 -23 M'+(x+12)+' '+(y-8)+'q12 -14 15 -20" fill="none" stroke="#050505" stroke-width="9" stroke-linecap="round"/><path d="M'+(x-11)+' '+y+' l'+a[0]+' '+a[1]+' M'+(x+11)+' '+y+' l'+b[0]+' '+b[1]+' M'+(x-9)+' '+(y+27)+' l'+l[0]+' '+l[1]+' M'+(x+9)+' '+(y+27)+' l'+r[0]+' '+r[1]+'" fill="none" stroke="#050505" stroke-width="10" stroke-linecap="round"/>'+((k===0||k===1)?'<path d="M12 109l10 4-3 7-11-4z" fill="#e3232a"/>':'')+'</g>'+adorn+'</svg>'}
+function stored(){return active()?(state.config.design.heroFigures||[]):[]}
+function saveFigures(list){if(!active())return;state.config.design.heroFigures=list;if(typeof save==='function')save();if(typeof syncAdminStateToCloud==='function'){/* La sincronización existente se conserva; no se fuerza una escritura duplicada. */}draw()}
+function nodes(list,interactive=false){return '<div class="vibra-custom-figures">'+list.map((v,i)=>'<div class="vibra-custom-figure '+(interactive&&i===selected?'is-selected':'')+'" data-fig="'+i+'" style="left:'+Number(v.x||50)+'%;top:'+Number(v.y||50)+'%;--hero-size:'+Number(v.size||100)+'px;--hero-opacity:'+Number(v.opacity??.78)+'">'+figureSVG(v.pose)+'</div>').join('')+'</div>'}
+let selected=0;
+function draw(){const hero=$('.hero-card');if(hero){hero.querySelector('.vibra-custom-figures')?.remove();hero.insertAdjacentHTML('beforeend',nodes(stored()))}const canvas=$('#vibraHeroCanvas');if(canvas){canvas.innerHTML=nodes(stored(),true);const curr=stored()[selected];const size=$('#vibraHeroSize'),opa=$('#vibraHeroOpacity');if(size)size.value=curr?.size||100;if(opa)opa.value=curr?.opacity??.78;}}
+function mount(){const admin=$('#adminModal');if(!admin?.classList.contains('show'))return;const tab=$('#adminTabs .tab-btn.active');if(!tab||!(/Personalizaci/i.test(tab.textContent)))return;const body=$('#adminContent');if(!body||$('#vibraHeroEditor'))return;const section=document.createElement('section');section.className='section-card';section.id='vibraHeroEditor';section.innerHTML='<h3>Composición del encabezado</h3><p class="small muted">Las siluetas son opcionales. Selecciona una, colócala arrastrando y ajusta su tamaño. Los cambios siguen el sistema de guardado existente.</p><div id="vibraHeroCanvas" aria-label="Vista previa editable de la portada"></div><div class="vibra-editor-actions"><label>Tamaño <input id="vibraHeroSize" type="range" min="35" max="230" value="100"></label><label>Opacidad <input id="vibraHeroOpacity" type="range" min="0.1" max="1" step="0.05" value="0.78"></label><button class="btn secondary" type="button" id="vibraHeroDelete">Quitar seleccionada</button><button class="btn secondary" type="button" id="vibraHeroClear">Limpiar portada</button></div><p class="small">Selecciona una silueta para añadirla a la portada:</p><div class="vibra-figure-grid">'+names.map((n,i)=>'<button type="button" class="vibra-figure-pick" data-pose="'+i+'" aria-pressed="false">'+figureSVG(i)+'<span>'+n+'</span></button>').join('')+'</div>';
+body.prepend(section);section.querySelectorAll('[data-pose]').forEach(b=>b.onclick=()=>{const list=stored().slice();list.push({pose:Number(b.dataset.pose),x:72,y:55,size:100,opacity:.78});selected=list.length-1;saveFigures(list)});
+section.querySelector('#vibraHeroDelete').onclick=()=>{const list=stored().slice();if(list[selected])list.splice(selected,1);selected=Math.max(0,Math.min(selected,list.length-1));saveFigures(list)};
+section.querySelector('#vibraHeroClear').onclick=()=>{selected=0;saveFigures([])};
+for(const [id,key] of [['vibraHeroSize','size'],['vibraHeroOpacity','opacity']])section.querySelector('#'+id).oninput=e=>{const list=stored().slice();if(list[selected]){list[selected]={...list[selected],[key]:Number(e.target.value)};saveFigures(list)}};
+let drag=null;const canvas=section.querySelector('#vibraHeroCanvas');canvas.addEventListener('pointerdown',e=>{const target=e.target.closest('[data-fig]');if(!target)return;selected=Number(target.dataset.fig);drag=e.pointerId;canvas.setPointerCapture(drag);draw()});canvas.addEventListener('pointermove',e=>{if(drag!==e.pointerId)return;const rect=canvas.getBoundingClientRect(),list=stored().slice();if(!list[selected])return;list[selected]={...list[selected],x:Math.max(4,Math.min(96,(e.clientX-rect.left)/rect.width*100)),y:Math.max(5,Math.min(95,(e.clientY-rect.top)/rect.height*100))};state.config.design.heroFigures=list;draw()});canvas.addEventListener('pointerup',e=>{if(drag!==e.pointerId)return;drag=null;saveFigures(stored().slice())});draw();}
+function routeEnhance(){const b=$('#foodGpsDestination');if(!b||b.dataset.vibraRouteFixed)return;b.dataset.vibraRouteFixed='1';b.addEventListener('click',()=>{const box=$('#vscopePrincipalRoute');if(box)box.hidden=false;},false)}
+function setup(){draw();routeEnhance();mount();const host=$('#adminModal');if(host)new MutationObserver(()=>{if(host.classList.contains('show'))mount()}).observe(host,{subtree:true,childList:true,attributes:true,attributeFilter:['class']});document.addEventListener('click',e=>{if(e.target.closest('#foodGpsDestination,#adminTabs button'))setTimeout(()=>{routeEnhance();mount()},100)},true)}
+if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',setup,{once:true});else setup();
 })();
 </script>
 </body>
@@ -6209,7 +6274,7 @@ const esc=x=>String(x??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&
 const client=()=>typeof supabaseClient!=='undefined'?supabaseClient:null;
 const coords=p=>{const a=Number(p?.latitude??p?.lat),b=Number(p?.longitude??p?.lng);return Number.isFinite(a)&&Number.isFinite(b)&&Math.abs(a)<=90&&Math.abs(b)<=180&&!(a===0&&b===0)?[a,b]:null};
 let sites=[],roomItems=[],routeMap=null,routeLine=null,routeEnd=null,businessMap=null,bookingMap=null,routeOrigin=null,adminBusy=false;
-/* MODIFICADO: utilizar la mejor lectura GPS disponible y advertir si es inexacta. */const gps=async()=>{const p=await window.vibraPrecisePosition();window.vibraLastGpsAccuracy=p.coords.accuracy;if(p.coords.accuracy>250)throw Error('Señal GPS imprecisa (±'+Math.round(p.coords.accuracy)+' m). Activa ubicación precisa o mueve el pin manualmente.');return [p.coords.latitude,p.coords.longitude]};
+/* MODIFICADO: utilizar la mejor lectura GPS disponible y advertir si es inexacta. */const gps=async()=>{const p=await window.vibraPrecisePosition();window.vibraLastGpsAccuracy=p.coords.accuracy;/* MODIFICADO: se comunica la incertidumbre al usuario; una lectura imprecisa no impide ofrecer navegación externa. */return [p.coords.latitude,p.coords.longitude]};
 async function getSites(){const db=client();if(!db)return sites;const r=await db.from('service_locations').select('id,name,address,latitude,longitude,is_active');if(!r.error)sites=(r.data||[]);return sites;}
 function mapLayer(map){try{if(typeof addConfiguredTileLayer==='function'){addConfiguredTileLayer(map,'vscopeRoutes');return;}}catch(err){console.warn('CARTO route layer:',err)}const proxy=typeof SUPABASE_URL!=='undefined'?String(SUPABASE_URL).replace(/\/$/,'')+'/functions/v1/carto-tiles/voyager/{z}/{x}/{y}.png':null;L.tileLayer(proxy||'https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png',{attribution:'© OpenStreetMap © CARTO',maxZoom:19}).addTo(map)}
 function newMap(host,center){if(!window.L||!host)return null;const m=L.map(host,{scrollWheelZoom:false}).setView(center,13);mapLayer(m);setTimeout(()=>m.invalidateSize(),100);return m;}
