@@ -11,6 +11,9 @@
 <title>Vibra Erótica</title><script id="vibra-published-prepaint">(function(){try{const raw=localStorage.getItem('vibra.published.snapshot.v2');if(!raw)return;const obj=JSON.parse(raw);if(!obj||!obj.config||!obj.config.design)return;const d=obj.config.design,r=document.documentElement.style;for(const [k,v] of Object.entries({'--primary':d.primary,'--secondary':d.secondary,'--accent':d.accent,'--text':d.text,'--card':d.card,'--site-bg':d.siteBg,'--font':d.font?"'"+d.font+"',sans-serif":null})){if(v)r.setProperty(k,v)}document.documentElement.style.background=d.siteBg||'#0d1015';if(obj.config.businessName)document.title=obj.config.businessName;/* MODIFICADO: identidad publicada */}catch(e){}})();</script>
 <!-- MODIFICADO: favicon servido desde el repositorio, no incrustado -->
 <link id="vibraDynamicFavicon" rel="icon" href="./Img/Logo">
+<!-- NUEVO: precarga de fondos ya presentes en Img para la pantalla de acceso -->
+<link rel="preload" as="image" href="./Img/Escritorio" media="(min-width:701px)" fetchpriority="high">
+<link rel="preload" as="image" href="./Img/Movil" media="(max-width:700px)" fetchpriority="high">
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&family=Nunito:wght@400;600;700;800&family=Poppins:wght@400;500;600;700&family=Roboto:wght@400;500;700&display=swap" rel="stylesheet">
@@ -3576,7 +3579,7 @@ const v14MoreBase=v12OpenMore;
 v12OpenMore=function(){
  v14MoreBase();
  const body=document.getElementById('v12MoreModal')?.querySelector('.modal-body'),list=body?.querySelector('.v12-menu-list');if(!list||list.querySelector('[data-v14-rating]'))return;
- const b=document.createElement('button');b.className='v12-menu-item';b.dataset.v14Rating='1';b.innerHTML=`${V12I.heart}<span>Calificar sitio y servicio</span>`;b.onclick=()=>{closeModal('v12MoreModal');v14OpenRating()};list.append(b);
+ const b=document.createElement('button');b.className='v12-menu-item';b.dataset.v14Rating='1';b.innerHTML=`${V12I.heart}<span>Calificar sitio y servicio</span>`;b.onclick=()=>{closeModal('v12MoreModal');v14OpenRating()};list.insertBefore(b,list.querySelector('[data-v12-menu="settings"]')); /* MODIFICADO: Configuración después de Calificar sitio y servicio */
 };
 
 /* ----- categorías admin ----- */
@@ -6503,4 +6506,39 @@ function boot(){const modal=$('#customerProfileModal');if(modal){new MutationObs
 if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',boot,{once:true});else boot();
 })();
 </script>
+
+<!-- NUEVO: ajustes quirúrgicos de legibilidad, aviso de edad y contraseña -->
+<style id="vibra-access-contrast-20261015">
+/* MODIFICADO: el aviso de edad usa el área libre del fondo en pantallas grandes. */
+@media(min-width:1051px){#vibraAccessAge{justify-content:flex-end!important;padding-right:clamp(90px,15vw,330px)!important}#vibraAccessAge .vibra-age-card{width:min(410px,34vw)!important}}
+@media(max-width:1050px){#vibraAccessAge{justify-content:center!important}}
+/* MODIFICADO: fondo del acceso precargado y sin desplazamiento con el contenido. */
+#vibraAccessAge,body.vibra-entry-login::before{background-attachment:fixed!important}
+/* MODIFICADO: un solo ojo SVG blanco, manteniendo el campo y su evento existentes. */
+#authPass::-ms-reveal,#authPass::-ms-clear{display:none!important}
+.vibra-password-wrap .vibra-password-toggle{color:#fff!important;z-index:3!important}
+.vibra-password-wrap .vibra-password-toggle svg{stroke:#fff!important}
+/* MODIFICADO: los controles del formulario de cuenta de invitado tienen separación efectiva. */
+#customerProfileModal #foodAuthSubmit{margin-bottom:15px!important}
+#customerProfileModal #authRecover{margin-top:9px!important}
+/* MODIFICADO: contraste en superficies oscuras del panel admin sin modificar sus datos ni controles. */
+#adminModal{--text:#f4f6fa!important;--muted:#c4cedb!important;color:#f4f6fa!important}
+#adminModal :is(.section-card,.admin-kpi,.review-card,.integration-card,.payment-item,.notice,.audit-item,.metric){color:#f4f6fa!important}
+#adminModal :is(.section-card h2,.section-card h3,.section-card h4,.section-card p,.section-card strong,.section-card span,.admin-kpi strong,.admin-kpi span,.metric strong,.metric span,.notice,.muted,.small,.field label,.product-admin,.review-meta,.summary-table td,.summary-table th){color:#edf2f9!important;opacity:1!important}
+#adminModal .admin-tabs .tab-btn:not(.active){color:#d3dce8!important;opacity:1!important}
+#adminModal .ticket-preview,#adminModal .ticket-preview *{color:#111!important}
+/* MODIFICADO: textos y etiquetas publicados bajo ambos modos. */
+body:not(.dark-mode) :is(#catalogGrid,#vibraServiceCatalog) :is(.meta,.desc,.unit-label,.status-badge,.vsm-pricing,.vsm-rate){color:#233047!important;opacity:1!important}
+body.dark-mode :is(#catalogGrid,#vibraServiceCatalog) :is(.meta,.desc,.unit-label,.status-badge,.vsm-pricing,.vsm-rate){color:#e6edf7!important;opacity:1!important}
+#vsmGallery .vsm-viewer-social a{color:#f7f8fd!important;background:#303743!important;opacity:1!important}
+#vsmGallery .vsm-viewer-social a svg{color:inherit!important}
+</style>
+<script id="vibra-single-password-eye-20261015">
+// NUEVO: suprime ojos duplicados si otra rutina vuelve a dibujar el formulario.
+(()=>{'use strict';let pending=false;function fix(){pending=false;const input=document.getElementById('authPass');if(!input)return;const wrapper=input.closest('.vibra-password-wrap');if(!wrapper)return;const eyes=[...wrapper.querySelectorAll('.vibra-password-toggle')];for(const extra of eyes.slice(1))extra.remove();const keep=eyes[0];if(keep){keep.setAttribute('aria-label',input.type==='password'?'Mostrar contraseña':'Ocultar contraseña');keep.style.color='#fff'}for(const e of wrapper.querySelectorAll('button:not(.vibra-password-toggle)')){if(/mostrar|ocultar|ver contrase/i.test(e.textContent||e.getAttribute('aria-label')||''))e.hidden=true}}
+function schedule(){if(!pending){pending=true;requestAnimationFrame(fix)}}
+if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',()=>{fix();new MutationObserver(schedule).observe(document.getElementById('customerProfileModal')||document.body,{childList:true,subtree:true})},{once:true});else{fix();new MutationObserver(schedule).observe(document.getElementById('customerProfileModal')||document.body,{childList:true,subtree:true})}
+})();
+</script>
+
 </html>
