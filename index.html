@@ -344,6 +344,26 @@ body.dark-mode :is(.product-viewer,#productModal,#vsmGallery) :is(.notice,.produ
 body:not(.dark-mode) :is(.product-viewer,#productModal,#vsmGallery) .muted{color:#526174!important}
 body.dark-mode :is(.product-viewer,#productModal,#vsmGallery) .muted{color:#b4c0d1!important}
 </style>
+
+<!-- NUEVO: ubicación, teléfono, botones y contraste de los temas solicitados -->
+<style id="vibra-ajustes-catalogo-20261015">
+#viPublicWrap{margin:12px auto 10px!important}
+#viPublicWrap .vi-filter-panel{margin-bottom:8px}
+#viPublicWrap select{min-height:44px;color:var(--text)!important;background:var(--card)!important;border-color:var(--line)!important}
+#viPublicWrap .vi-filter-panel .vi-fields{grid-template-columns:repeat(3,minmax(0,1fr))}
+#customerProfileModal .vi-country-phone{grid-template-columns:minmax(130px,190px) minmax(130px,260px)!important;max-width:480px;width:100%;align-items:stretch}
+#customerProfileModal .vi-country-phone select,#customerProfileModal .vi-country-phone input{width:100%;min-width:0;max-width:100%}
+#customerProfileModal #viOpen{display:inline-flex;align-items:center;justify-content:center;max-width:100%;width:auto;margin:10px 0 14px;white-space:normal;text-align:center;overflow-wrap:anywhere}
+#catalogGrid .status-badge,#catalogGrid .product-card .status-badge,#catalogGrid .product-card .meta .status-badge{background:var(--secondary)!important;color:var(--text)!important;border:1px solid var(--line)!important}
+#catalogGrid .status-badge svg,#catalogGrid .meta svg{color:inherit!important;stroke:currentColor!important}
+#vibraServiceCatalog .desc,#vibraServiceCatalog .meta,#vibraServiceCatalog .vsm-media-button small,#vsmGallery .vsm-viewer-header small{color:var(--text)!important;opacity:1!important}
+#vsmGallery .vsm-viewer-social a,#vsmGallery .vsm-viewer-social a svg{color:var(--text)!important;opacity:1!important}
+#adminModal .section-card h2,#adminModal .section-card h3,#adminModal .section-card h4,#adminModal .section-card p,#adminModal .admin-content .muted,#adminModal .admin-content .small{color:#f3f4f6!important;opacity:1!important}
+#adminModal .admin-kpi span,#adminModal .metric span{color:#bdc8d8!important}
+body:not(.dark-mode) .product-card .meta,body:not(.dark-mode) .product-card .desc{color:#394454!important}
+body:not(.dark-mode) #vibraServiceCatalog .desc,body:not(.dark-mode) #vibraServiceCatalog .meta{color:#303948!important}
+@media(max-width:750px){#viPublicWrap .vi-filter-panel .vi-fields{grid-template-columns:1fr}#customerProfileModal .vi-country-phone{grid-template-columns:minmax(105px,38%) minmax(0,1fr)!important}}
+</style>
 </head>
 <body>
 <div class="topbar"><div class="container header">
@@ -6018,6 +6038,8 @@ if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',
 // NUEVO: anexo aislado; no modifica los identificadores o funciones existentes.
 const $=id=>document.getElementById(id), text=v=>String(v??''), safe=v=>text(v).replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
 const states=['Aguascalientes','Baja California','Baja California Sur','Campeche','Coahuila','Colima','Chiapas','Chihuahua','Ciudad de México','Durango','Guanajuato','Guerrero','Hidalgo','Jalisco','México','Michoacán','Morelos','Nayarit','Nuevo León','Oaxaca','Puebla','Querétaro','Quintana Roo','San Luis Potosí','Sinaloa','Sonora','Tabasco','Tamaulipas','Tlaxcala','Veracruz','Yucatán','Zacatecas'];
+// NUEVO: municipio de referencia disponible aun sin conexión; el resto se descarga y almacena en caché.
+window.vibraMexicoMunicipalities=window.vibraMexicoMunicipalities||{'Colima':['Armería','Colima','Comala','Coquimatlán','Cuauhtémoc','Ixtlahuacán','Manzanillo','Minatitlán','Tecomán','Villa de Álvarez']};
 let active=[], profile=null, publication=null, municipalities=[], serviceFilter='Todos', stateFilter='', cityFilter='', genderFilter=''; // MODIFICADO: filtro por categoría de publicación
 const api=()=>typeof supabaseClient!=='undefined'?supabaseClient:null;
 const user=()=>typeof customerSession!=='undefined'?customerSession?.user:null;
@@ -6038,7 +6060,14 @@ async function requireAllowedCategory(){await loadAccountCategory();if(!accountC
 function addAccountEntry(){const root=$('customerProfileModal');if(!root||!user()||root.querySelector('#viOpen'))return;const container=root.querySelector('.modal-body');if(!container)return;const btn=document.createElement('button');btn.id='viOpen';btn.className='btn secondary';btn.type='button';btn.textContent='Masajista independiente';btn.onclick=()=>openIndependent().catch(message);const anchor=container.querySelector('.profile-heading');(anchor||container).after(btn);enhancePhone();}
 async function getMine(){if(!mayManage())throw Error('Inicia sesión para registrarte.');const db=api();if(!db)throw Error('Supabase no está disponible');let r=await db.from('vibra_independent_profiles').select('*').eq('user_id',user().id).maybeSingle();if(r.error)throw r.error;profile=r.data;r=await db.from('vibra_independent_services').select('*').eq('user_id',user().id).maybeSingle();if(r.error)throw r.error;publication=r.data;return db}
 function regionFields(stateName='',municipality=''){return `<div class="vi-field"><label>Estado</label>${select('viState',['',...states],stateName)}</div><div class="vi-field"><label>Municipio (México)</label><input id="viCity" list="viCityChoices" value="${safe(municipality)}" required><datalist id="viCityChoices"></datalist><small class="vi-note">Puedes escribir el municipio. Las sugerencias dependen del catálogo municipal cargado en Supabase.</small></div>`}
-async function loadMunicipalities(){const db=api();if(!db)return;const r=await db.from('vibra_mexico_municipalities').select('state_name,municipality_name').limit(10000);if(!r.error)municipalities=r.data||[];fillCities()}
+// MODIFICADO: consulta paginada Supabase y respaldo de municipios mexicanos sin dependencias nuevas.
+async function loadMunicipalities(){
+ const db=api();
+ if(db){try{const rows=[];for(let start=0;start<3500;start+=1000){const r=await db.from('vibra_mexico_municipalities').select('state_name,municipality_name').range(start,start+999);if(r.error)break;rows.push(...(r.data||[]));if((r.data||[]).length<1000)break;}if(rows.length)municipalities=rows;}catch(e){console.warn('Municipios Supabase:',e)}}
+ try{const cached=JSON.parse(localStorage.getItem('vibra.municipios.mx.v1')||'null');if(cached&&typeof cached==='object')Object.assign(window.vibraMexicoMunicipalities,cached)}catch(e){}
+ fillCities();
+ if(!window.vibraMexicoMunicipalities.__complete){try{const response=await fetch('https://raw.githubusercontent.com/cisnerosnow/json-estados-municipios-mexico/master/estados-municipios.json',{cache:'force-cache'});if(!response.ok)throw Error('Catálogo HTTP '+response.status);const json=await response.json();if(Object.keys(json).length<30)throw Error('Catálogo incompleto');Object.assign(window.vibraMexicoMunicipalities,json,{__complete:true});try{localStorage.setItem('vibra.municipios.mx.v1',JSON.stringify(json))}catch(e){};fillCities();if($('viFilterState'))renderPublic()}catch(e){console.warn('Catálogo municipal remoto no disponible:',e)}}
+} 
 function fillCities(){const dl=$('viCityChoices');if(!dl)return;const sel=read('viState');dl.replaceChildren(...municipalities.filter(x=>!sel||x.state_name===sel).map(x=>{const o=document.createElement('option');o.value=x.municipality_name;return o}))}
 function wireRegion(){const s=$('viState');if(s){s.onchange=()=>{$('viCity').value='';fillCities()};fillCities()}}
 async function openIndependent(){await requireAllowedCategory();await getMine();let p=profile||{};modal('Mi perfil · masajista independiente',`<div class="vi-panel"><h3>Perfil profesional</h3><p class="vi-note">La cuenta debe corresponder a una persona mayor de edad. Puedes registrarte sin verificación.</p><form id="viProfileForm"><div class="vi-fields">${field('viName','Nombre o nombre artístico',p.display_name)}${field('viPhone','Teléfono',p.phone,'tel')}${field('viAge','Edad',p.age||18,'number')}<div class="vi-field"><label>Procedencia</label>${select('viOrigin',['local','foranea'],p.origin_type||'local')}</div>${regionFields(p.state_name||'',p.municipality||'')}</div><div class="vi-actions"><button class="btn" type="submit">Guardar perfil</button></div></form></div><div id="viStatusSection"></div>`);$('viProfileForm').onsubmit=saveProfile;wireRegion();await loadMunicipalities();renderMineSection();}
@@ -6056,13 +6085,17 @@ async function refreshPublic(){const db=api();if(!db)return;const r=await db.rpc
 // MODIFICADO: filtros unificados en el catálogo, antes de productos y mapa; sin panel duplicado al final.
 function renderPublic(){
  let wrap=$('viPublicWrap');if(!wrap){wrap=document.createElement('section');wrap.id='viPublicWrap';wrap.className='container';}
- const anchor=$('catalogGrid');if(anchor&&wrap.nextElementSibling!==anchor)anchor.parentNode.insertBefore(wrap,anchor);
+ // MODIFICADO: filtros antes de búsqueda y categorías, resultados independientes permanecen junto al catálogo.
+ const anchor=$('catalogGrid'),controls=document.querySelector('.controls');if(controls&&wrap.nextElementSibling!==controls)controls.parentNode.insertBefore(wrap,controls);else if(!controls&&anchor&&wrap.nextElementSibling!==anchor)anchor.parentNode.insertBefore(wrap,anchor);
  const filtering=active.filter(x=>!stateFilter||x.state_name===stateFilter).filter(x=>!cityFilter||x.municipality===cityFilter).filter(x=>!genderFilter||x.service_category===genderFilter);
- const cities=[...new Set([...active.filter(x=>!stateFilter||x.state_name===stateFilter).map(x=>x.municipality),...((window.vibraLocalServiceRegions||[]).filter(x=>!stateFilter||x.state_name===stateFilter).map(x=>x.municipality))].filter(Boolean))].sort((a,b)=>a.localeCompare(b,'es'));
+ // MODIFICADO: municipios por entidad, independientemente de que existan publicaciones.
+ const norm=v=>String(v||'').normalize('NFD').replace(/[\u0300-\u036f]/g,'').toLowerCase().trim();
+ const cities=[...new Set([...(window.vibraMexicoMunicipalities?.[stateFilter]||[]),...municipalities.filter(x=>!stateFilter||norm(x.state_name)===norm(stateFilter)).map(x=>x.municipality_name),...active.filter(x=>!stateFilter||norm(x.state_name)===norm(stateFilter)).map(x=>x.municipality),...((window.vibraLocalServiceRegions||[]).filter(x=>!stateFilter||norm(x.state_name)===norm(stateFilter)).map(x=>x.municipality))].filter(Boolean))].sort((a,b)=>a.localeCompare(b,'es'));
  const statesAvailable=[...new Set([...states,...(window.vibraLocalServiceRegions||[]).map(x=>x.state_name)].filter(Boolean))].sort((a,b)=>a.localeCompare(b,'es'));
  const h=`<div class="vi-panel vi-filter-panel"><div class="vi-filter-header"><h3>Filtrar masajes</h3><p class="vi-note">Local e independientes · Estado, municipio y categoría</p></div><div class="vi-fields"><div class="vi-field"><label for="viFilterState">Estado</label>${select('viFilterState',['',...statesAvailable],stateFilter)}</div><div class="vi-field"><label for="viFilterCity">Municipio</label>${select('viFilterCity',['',...cities],cityFilter)}</div><div class="vi-field"><label for="viFilterGender">Tipo de masaje</label>${select('viFilterGender',['','Mujer','Gay','Trans'],genderFilter)}</div></div><div class="vi-actions"><button class="btn secondary" id="viSeeAll" type="button">Todos</button><button class="btn secondary" id="viOnlyIndie" type="button">Masajes independientes</button></div></div>`;
  const cards=filtering.map(x=>`<article class="vi-card" data-vi-indie><div>${x.media_paths?.[0]?`<img loading="lazy" src="${safe(publicUrl(x.media_paths[0]))}" alt="${safe(x.title)}">`:''}</div><h3>${safe(x.title)} ${x.vibra_independent_profiles?.verification_status==='verified'?'<span class="vi-badge">✓ Verificado</span>':''}</h3><p class="vi-location">${safe(x.state_name)} · ${safe(x.municipality)} · ${safe(x.service_category==='Trans'?'Transexual':x.service_category||'Sin clasificar')}</p><p><strong>${safe(x.vibra_independent_profiles?.display_name||'Profesional')}</strong></p><p>${safe(x.description)}</p><p>${safe(x.offering)}</p><p class="vi-note">${safe((x.service_modes||[]).join(' · '))} · ${safe(x.availability)}</p>${x.whatsapp?`<a class="btn" target="_blank" rel="noopener noreferrer" href="https://wa.me/${safe(x.whatsapp.replace(/\D/g,''))}?text=${encodeURIComponent(x.whatsapp_message||'Hola, deseo consultar tus servicios')}">Consultar por WhatsApp</a>`:''}</article>`).join('');
  wrap.innerHTML=h+'<div id="viIndieResults" class="vi-list">'+(cards||'<p class="muted">Aún no hay publicaciones independientes con estos filtros.</p>')+'</div>';
+ let resultHost=$('viIndieHost');if(!resultHost){resultHost=document.createElement('section');resultHost.id='viIndieHost';resultHost.className='container';}if(anchor&&resultHost.nextElementSibling!==anchor)anchor.parentNode.insertBefore(resultHost,anchor);resultHost.replaceChildren($('viIndieResults'));
  $('viFilterState').onchange=e=>{stateFilter=e.target.value;cityFilter='';renderPublic()};$('viFilterCity').onchange=e=>{cityFilter=e.target.value;renderPublic()};$('viFilterGender').onchange=e=>{genderFilter=e.target.value;renderPublic()};$('viSeeAll').onclick=()=>{serviceFilter='Todos';stateFilter='';cityFilter='';genderFilter='';renderPublic()};$('viOnlyIndie').onclick=()=>{serviceFilter='Masajes independientes';renderPublic()};
  window.vibraMassageFilterValues={state:stateFilter,city:cityFilter,category:genderFilter,kind:serviceFilter};document.dispatchEvent(new CustomEvent('vibra-massage-filters-changed'));
 }
@@ -6072,7 +6105,7 @@ function adminButton(){const c=$('adminContent');if(!c||!c.querySelector('.admin
 function ageNote(){const age=$('vibraAccessAge');if(!age||age.querySelector('.vi-age-note'))return;const p=document.createElement('p');p.className='vi-age-note';p.textContent='Al ingresar aceptas interactuar con respeto, proteger la privacidad de otras personas y realizar consultas serias. No se tolera el acoso ni el uso indebido de información personal.';age.querySelector('.vibra-age-card')?.append(p)}
 let scheduled=false;function check(){scheduled=false;ageNote();if(user()&&typeof panelAccess!=='undefined'&&adminSession?.user?.id===user().id&&(panelAccess.owner||panelAccess.master||(panelAccess.modules||[]).length)){$('viCategoryPrompt')?.remove();checkedUser=user().id;accountCategory='privileged';}addAccountEntry();adminButton();if(user()&&checkedUser!==user().id&&!categoryPending)loadAccountCategory().catch(console.warn);if(!user()){checkedUser=null;accountCategory=null;$('viCategoryPrompt')?.remove()}}
 function queue(){if(scheduled)return;scheduled=true;requestAnimationFrame(check)}
-function start(){queue();new MutationObserver(queue).observe(document.body,{childList:true,subtree:true});let attempts=0;const poll=setInterval(()=>{if(api()){clearInterval(poll);refreshPublic().catch(console.warn)}if(++attempts>25)clearInterval(poll)},400);document.addEventListener('click',e=>{if(e.target?.id==='vibraAgeYes'||e.target?.closest('#vibraAgeYes')){document.body.classList.add('vi-entered');setTimeout(()=>document.body.classList.remove('vi-entered'),700)}},true)}
+function start(){queue();loadMunicipalities().catch(console.warn);new MutationObserver(queue).observe(document.body,{childList:true,subtree:true});let attempts=0;const poll=setInterval(()=>{if(api()){clearInterval(poll);refreshPublic().catch(console.warn)}if(++attempts>25)clearInterval(poll)},400);document.addEventListener('click',e=>{if(e.target?.id==='vibraAgeYes'||e.target?.closest('#vibraAgeYes')){document.body.classList.add('vi-entered');setTimeout(()=>document.body.classList.remove('vi-entered'),700)}},true)}
 if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',start,{once:true});else start();
 })();
 </script>
