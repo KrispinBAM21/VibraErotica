@@ -6232,6 +6232,56 @@ function clearMapGhost(){const planner=document.getElementById('foodDeliveryPlan
 clearMapGhost();document.addEventListener('DOMContentLoaded',clearMapGhost,{once:true});
 })();
 </script>
+
+<!-- NUEVO: presentación lineal del pie legal, motivo del logotipo y sincronización del pin público. -->
+<style id="vibra-footer-pin-pattern-20261015">
+/* MODIFICADO: los documentos existentes permanecen intactos y sus enlaces se leen como texto lineal. */
+#vibraLegalFooter{margin-top:12px!important}
+#vibraLegalFooter .vibra-legal-inner{max-width:1680px;padding:12px 20px!important;display:flex;align-items:center;justify-content:center;flex-wrap:wrap;gap:8px 18px}
+#vibraLegalFooter .vibra-legal-adult{background:none!important;border:0!important;padding:0!important;display:flex;align-items:baseline;gap:8px;flex-wrap:wrap}
+#vibraLegalFooter .vibra-legal-adult strong{font-size:.78rem!important;white-space:nowrap}
+#vibraLegalFooter .vibra-legal-adult p{display:none}
+#vibraLegalFooter .vibra-legal-links{display:flex!important;flex-wrap:wrap;align-items:center;justify-content:center;gap:4px 15px!important;margin:0!important}
+#vibraLegalFooter .vibra-legal-links button{display:inline-flex!important;border:0!important;border-radius:0!important;background:transparent!important;padding:3px 0!important;min-height:28px!important;font-weight:600;font-size:.78rem;gap:5px!important;box-shadow:none!important}
+#vibraLegalFooter .vibra-legal-links button:hover,#vibraLegalFooter .vibra-legal-links button:focus-visible{background:transparent!important;text-decoration:underline;color:#ffc2e2!important}
+#vibraLegalFooter svg{width:15px!important;height:15px!important}
+#vibraLegalFooter .vibra-legal-warning{border:0!important;background:transparent!important;border-radius:0!important;font-size:.78rem;min-width:0}
+#vibraLegalFooter .vibra-legal-warning summary{padding:3px 0!important;gap:5px!important;font-weight:600;min-height:28px}
+#vibraLegalFooter .vibra-legal-warning summary::after{font-size:1rem;margin-left:4px}
+#vibraLegalFooter .vibra-legal-warning>div{position:relative;padding:10px!important;margin-top:8px;border:1px solid #734260;background:#241428;border-radius:8px;max-width:min(560px,90vw);line-height:1.5}
+#vibraLegalFooter .vibra-legal-rights{margin:0!important;font-size:.74rem!important;white-space:normal}
+/* NUEVO: el patrón usa el archivo Logo del repositorio, respetando la opacidad y el interruptor de Personalización. */
+body.pattern-on::after{background-image:url('./Img/Logo')!important;background-repeat:space!important;background-size:clamp(110px,12vw,185px) auto!important;background-position:center center!important}
+body.dark-mode.pattern-on::after{filter:none!important}
+@media(max-width:750px){#vibraLegalFooter .vibra-legal-inner{gap:3px 12px;padding:12px!important}#vibraLegalFooter .vibra-legal-rights{flex:1 1 100%;text-align:center}#vibraLegalFooter .vibra-legal-warning>div{max-width:calc(100vw - 36px)}}
+</style>
+<script id="vibra-pin-publicado-20261015">
+// NUEVO: sincroniza el marcador público con el mismo objeto businessPin que emplea el editor administrativo.
+(function(){
+  function refreshPublicPin(){
+    try{
+      if(typeof publicFoodMap==='undefined'||!publicFoodMap||typeof publicFoodOrigin==='undefined'||!publicFoodOrigin||typeof labeledFoodPin!=='function')return;
+      if(typeof state==='undefined'||!state.config)return;
+      const p=state.config.businessPin||{};
+      const signature=JSON.stringify([p.icon||'store',p.color||'#16324f',p.label||'Local']);
+      if(publicFoodOrigin._vibraPublishedPinSignature===signature)return;
+      publicFoodOrigin.setIcon(labeledFoodPin('origin'));
+      publicFoodOrigin._vibraPublishedPinSignature=signature;
+    }catch(e){console.warn('Sincronización del pin público:',e)}
+  }
+  if(typeof initFoodPublicMap==='function'){
+    const originalInit=initFoodPublicMap;
+    initFoodPublicMap=function(){const result=originalInit.apply(this,arguments);refreshPublicPin();return result};
+  }
+  if(typeof loadPublicCloudState==='function'){
+    const originalLoad=loadPublicCloudState;
+    loadPublicCloudState=async function(){const result=await originalLoad.apply(this,arguments);refreshPublicPin();return result};
+  }
+  document.addEventListener('DOMContentLoaded',refreshPublicPin);
+  document.addEventListener('click',function(event){if(event.target.closest('#v15PinSave,#v15PinSection button'))setTimeout(refreshPublicPin,200)},true);
+  window.addEventListener('pageshow',refreshPublicPin);
+})();
+</script>
 </body>
 <style id="vibra-sedes-vinculadas-css">
 #vibraAssignmentPanel{margin:16px 0;padding:16px;border:1px solid var(--line,#374151);border-radius:16px;background:var(--card,#161a20);color:var(--text,#fff)}
