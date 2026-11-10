@@ -7221,11 +7221,12 @@ body.dark-mode #vibraCartBooking{--booking-bg:#2b2031;--booking-ink:#fff0fa;--bo
       <canvas data-vibra-pose-image width="440" height="350" tabindex="0" role="button" aria-expanded="false" aria-label="Hablar con el personaje del carrito" aria-describedby="vibraCartDragHelp">Usa el letrero para consultar las opciones.</canvas>
       <div class="vibra-booking-sign">
         <!-- MODIFICADO: letrero interactivo del carrito -->
-        <p><strong data-vibra-cart-message aria-live="polite">¡Hola! Voy a sentarme y te ayudo con tu pedido.</strong></p>
-        <button type="button" data-vibra-cart-answer="reserved">Ya reservé</button>
+        <p><strong data-vibra-cart-message aria-live="polite">¡Hola! ¿En qué puedo ayudarte?</strong></p>
         <button type="button" data-booking-kind="room">Reservar habitación</button>
         <button type="button" data-booking-kind="service">Ver servicios</button>
         <button type="button" data-vibra-cart-answer="products">Añadir productos</button>
+        <!-- NUEVO: avanzar por las preguntas sin cambiar el pedido -->
+        <button type="button" data-vibra-next-question hidden>Otra pregunta</button>
       </div>
     </div>
     <!-- MODIFICADO: ayuda de interacción con la escena -->
@@ -7246,7 +7247,7 @@ body.dark-mode #vibraCartBooking{--booking-bg:#2b2031;--booking-ink:#fff0fa;--bo
   'use strict';
   const template=document.getElementById('vibraCartBookingTemplate');
   const panel=template.content.firstElementChild.cloneNode(true);
-  // MODIFICADO: animar articulaciones durante la caminata y al sentarse.
+  // MODIFICADO: escena RPG y diálogo interactivo del carrito.
   const poseImage=panel.querySelector('[data-vibra-pose-image]');
   const poseCount=panel.querySelector('[data-vibra-pose-count]');
   const sign=panel.querySelector('[data-vibra-cart-message]');
@@ -7287,11 +7288,15 @@ body.dark-mode #vibraCartBooking{--booking-bg:#2b2031;--booking-ink:#fff0fa;--bo
   ];
   const colors={h:'#4b2633',a:'#ad593e',s:'#efad8c',e:'#372336',p:'#b65e69',w:'#fff0e9',v:'#513146',b:'#cfa6aa',d:'#354661',l:'#738aa6'};
   let frame=0,drawerOpen=false,hasSpoken=false,facing=1,lastElapsed=0,drag=null,ignoreClick=false;
-  const walkTime=2350,sitTime=460;
+  const walkTime=1500; // MODIFICADO: caminar al centro para conversar.
   const mix=(a,b,t)=>a+(b-a)*t;
-  const dialogue=()=>cartItems().length
-    ?'¿Quieres añadir algo a tu pedido, reservar una habitación o solicitar un servicio?'
-    :'Tu carrito está vacío. ¿Buscas un producto, una habitación o un servicio?';
+  const nextQuestion=panel.querySelector('[data-vibra-next-question]');
+  let question=0;
+  const questions=[
+    [()=>cartItems().length?'¿Quieres añadir algo más a tu pedido?':'¿Quieres añadir un producto a tu pedido?', '[data-vibra-cart-answer="products"]'],
+    [()=>'¿Quieres reservar una habitación?', '[data-booking-kind="room"]'],
+    [()=>'¿Te gustaría consultar nuestros servicios?', '[data-booking-kind="service"]']
+  ];
 
   function paintCharacter(elapsed,wave=false){
     lastElapsed=elapsed;
@@ -7309,33 +7314,22 @@ body.dark-mode #vibraCartBooking{--booking-bg:#2b2031;--booking-ink:#fff0fa;--bo
       rect(0,y,110,1,ink);
       for(let x=(y%3)*7;x<110;x+=23)rect(x,y,1,8,ink);
     }
-    // Ventana, cabecera y cama. El dibujo se coloca detrás de la guía.
+    // MODIFICADO: escenario de bienvenida, con ventana, mostrador y maceta.
     rect(10,9,30,27,'#795575');rect(12,11,26,23,dark?'#505f8b':'#8ab6cf');
     rect(24,11,2,23,'#e5c8dc');rect(12,21,26,2,'#e5c8dc');
     rect(14,13,5,1,'#fff2e2');rect(16,11,1,5,'#fff2e2');
-    rect(98,39,8,33,'#5b3554');rect(100,41,4,20,'#9a5b80');
-    rect(63,65,43,11,'#70405e');rect(65,74,3,8,'#4c2c49');rect(101,74,3,8,'#4c2c49');
-    rect(61,60,45,8,'#f6dbe7');rect(61,65,32,8,'#ac5c85');rect(62,67,30,2,'#d18cae');
-    rect(94,57,9,5,'#fff1ed');rect(94,61,9,1,'#dcb6cc');
-
+    rect(86,66,15,14,'#76506f');rect(84,64,19,4,'#b97ca0');
+    rect(91,52,5,12,'#69936f');rect(87,54,5,5,'#8eb28b');rect(96,49,5,7,'#7aab84');
     const progress=Math.min(1,elapsed/walkTime);
-    const settled=Math.min(1,Math.max(0,(elapsed-walkTime)/sitTime));
-    const x=Math.round(mix(17,72,progress)),baseY=Math.round(mix(47,40,settled));
+    const x=Math.round(mix(17,55,progress)),baseY=47;
     const walking=progress>0&&progress<1;
     const step=walking?Math.floor(elapsed/140)%4:0;
     const stride=[0,4,0,-4][step];
     const bob=walking&&step%2===1?1:0;
     rect(x-7,81,16,2,dark?'#352637':'#ad849d');
     ctx.save();ctx.translate(x,baseY-bob);ctx.scale(facing,1);
-    if(settled>0){
-      const reach=Math.round(settled*7);
-      rect(-5,24,6+reach,5,'#c58678');rect(1,26,7+reach,5,'#e4a085');
-      rect(3+reach,29,4,9,'#bd7c72');rect(6+reach,30,4,10,'#dc9983');
-      rect(3+reach,37,5,3,'#382f46');rect(6+reach,39,6,3,'#382f46');
-    }else{
-      rect(-5-stride,24,4,10,'#bf7d72');rect(1+stride,24,4,10,'#e0a18a');
-      rect(-6-stride,32,6,3,'#382f46');rect(stride,32,6,3,'#382f46');
-    }
+    rect(-5-stride,24,4,10,'#bf7d72');rect(1+stride,24,4,10,'#e0a18a');
+    rect(-6-stride,32,6,3,'#382f46');rect(stride,32,6,3,'#382f46');
     rect(-10,15+Math.sign(stride),3,11,'#c78976');
     if(wave){
       rect(9,12,3,7,'#edac8d');rect(11,8,3,6,'#edac8d');
@@ -7347,22 +7341,26 @@ body.dark-mode #vibraCartBooking{--booking-bg:#2b2031;--booking-ink:#fff0fa;--bo
   }
   function talk(){
     hasSpoken=true;
-    sign.textContent=dialogue(); // MODIFICADO: adaptar el saludo al contenido del pedido.
-    options.forEach(button=>{button.hidden=false});
+    // MODIFICADO: cada pregunta muestra solo su acción correspondiente.
+    const [message,selector]=questions[question];
+    sign.textContent=message();
+    const action=panel.querySelector(selector);
+    options.forEach(button=>{button.hidden=button!==action});
+    nextQuestion.hidden=false;
     poseImage.setAttribute('aria-expanded','true');
   }
   function animatePose(){
     cancelAnimationFrame(frame);
     hasSpoken=false;
     facing=1;
-    const total=walkTime+sitTime;
+    const total=walkTime;
     if(reducedMotion.matches){
       paintCharacter(total);
-      poseCount.textContent='Sentada en la cama';
+      poseCount.textContent='Lista para ayudarte';
       talk();
       return;
     }
-    poseCount.textContent='Caminando hacia la cama';
+    poseCount.textContent='Acercándose para saludarte';
     paintCharacter(0);
     const start=performance.now();
     function step(now){
@@ -7370,7 +7368,7 @@ body.dark-mode #vibraCartBooking{--booking-bg:#2b2031;--booking-ink:#fff0fa;--bo
       paintCharacter(elapsed);
       if(elapsed<total){frame=requestAnimationFrame(step);return}
       frame=0;
-      poseCount.textContent='Sentada en la cama';
+      poseCount.textContent='Lista para ayudarte';
       if(!hasSpoken)talk();
     }
     frame=requestAnimationFrame(step);
@@ -7381,9 +7379,11 @@ body.dark-mode #vibraCartBooking{--booking-bg:#2b2031;--booking-ink:#fff0fa;--bo
     if(open===drawerOpen)return;
     drawerOpen=open;
     if(open){
+      question=0;
+      nextQuestion.hidden=true;
       options.forEach(button=>{button.hidden=true});
       poseImage.setAttribute('aria-expanded','false');
-      sign.textContent='¡Hola! Voy a sentarme y te ayudo con tu pedido.';
+      sign.textContent='¡Hola! ¿En qué puedo ayudarte?';
       animatePose();
     }else{
       cancelAnimationFrame(frame);
@@ -7458,11 +7458,12 @@ body.dark-mode #vibraCartBooking{--booking-bg:#2b2031;--booking-ink:#fff0fa;--bo
   panel.addEventListener('click',event=>{
     const button=event.target.closest('button');
     if(!button)return;
-    // NUEVO: respuestas del usuario, sin consultar ni inferir una reserva.
-    if(button.dataset.vibraCartAnswer==='reserved'){
-      sign.textContent='Gracias por indicarlo. ¿Quieres añadir un servicio o un producto?';
+    // NUEVO: pasar a otra pregunta sin ejecutar la acción mostrada.
+    if(button===nextQuestion){
+      question=(question+1)%questions.length;
       choice.hidden=true;
       status.textContent='';
+      greet();
       return;
     }
     if(button.dataset.vibraCartAnswer==='products'){
@@ -7860,5 +7861,11 @@ body.dark-mode #vibraCartBooking .vibra-scene-frame{fill:#4f3550;stroke:#ae779d}
 <style>
 #vibraCartBooking canvas[data-vibra-pose-image]{height:auto;max-height:44dvh;aspect-ratio:44/35;object-fit:contain;background:var(--booking-bg);touch-action:pan-y;image-rendering:pixelated}
 @media(max-width:460px){#vibraCartBooking canvas[data-vibra-pose-image]{max-height:35dvh}}
+</style>
+
+<!-- NUEVO: distinguir la navegación del diálogo de su acción principal -->
+<style>
+#vibraCartBooking .vibra-booking-sign [data-vibra-next-question]{background:var(--booking-bg);color:var(--booking-ink)}
+#vibraCartBooking .vibra-booking-sign button[hidden]{display:none!important}
 </style>
 </html>
