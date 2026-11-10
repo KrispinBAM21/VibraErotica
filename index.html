@@ -4558,8 +4558,8 @@ paintExperience=function(){
   h.className='container v17-experience';const s=summary?.scores||{},avg=Number(s.overall||0);
   // MODIFICADO: iconos propios para las acciones y la puntuación de la barra.
   const experienceSvg=path=>`<svg aria-hidden="true" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round">${path}</svg>`;
-  // MODIFICADO: toldo de comercio, conversación con lápiz, corazón de seguimiento y apertura.
-  h.innerHTML=`<button class="v17-experience-toggle" id="v17ExperienceToggle" aria-expanded="false"><div><h3>Tu experiencia importa</h3><p>Califica el negocio, conoce el perfil, consulta opiniones y síguenos.</p></div><span class="v17-experience-chevron">${experienceSvg('<path d="M7 9l5 5 5-5m-9 7 4 4 4-4"/>')}</span></button><div class="v17-experience-panel"><div><div class="v17-experience-inner"><div class="v17-experience-summary"><span class="v17-stars">${Array.from({length:avg?Math.min(5,Math.max(0,Math.round(avg))):5},()=>experienceSvg('<path d="m12 3 2.8 5.7 6.2.9-4.5 4.4 1 6.2-5.5-2.9-5.5 2.9 1-6.2L3 9.6l6.2-.9L12 3Z"/>')).join('')}</span><span>${avg?avg.toFixed(1):'Sin calificaciones'} · ${Number(s.reviews||0)} opiniones · ${Number(summary?.followers||0)} seguidores</span></div><div class="v17-experience-actions"><button class="btn v16-glow-btn" id="v17KnowBusiness">${experienceSvg('<path d="M3 10 5 4h14l2 6M3 10c0 3 4 3 4.5 0 .5 3 4 3 4.5 0 .5 3 4 3 4.5 0 .5 3 4.5 3 4.5 0M5 13v7h14v-7M9 20v-5h5v5"/>')}<span>Conocer el negocio</span></button><button class="btn" id="v17Rate">${experienceSvg('<path d="M4 4h13v9H9l-5 4V4Z"/><path d="M7 8h7m-7 3h4m2 8 5-5 3 3-5 5h-3v-3Z"/>')}<span>Opiniones y calificar</span></button><button class="btn secondary" id="v17Follow">${experienceSvg(summary?.following?'<path d="M12 20 4 12a4.5 4.5 0 0 1 6.4-6.4L12 7l1.6-1.4A4.5 4.5 0 0 1 20 12l-8 8Z M9 12h6"/>':'<path d="M12 20 4 12a4.5 4.5 0 0 1 6.4-6.4L12 7l1.6-1.4A4.5 4.5 0 0 1 20 12l-8 8Z M9 12h6m-3-3v6"/>')}<span>${summary?.following?'Siguiendo':'Seguir'}</span></button></div></div></div></div>`;
+  // MODIFICADO: fachada con ubicación, reseña destacada, seguimiento y apertura.
+  h.innerHTML=`<button class="v17-experience-toggle" id="v17ExperienceToggle" aria-expanded="false"><div><h3>Tu experiencia importa</h3><p>Califica el negocio, conoce el perfil, consulta opiniones y síguenos.</p></div><span class="v17-experience-chevron">${experienceSvg('<path d="M5 7h14v10H5z M9 10l3 3 3-3"/>')}</span></button><div class="v17-experience-panel"><div><div class="v17-experience-inner"><div class="v17-experience-summary"><span class="v17-stars">${Array.from({length:avg?Math.min(5,Math.max(0,Math.round(avg))):5},()=>experienceSvg('<path d="m12 3 2.8 5.7 6.2.9-4.5 4.4 1 6.2-5.5-2.9-5.5 2.9 1-6.2L3 9.6l6.2-.9L12 3Z"/>')).join('')}</span><span>${avg?avg.toFixed(1):'Sin calificaciones'} · ${Number(s.reviews||0)} opiniones · ${Number(summary?.followers||0)} seguidores</span></div><div class="v17-experience-actions"><button class="btn v16-glow-btn" id="v17KnowBusiness">${experienceSvg('<path d="M3 20h18M5 20V9l7-5 7 5v11M9 20v-5h6v5M10 10h4M12 2v2"/>')}<span>Conocer el negocio</span></button><button class="btn" id="v17Rate">${experienceSvg('<path d="M4 5h16v12H9l-4 3v-3H4z"/><path d="m12 7 1.1 2.3 2.6.4-1.9 1.8.5 2.6-2.3-1.2-2.3 1.2.5-2.6-1.9-1.8 2.6-.4z"/>')}<span>Opiniones y calificar</span></button><button class="btn secondary" id="v17Follow">${experienceSvg(summary?.following?'<path d="M8 13a4 4 0 1 0 0-8 4 4 0 0 0 0 8ZM2 21v-2c0-2 3-4 6-4s6 2 6 4v2M16 11h6"/>':'<path d="M8 13a4 4 0 1 0 0-8 4 4 0 0 0 0 8ZM2 21v-2c0-2 3-4 6-4s6 2 6 4v2M16 11h6m-3-3v6"/>')}<span>${summary?.following?'Siguiendo':'Seguir'}</span></button></div></div></div></div>`;
   const toggle=document.getElementById('v17ExperienceToggle');toggle.onclick=()=>{const open=!h.classList.contains('open');h.classList.toggle('open',open);toggle.setAttribute('aria-expanded',String(open));clearTimeout(v17ExperienceTimer);if(open)v17ExperienceTimer=setTimeout(()=>{if(h.isConnected){h.classList.remove('open');toggle.setAttribute('aria-expanded','false')}},10*60*1000)};
   document.getElementById('v17KnowBusiness').onclick=()=>openBusinessShowcase();document.getElementById('v17Rate').onclick=()=>openRateBusinessModal();document.getElementById('v17Follow').onclick=async e=>{if(!customerSession){renderCustomerProfile();openModal('customerProfileModal');return toast('Inicia sesión para seguir al negocio.','info')}try{const r=await v16Community('toggle_follow',{});summary.following=r.following;summary.followers=r.followers;paintExperience()}catch(err){toast(err.message,'error')}};
 };
@@ -7060,6 +7060,253 @@ body.vibra-entry-login #customerProfileModal :is(#authRecover,#vibraGuestAccess)
       else for(const node of change.addedNodes)mark(node);
     }
   }).observe(document.body,{subtree:true,childList:true,characterData:true});
+})();
+</script>
+
+<!-- NUEVO: estilos acotados al panel, la barra de experiencia y la invitación del carrito -->
+<style>
+body:not(.dark-mode) #adminModal{
+  --card:#fff!important;--site-bg:#f3f5fa!important;--text:#18243a!important;--muted:#4c5b71!important;--line:#d3dce9!important;--secondary:#edf1f8!important;--admin-accent:#a01456;--admin-active:#f9e7f0;color-scheme:light
+}
+body.dark-mode #adminModal{
+  --card:#171c26!important;--site-bg:#10151e!important;--text:#f0f4fc!important;--muted:#bcc8da!important;--line:#39465a!important;--secondary:#252e3d!important;--admin-accent:#ff9dce;--admin-active:#43253d;color-scheme:dark
+}
+html body #adminModal{background:var(--card)!important;color:var(--text)!important}
+html body #adminModal .modal-head{padding:12px clamp(12px,2vw,22px);min-height:0;background:var(--card);border-color:var(--line)}
+html body #adminModal .admin-layout{grid-template-columns:minmax(0,clamp(155px,20vw,218px)) minmax(0,1fr);background:var(--site-bg)}
+html body #adminModal #adminTabs{width:auto;min-width:0;padding:8px;overflow-x:hidden;scrollbar-width:thin;scrollbar-color:var(--muted) transparent;background:var(--card);border-color:var(--line)}
+html body #adminModal #adminTabs .tab-btn{width:100%;min-width:0;margin:0 0 3px;min-height:38px;padding:7px 9px;gap:8px;font-size:.86rem;line-height:1.22;border:1px solid transparent;border-radius:9px;background:transparent!important}
+html body #adminModal #adminTabs .tab-btn svg{width:17px;height:17px;flex:0 0 17px;color:inherit}
+html body #adminModal #adminTabs .tab-btn span{min-width:0;overflow-wrap:anywhere;color:inherit!important}
+html body #adminModal #adminTabs .tab-btn:not(.active){color:var(--text)!important}
+html body #adminModal #adminTabs .tab-btn:not(.active):hover{background:var(--secondary)!important}
+html body #adminModal #adminTabs .tab-btn.active{color:var(--admin-accent)!important;background:var(--admin-active)!important;border-color:var(--line)}
+html body #adminModal #adminContent{min-width:0;padding:clamp(10px,1.7vw,19px);scrollbar-width:thin;scrollbar-color:var(--muted) transparent;background:var(--site-bg)}
+html body #adminModal :is(.modal-head>strong,.section-card h2,.section-card h3,.section-card h4,.admin-pane h3,.faithful-session,.product-admin,.summary-table td,.summary-table th){color:var(--text)!important}
+html body #adminModal :is(.section-card p,.section-card strong,.section-card span,.admin-kpi strong,.admin-kpi span,.metric strong,.metric span,.field label){color:inherit!important}
+html body #adminModal :is(.muted,.small.muted,.review-meta,.faithful-session .small){color:var(--muted)!important}
+html body #adminModal :is(.section-card,.admin-kpi,.review-card,.integration-card,.payment-item,.audit-item,.metric){color:var(--text)!important;background:var(--card)!important;border-color:var(--line)!important}
+html body #adminModal :is(.section-card,.admin-kpi){padding:clamp(10px,1.3vw,15px);border-radius:12px}
+html body #adminModal .admin-dashboard{gap:8px;grid-template-columns:repeat(auto-fit,minmax(min(112px,100%),1fr))}
+html body #adminModal .notice{background:var(--secondary)!important;color:var(--text)!important;border-color:var(--admin-accent)}
+html body #adminModal :is(input:not([type=checkbox]):not([type=radio]):not([type=color]):not([type=range]),select,textarea){background:var(--card)!important;color:var(--text)!important;border-color:var(--line)!important}
+html body #adminModal :is(input,textarea)::placeholder{color:var(--muted);opacity:1}
+html body #adminModal :is(.btn.secondary,.btn.ghost){background:var(--secondary)!important;color:var(--text)!important;border-color:var(--line)!important}
+html body #adminModal :is(.btn,.icon-btn) :is(span,svg){color:inherit!important}
+html body #adminModal :is(button,input,select,textarea,a):focus-visible{outline:2px solid var(--admin-accent);outline-offset:2px}
+html body #adminModal .ticket-preview,html body #adminModal .ticket-preview *{color:#111!important}
+@media(max-width:700px){
+  html body #adminModal .admin-layout{grid-template-columns:minmax(0,1fr);grid-template-rows:auto minmax(0,1fr)}
+  html body #adminModal #adminTabs{display:flex;max-height:74px;overflow-x:auto;overflow-y:hidden}
+  html body #adminModal #adminTabs .tab-btn{flex:0 0 auto;width:auto;max-width:180px;margin:0}
+}
+html body #adminModal [data-vibra-match-pending]{color:#6c4300!important;background:#fff0bf!important;border-color:#a36d12}
+html body.dark-mode #adminModal [data-vibra-match-pending]{color:#ffdf92!important;background:#3e2b15!important;border-color:#c69236}
+#v15Experience #v17ExperienceToggle svg{width:22px;height:22px}
+#v15Experience .v17-experience-actions .btn{min-height:42px}
+#vibraCartBooking{--booking-bg:#f9eff7;--booking-ink:#342038;--booking-edge:#dcbcd4;--booking-stage:#e2f2f6;flex:none;margin:0 0 12px;padding:11px;background:var(--booking-bg);color:var(--booking-ink);border:1px solid var(--booking-edge);border-radius:14px}
+body.dark-mode #vibraCartBooking{--booking-bg:#2b2031;--booking-ink:#fff0fa;--booking-edge:#725670;--booking-stage:#2d3b50}
+#vibraCartBooking .vibra-booking-intro{display:grid;grid-template-columns:minmax(108px,1fr) minmax(138px,1fr);gap:10px;align-items:center}
+#vibraCartBooking canvas{display:block;width:100%;height:auto;background:var(--booking-stage);border-radius:10px;touch-action:pan-y}
+#vibraCartBooking p{margin:0 0 6px;color:inherit}
+#vibraCartBooking .vibra-booking-sign{border:1px solid var(--booking-edge);border-radius:10px;padding:8px;background:var(--booking-bg)}
+#vibraCartBooking .vibra-booking-sign button{width:100%;margin-top:5px}
+#vibraCartBooking button,#vibraCartBooking select{border:1px solid var(--booking-edge);border-radius:8px;padding:6px 9px;background:var(--booking-bg);color:var(--booking-ink);font:inherit;font-size:.8rem;min-height:33px}
+#vibraCartBooking [data-booking-kind]{background:#862255;color:white;border-color:#862255;font-weight:700}
+#vibraCartBooking button[aria-pressed=true]{outline:2px solid currentColor;outline-offset:-3px}
+#vibraCartBooking :is(button,select):focus-visible{outline:2px solid currentColor;outline-offset:2px}
+#vibraCartBooking .vibra-booking-poses{display:flex;flex-wrap:wrap;gap:4px;margin-top:7px}
+#vibraCartBooking .vibra-booking-choice:not([hidden]){display:grid;gap:5px;margin-top:8px}
+#vibraCartBooking select{width:100%}
+</style>
+<!-- NUEVO: invitación de reserva con personaje tridimensional integrado -->
+<template id="vibraCartBookingTemplate">
+  <section id="vibraCartBooking" aria-label="Reservas desde el carrito">
+    <div class="vibra-booking-intro">
+      <canvas width="440" height="350" role="img" aria-label="Personaje adulto animado con bikini junto a una cama"></canvas>
+      <div class="vibra-booking-sign">
+        <p><strong>¿Qué deseas reservar?</strong></p>
+        <button type="button" data-booking-kind="room">Reservar habitación</button>
+        <button type="button" data-booking-kind="service">Reservar servicio</button>
+      </div>
+    </div>
+    <div class="vibra-booking-poses" role="group" aria-label="Movimientos del personaje">
+      <button type="button" data-pose="walk" aria-pressed="true">Caminar</button>
+      <button type="button" data-pose="jump" aria-pressed="false">Saltar</button>
+      <button type="button" data-pose="sit" aria-pressed="false">Sentarse</button>
+      <button type="button" data-pose="rest" aria-pressed="false">Recostarse</button>
+      <button type="button" data-pose="pause" aria-pressed="false">Pausa</button>
+    </div>
+    <div class="vibra-booking-choice" hidden>
+      <label for="vibraCartProfessional">Elige un profesional</label>
+      <select id="vibraCartProfessional"></select>
+      <button type="button" data-booking-continue>Continuar a la reserva</button>
+    </div>
+    <p data-booking-status role="status"></p>
+  </section>
+</template>
+<script>
+(()=>{
+  'use strict';
+  const drawer=document.getElementById('cartDrawer');
+  const template=document.getElementById('vibraCartBookingTemplate');
+  const panel=template.content.firstElementChild.cloneNode(true);
+  const canvas=panel.querySelector('canvas');
+  const ctx=canvas.getContext('2d');
+  const reduced=matchMedia('(prefers-reduced-motion: reduce)');
+  const choice=panel.querySelector('.vibra-booking-choice');
+  const professional=panel.querySelector('select');
+  const status=panel.querySelector('[data-booking-status]');
+  let pose=reduced.matches?'pause':'walk', kind, started=performance.now(), frame=0;
+  const cartRender=renderCart;
+  renderCart=function(){
+    const result=cartRender.apply(this,arguments);
+    const body=document.getElementById('cartBody');
+    if(panel.parentNode!==body)body.prepend(panel);
+    if(drawer.classList.contains('show')&&!frame)draw(performance.now());
+    return result;
+  };
+
+  // La selección usa las fichas publicadas y su evento habitual de reserva.
+  function bookingButtons(){
+    return [...document.querySelectorAll('#vibraServiceCatalog [data-vibra-book]')]
+      .filter(button=>button.dataset.vibraBook&&!button.disabled&&
+        [...document.querySelectorAll('#v9Professionals [data-p]')].some(source=>source.dataset.p===button.dataset.vibraBook));
+  }
+  panel.addEventListener('click',event=>{
+    const button=event.target.closest('button');
+    if(!button)return;
+    if(button.dataset.pose){setPose(button.dataset.pose);return}
+    if(button.dataset.bookingKind){
+      kind=button.dataset.bookingKind;
+      professional.replaceChildren(new Option('Selecciona un profesional',''));
+      for(const source of bookingButtons()){
+        const name=source.closest('article')?.querySelector('h3')?.textContent?.trim();
+        if(name)professional.add(new Option(name,source.dataset.vibraBook));
+      }
+      choice.hidden=professional.options.length<2;
+      status.textContent=choice.hidden?'En este momento no hay profesionales publicados para reservar.':
+        kind==='room'?'Selecciona un profesional para consultar habitaciones en la modalidad Local.':'';
+      if(!choice.hidden)professional.focus();
+      return;
+    }
+    if(!button.hasAttribute('data-booking-continue'))return;
+    const booking=bookingButtons().find(item=>item.dataset.vibraBook===professional.value);
+    const options=document.getElementById('v9Mode');
+    const modal=document.getElementById('v9Modalities');
+    if(!booking||!options||!modal){status.textContent='Selecciona un profesional disponible.';return}
+    booking.click();
+    if(kind==='room'){
+      const local=[...options.options].find(option=>option.value==='local'&&!option.disabled);
+      if(!local){
+        modal.hidden=true;
+        status.textContent='Este profesional no ofrece atención en el local. Selecciona otro profesional.';
+        return;
+      }
+      options.value=local.value;
+      options.dispatchEvent(new Event('change',{bubbles:true}));
+    }
+    closeDrawer();
+    choice.hidden=true;
+    status.textContent='';
+  });
+  function setPose(value){
+    pose=value;
+    started=performance.now();
+    panel.querySelectorAll('[data-pose]').forEach(button=>button.setAttribute('aria-pressed',String(button.dataset.pose===pose)));
+    if(frame)cancelAnimationFrame(frame);
+    frame=0;
+    draw(started);
+  }
+  reduced.addEventListener('change',()=>setPose(reduced.matches?'pause':'walk'));
+
+  // Volúmenes articulados en coordenadas XYZ y proyección en perspectiva.
+  function draw(now){
+    frame=0;
+    if(!ctx||!drawer.classList.contains('show'))return;
+    const t=(now-started)/1000, moving=pose==='walk', sitting=pose==='sit', resting=pose==='rest';
+    const stride=moving?Math.sin(t*8):0;
+    const walkX=moving&&!reduced.matches?Math.sin(t*1.25)*80:0;
+    const jump=pose==='jump'&&!reduced.matches?Math.abs(Math.sin(t*4))*39:0;
+    const lean=resting?Math.PI/2:0;
+    const turn=moving&&!reduced.matches?Math.cos(t*1.25)*.44:.19;
+    const skin='#bd7356', hair='#3f222a', suit='#bb1763';
+    const shapes=[];
+    const bodyX=resting?266:sitting?319:131+walkX;
+    const bodyY=resting?242:sitting?277:278-jump;
+    const project=([x,y,z])=>{
+      const lx=x*Math.cos(lean)-y*Math.sin(lean),ly=x*Math.sin(lean)+y*Math.cos(lean);
+      const depth=z*Math.cos(turn)-lx*Math.sin(turn);
+      const scale=420/(420-depth);
+      return [bodyX+(lx*Math.cos(turn)+z*Math.sin(turn))*scale,bodyY+ly*scale,depth,scale];
+    };
+    function volume(point,rx,ry,color,angle=0){
+      const [x,y,z,scale]=project(point);
+      shapes.push({x,y,z,rx:rx*scale,ry:ry*scale,color,angle:angle+lean});
+    }
+    function limb(a,b,width,color){
+      const p=project(a),q=project(b);
+      shapes.push({x:(p[0]+q[0])/2,y:(p[1]+q[1])/2,z:(p[2]+q[2])/2,rx:width*(p[3]+q[3])/2,
+        ry:Math.hypot(q[0]-p[0],q[1]-p[1])/2+width*.65,color,angle:Math.atan2(p[0]-q[0],q[1]-p[1])});
+    }
+    ctx.clearRect(0,0,440,350);
+    const sky=ctx.createLinearGradient(0,0,0,350);
+    const dark=document.body.classList.contains('dark-mode');
+    sky.addColorStop(0,dark?'#203047':'#b6e4ec');
+    sky.addColorStop(.66,dark?'#37596e':'#e7f4ee');
+    sky.addColorStop(.67,dark?'#6d5a66':'#f4dfc3');
+    sky.addColorStop(1,dark?'#373047':'#e8bca8');
+    ctx.fillStyle=sky;ctx.fillRect(0,0,440,350);
+    function polygon(points,color){
+      ctx.beginPath();points.forEach(([x,y],i)=>i?ctx.lineTo(x,y):ctx.moveTo(x,y));
+      ctx.closePath();ctx.fillStyle=color;ctx.fill();
+    }
+    // Cama con plano superior, faldón y almohada.
+    polygon([[191,251],[387,251],[416,273],[218,273]],'#f6b8c9');
+    polygon([[218,273],[416,273],[416,289],[218,289]],'#895b7e');
+    polygon([[191,251],[218,273],[218,289],[191,266]],'#a76f96');
+    polygon([[362,254],[393,254],[405,265],[371,265]],'#fff0f5');
+    ctx.fillStyle='#31223640';ctx.beginPath();ctx.ellipse(bodyX,resting||sitting?267:281,resting?64:24,6,0,0,Math.PI*2);ctx.fill();
+
+    const hip=sitting?-29:-73;
+    for(const side of [-1,1]){
+      const knee=sitting?[side*13,3,23]:[side*9,-38,side*stride*20];
+      const ankle=sitting?[side*13,43,25]:[side*10,-6,-side*stride*20];
+      limb([side*8,hip,0],knee,8,skin);limb(knee,ankle,5.5,skin);
+      volume([ankle[0],ankle[1]+2,ankle[2]+4],7,4,'#f6d78d');
+    }
+    volume([0,hip-18,0],17,29,skin);
+    volume([0,hip-2,3],16,9,suit);
+    volume([0,hip-33,6],17,10,suit);
+    volume([0,hip-49,0],6,10,skin);
+    volume([0,hip-67,-6],18,25,hair);
+    volume([0,hip-66,4],15,19,skin);
+    volume([-4,hip-78,7],13,7,hair,-.24);
+    for(const side of [-1,1]){
+      const elbow=[side*23,hip-18,side*stride*10];
+      const wrist=[side*(pose==='jump'?31:22),hip-(pose==='jump'?47:3),7];
+      limb([side*13,hip-35,0],elbow,5,skin);limb(elbow,wrist,4,skin);
+      volume(wrist,4,5,skin);
+      volume([side*5,hip-66,17],1.6,1.8,'#402431');
+      volume([side*14,hip-61,9],2,2,'#ffd978');
+    }
+    volume([0,hip-60,18],3.5,1.25,'#8f3d4e');
+    shapes.sort((a,b)=>a.z-b.z);
+    for(const shape of shapes){
+      ctx.save();ctx.translate(shape.x,shape.y);ctx.rotate(shape.angle);ctx.scale(shape.rx,shape.ry);
+      const light=ctx.createRadialGradient(-.3,-.38,0,.02,.06,1.14);
+      light.addColorStop(0,'#ffffff');light.addColorStop(.28,shape.color);light.addColorStop(1,'#32233b');
+      ctx.fillStyle=light;ctx.beginPath();ctx.arc(0,0,1,0,Math.PI*2);ctx.fill();ctx.restore();
+    }
+    if(!reduced.matches&&(moving||pose==='jump'))frame=requestAnimationFrame(draw);
+  }
+  setPose(pose);
+  new MutationObserver(()=>{
+    if(drawer.classList.contains('show')&&!frame)draw(performance.now());
+    if(!drawer.classList.contains('show')&&frame){cancelAnimationFrame(frame);frame=0}
+  }).observe(drawer,{attributes:true,attributeFilter:['class']});
+  new MutationObserver(()=>{if(!frame)draw(performance.now())})
+    .observe(document.body,{attributes:true,attributeFilter:['class']});
 })();
 </script>
 </html>
