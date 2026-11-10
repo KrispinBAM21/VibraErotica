@@ -5162,9 +5162,13 @@ async function getTable(table,fallback=[]){const s=db();if(!s)return fallback;co
 async function load(){setup();const s=db();if(!s)return;
 // MODIFICADO: publicar un conjunto completo de fichas y mantener las anteriores ante errores.
 const results=await Promise.all(['service_locations','practitioner_service_modes','travel_pricing','practitioners','services','practitioner_work_hours','site_theme_v9','practitioner_media','practitioner_services','service_durations','rooms'].map(name=>getTable(name,null)));
-const previous=[locations,modes,pArr,staff,services,hours,tArr,media,links,durations,rooms];
-[locations,modes,pArr,staff,services,hours,tArr,media,links,durations,rooms]=results.map((rows,i)=>rows??previous[i]);
-price=pArr?.[0]||null;theme=tArr?.[0]||null;
+// MODIFICADO: los resultados opcionales de tarifa y tema se asignan a su estado existente.
+const [nextLocations,nextModes,nextPrices,nextStaff,nextServices,nextHours,nextThemes,nextMedia,nextLinks,nextDurations,nextRooms]=results;
+locations=nextLocations??locations;modes=nextModes??modes;staff=nextStaff??staff;
+services=nextServices??services;hours=nextHours??hours;media=nextMedia??media;
+links=nextLinks??links;durations=nextDurations??durations;rooms=nextRooms??rooms;
+if(nextPrices!==null)price=nextPrices[0]||null;
+if(nextThemes!==null)theme=nextThemes[0]||null;
 renderStaff();
 const {data:{user}}=await s.auth.getUser();admin=false;if(user){const r=await s.from('staff_roles').select('role').eq('user_id',user.id).maybeSingle();admin=['admin','manager'].includes(r.data?.role)}
 el('#v9Admin').classList.toggle('visible',admin);renderLocations();renderAdmin();applyTheme();}
@@ -7187,10 +7191,10 @@ body.dark-mode #vibraCartBooking{--booking-bg:#2b2031;--booking-ink:#fff0fa;--bo
   <section id="vibraCartBooking" aria-label="Reservas desde el carrito">
     <div class="vibra-booking-intro">
       <!-- MODIFICADO: pose fija elegida por el usuario -->
-      <img data-vibra-pose-image width="440" height="350" tabindex="0" aria-describedby="vibraCartDragHelp" alt="Personaje adulto de frente">
+      <img data-vibra-pose-image width="440" height="350" tabindex="0" role="button" aria-expanded="false" aria-label="Hablar con el personaje del carrito" aria-describedby="vibraCartDragHelp" alt="Personaje adulto de frente">
       <div class="vibra-booking-sign">
         <!-- MODIFICADO: letrero interactivo del carrito -->
-        <p><strong data-vibra-cart-message aria-live="polite">¿Quieres reservar una habitación o añadir un servicio o producto?</strong></p>
+        <p><strong data-vibra-cart-message aria-live="polite">¡Hola! Tócame y te ayudo con tu pedido.</strong></p>
         <button type="button" data-vibra-cart-answer="reserved">Ya reservé</button>
         <button type="button" data-booking-kind="room">Reservar habitación</button>
         <button type="button" data-booking-kind="service">Ver servicios</button>
@@ -7199,7 +7203,7 @@ body.dark-mode #vibraCartBooking{--booking-bg:#2b2031;--booking-ink:#fff0fa;--bo
     </div>
     <!-- MODIFICADO: giro directo con el dedo o ratón y alternativa con teclado -->
     <div class="vibra-booking-poses">
-      <span id="vibraCartDragHelp">Mantén pulsado y arrastra hacia los lados. Con el teclado, usa las flechas izquierda y derecha.</span>
+      <span id="vibraCartDragHelp">Toca el personaje para hablar. Mantén pulsado y arrastra para girarlo. Con el teclado, usa Enter o las flechas.</span>
       <span data-vibra-pose-count role="status"></span>
     </div>
     <div class="vibra-booking-choice" hidden>
@@ -7219,16 +7223,46 @@ body.dark-mode #vibraCartBooking{--booking-bg:#2b2031;--booking-ink:#fff0fa;--bo
   const poseImage=panel.querySelector('[data-vibra-pose-image]');
   const poseCount=panel.querySelector('[data-vibra-pose-count]');
   const sign=panel.querySelector('[data-vibra-cart-message]');
+  // NUEVO: saludo visible al abrir el carrito y respuesta al tocar el personaje.
+  const drawer=document.getElementById('cartDrawer');
+  const options=panel.querySelectorAll('[data-booking-kind],[data-vibra-cart-answer]');
+  const reducedMotion=matchMedia('(prefers-reduced-motion: reduce)');
+  let gestureAnimation=null;
+  function animatePose(){
+    gestureAnimation?.cancel();
+    if(reducedMotion.matches||!poseImage.animate)return;
+    gestureAnimation=poseImage.animate([
+      {transform:'translateX(-10px) rotate(-3deg)'},
+      {transform:'translateX(10px) rotate(3deg)'},
+      {transform:'translateX(0) rotate(0)'}
+    ],{duration:720,easing:'ease-out'});
+  }
+  function talk(){
+    sign.textContent='¿Quieres reservar una habitación o añadir un servicio o producto?';
+    options.forEach(button=>{button.hidden=false});
+    poseImage.setAttribute('aria-expanded','true');
+    animatePose();
+  }
+  options.forEach(button=>{button.hidden=true});
+  let drawerOpen=false;
+  new MutationObserver(()=>{
+    const open=drawer.classList.contains('show');
+    if(open&&!drawerOpen)animatePose();
+    if(!open&&drawerOpen)gestureAnimation?.cancel();
+    drawerOpen=open;
+  }).observe(drawer,{attributes:true,attributeFilter:['class']});
   poseImage.draggable=false;
   let drag=null;
   poseImage.addEventListener('pointerdown',event=>{
     if(!event.isPrimary||event.button!==0)return;
-    drag={id:event.pointerId,x:event.clientX};
+    gestureAnimation?.cancel();
+    drag={id:event.pointerId,x:event.clientX,startX:event.clientX,startY:event.clientY,moved:false};
     poseImage.setPointerCapture(event.pointerId);
     poseImage.dataset.dragging='true';
   });
   poseImage.addEventListener('pointermove',event=>{
     if(drag?.id!==event.pointerId)return;
+    if(Math.hypot(event.clientX-drag.startX,event.clientY-drag.startY)>9)drag.moved=true;
     const distance=event.clientX-drag.x;
     const steps=Math.trunc(distance/36);
     if(steps){setPose(pose-steps);drag.x+=steps*36}
@@ -7237,12 +7271,16 @@ body.dark-mode #vibraCartBooking{--booking-bg:#2b2031;--booking-ink:#fff0fa;--bo
   });
   function stopDrag(event){
     if(drag?.id!==event.pointerId)return;
+    const tapped=event.type==='pointerup'&&!drag.moved&&
+      Math.hypot(event.clientX-drag.startX,event.clientY-drag.startY)<=9;
     drag=null;
     delete poseImage.dataset.dragging;
     poseImage.style.removeProperty('--vibra-pose-offset');
+    if(tapped)talk();
   }
   for(const event of ['pointerup','pointercancel','lostpointercapture'])poseImage.addEventListener(event,stopDrag);
   poseImage.addEventListener('keydown',event=>{
+    if(event.key==='Enter'||event.key===' '){event.preventDefault();talk();return}
     if(event.key!=='ArrowLeft'&&event.key!=='ArrowRight')return;
     event.preventDefault();
     setPose(pose+(event.key==='ArrowLeft'?-1:1));
@@ -7623,4 +7661,34 @@ html body #adminModal :is(input,textarea)::placeholder{color:var(--vibra-admin-d
 html body #adminModal .ticket-preview-column :is(.ticket-preview,.ticket-preview *){color:#111!important}
 </style>
 
+
+<!-- NUEVO: contraste en controles administrativos y activación del letrero del carrito -->
+<style>
+#vibraCartBooking .vibra-booking-sign button[hidden]{display:none!important}
+#vibraCartBooking [data-vibra-pose-image]{cursor:pointer}
+#vibraCartBooking [data-vibra-pose-image][data-dragging]{cursor:grabbing}
+body:not(.dark-mode) #adminModal{--vibra-admin-copy:#192438;--vibra-admin-subcopy:#354861;--vibra-admin-control:#edf2f8;--vibra-admin-outline:#8b9ab1}
+body.dark-mode #adminModal{--vibra-admin-copy:#f2f6fd;--vibra-admin-subcopy:#d2ddec;--vibra-admin-control:#293547;--vibra-admin-outline:#71829b}
+html body #adminModal #adminContent :is(.section-card,.admin-pane,.ticket-controls,.saved-address,.summary-table,.admin-kpi,.metric) :is(p,h2,h3,h4,label,legend,dt,dd,th,td){
+  color:var(--vibra-admin-copy)!important
+}
+html body #adminModal #adminContent :is(.muted,.small,.desc,.v9muted,.v9small,.review-meta,.field-help,small,.ticket-controls .notice,#vibraCustomersMessage){
+  color:var(--vibra-admin-subcopy)!important
+}
+html body #adminModal #adminContent :is(.ticket-controls,.saved-address,.vscope-admin-box,.vscope-admin-entry,.permission-option,.payment-item,.ticket-footer-icons,.vibra-svg-library) :is(label,legend,strong,.field>span){
+  color:var(--vibra-admin-copy)!important
+}
+html body #adminModal #adminContent :is(input:not([type=color]):not([type=range]):not([type=checkbox]):not([type=radio]),select,textarea){
+  color:var(--vibra-admin-copy)!important;background:var(--card)!important;border-color:var(--vibra-admin-outline)!important
+}
+html body #adminModal #adminContent :is(input,textarea)::placeholder{color:var(--vibra-admin-subcopy)!important;opacity:1}
+html body #adminModal #adminContent :is(.btn.secondary,.btn.ghost,.ticket-controls button:not(.btn),.vscope-admin-toolbar button){
+  color:var(--vibra-admin-copy)!important;background:var(--vibra-admin-control)!important;border-color:var(--vibra-admin-outline)!important
+}
+html body #adminModal :is(button,.tab-btn,label) > svg{color:inherit!important}
+html body #adminModal :is(button,.tab-btn) > svg[stroke]:not([stroke=none]){stroke:currentColor!important}
+html body #adminModal :is(button,.tab-btn) > svg[fill]:not([fill=none]){fill:currentColor!important}
+html body #adminModal #adminContent :is(button,a) > :is(span,small,svg){color:inherit!important}
+html body #adminModal #adminContent .ticket-preview-column :is(.ticket-preview,.ticket-preview *){color:#111!important}
+</style>
 </html>
