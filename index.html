@@ -735,6 +735,16 @@ function applyDesign(){const d=state.config.design,r=document.documentElement.st
 const THEME_STORE='vibraerotica.theme.mode';
 let publicThemeMode=localStorage.getItem(THEME_STORE)||'default';
 function applyPublicTheme(){
+  // NUEVO: seleccionar el texto de mayor contraste para el color principal configurado.
+  const primary=String(state?.config?.design?.primary||'').trim();
+  const hex=/^#([\da-f]{3}|[\da-f]{6})$/i.exec(primary)?.[1];
+  if(hex){
+    const rgb=(hex.length===3?[...hex].map(ch=>ch+ch):hex.match(/../g))
+      .map(pair=>parseInt(pair,16)/255)
+      .map(value=>value<=.04045?value/12.92:((value+.055)/1.055)**2.4);
+    const luminance=rgb[0]*.2126+rgb[1]*.7152+rgb[2]*.0722;
+    document.documentElement.style.setProperty('--vibra-on-primary',luminance>.179?'#000':'#fff');
+  }else document.documentElement.style.removeProperty('--vibra-on-primary');
   document.documentElement.dataset.vibraMode=publicThemeMode==='dark'?'dark':'default';document.body.classList.toggle('dark-mode',publicThemeMode==='dark');document.documentElement.classList.toggle('vibra-dark-first',publicThemeMode==='dark');
   /* MODIFICADO: sincronizar el fondo al alternar ambos modos */ if(publicThemeMode==='dark') document.body.style.background='#0d1015'; else if(state?.config?.design){const d=state.config.design;document.body.style.background=d.bgType==='gradient'?`linear-gradient(${d.gradAngle}deg,${d.grad1},${d.grad2}) fixed`:d.bgType==='image'&&d.bgImage?`linear-gradient(rgba(255,255,255,${1-d.bgOpacity}),rgba(255,255,255,${1-d.bgOpacity})),url('${d.bgImage}') center/cover fixed`:(d.siteBg||'#f7f7f9');}
   const b=document.getElementById('themeBtn');
@@ -5564,7 +5574,27 @@ function attach(){const pane=q('#adminContent');if(!pane||typeof activeAdmin==='
  pane.prepend(root);q('#vsmReload').onclick=load;q('#vsmSave').onclick=save;q('#vsmCancel').onclick=()=>{q('#vsmEditForm').hidden=true;activeEdit=null};q('#vsmTogglePreview').onclick=()=>{const e=q('#vsmPreviewItems');e.hidden=!e.hidden};q('#vsmPreviewItems').innerHTML=previews.map(([n,c,p])=>`<article><strong>${esc(n)}</strong><small>${esc(c)}</small><span>$${p.toLocaleString('es-MX')} MXN</span><small>Precio de ejemplo, sin existencias</small></article>`).join('');load();}
 function viewer(){let e=q('#vsmGallery');if(e)return e;e=document.createElement('div');e.id='vsmGallery';e.className='vsm-gallery';e.setAttribute('role','dialog');e.setAttribute('aria-modal','true');e.setAttribute('aria-label','Galería de fotos y videos');e.innerHTML='<div class="vsm-dialog"><header class="vsm-viewer-header"><div><h2 id="vsmViewerName">Servicio</h2><p id="vsmViewerDetails"></p></div><button class="vsm-close" type="button" aria-label="Cerrar visor">×</button></header><div class="vsm-viewer-body"><div class="vsm-viewer-stage" id="vsmGalleryMedia"></div><aside class="vsm-viewer-sidebar"><h3>Información del servicio</h3><div id="vsmProfileInfo"></div><div class="vsm-viewer-social" id="vsmProfileSocial"></div><div class="vsm-viewer-interact"><button type="button" id="vsmLike">♡ Me gusta <span id="vsmLikes"></span></button><button type="button" id="vsmFavorite">☆ Favorito</button><button type="button" id="vsmShowComments">Comentarios</button></div><div id="vsmComments" hidden><div id="vsmCommentList"></div><textarea id="vsmCommentText" placeholder="Tu opinión sobre el servicio" rows="3"></textarea><button type="button" id="vsmSendComment">Publicar opinión</button><p id="vsmCommentStatus"></p></div></aside></div><nav class="vsm-actions"><button id="vsmPrev" aria-label="Anterior">← Anterior</button><span class="vsm-count" id="vsmCount"></span><button id="vsmNext" aria-label="Siguiente">Siguiente →</button></nav></div>';document.body.append(e);q('.vsm-close',e).onclick=closeViewer;q('#vsmPrev').onclick=()=>drawGallery(-1);q('#vsmNext').onclick=()=>drawGallery(1);e.onclick=event=>{if(event.target===e)closeViewer()};return e;}
 function closeViewer(){const e=q('#vsmGallery');if(!e)return;const v=q('video',e);if(v)v.pause();e.classList.remove('open');q('#vsmGalleryMedia').replaceChildren();}
-function drawGallery(delta=0){if(!galleryItems.length)return;galleryIndex=(galleryIndex+delta+galleryItems.length)%galleryItems.length;const m=galleryItems[galleryIndex],box=q('#vsmGalleryMedia');q('video',box)?.pause();box.replaceChildren();box.classList.add('vsm-media-changing');const v=document.createElement(m.type==='video'?'video':'img');v.addEventListener('loadeddata',()=>box.classList.remove('vsm-media-changing'),{once:true});v.addEventListener('load',()=>box.classList.remove('vsm-media-changing'),{once:true});v.addEventListener('error',()=>box.classList.remove('vsm-media-changing'),{once:true});v.src=m.url;if(m.type==='video'){v.controls=true;v.playsInline=true;v.loop=true;v.autoplay=true;v.muted=true;v.setAttribute('aria-label','Video del servicio: reproducción automática en bucle');}v.alt=m.alt||'Archivo multimedia';box.append(v);if(m.type==='video')v.play().catch(()=>{});q('#vsmCount').textContent=(galleryIndex+1)+' de '+galleryItems.length;}
+function drawGallery(delta=0){if(!galleryItems.length)return;galleryIndex=(galleryIndex+delta+galleryItems.length)%galleryItems.length;const m=galleryItems[galleryIndex],box=q('#vsmGalleryMedia');q('video',box)?.pause();box.replaceChildren();box.classList.add('vsm-media-changing');const v=document.createElement(m.type==='video'?'video':'img');v.addEventListener('loadeddata',()=>box.classList.remove('vsm-media-changing'),{once:true});v.addEventListener('load',()=>box.classList.remove('vsm-media-changing'),{once:true});v.addEventListener('error',()=>box.classList.remove('vsm-media-changing'),{once:true});// MODIFICADO: el fondo se añade al detectar un video vertical y se elimina al cambiar de archivo.
+if(m.type==='video')v.addEventListener('loadedmetadata',()=>{
+  if(v.parentElement!==box||!v.videoWidth||v.videoHeight<=v.videoWidth)return;
+  const brand=document.querySelector('#brandLogo img');
+  const logo=brand?.currentSrc||brand?.getAttribute('src');
+  if(!logo)return;
+  const backdrop=document.createElement('div');
+  backdrop.className='vibra-portrait-logos';
+  backdrop.setAttribute('aria-hidden','true');
+  for(let i=0;i<16;i++){
+    const mark=document.createElement('img');
+    mark.src=logo;
+    mark.alt='';
+    mark.style.left=(i%4*25+5+Math.random()*15)+'%';
+    mark.style.top=(Math.floor(i/4)*25+5+Math.random()*15)+'%';
+    mark.style.setProperty('--vibra-logo-angle',(Math.random()*42-21)+'deg');
+    backdrop.append(mark);
+  }
+  box.prepend(backdrop);
+},{once:true});
+v.src=m.url;if(m.type==='video'){v.controls=true;v.playsInline=true;v.loop=true;v.autoplay=true;v.muted=true;v.setAttribute('aria-label','Video del servicio: reproducción automática en bucle');}v.alt=m.alt||'Archivo multimedia';box.append(v);if(m.type==='video')v.play().catch(()=>{});q('#vsmCount').textContent=(galleryIndex+1)+' de '+galleryItems.length;}
 function showViewer(id){const m=allMedia.filter(x=>x.practitioner_id===id&&x.object_path).map(x=>({url:mediaUrl(x.object_path),type:x.media_type==='video'?'video':'image',alt:'Imagen del servicio'})).filter(x=>x.url);if(!m.length)return;galleryItems=m;galleryIndex=0;const gallery=viewer();gallery.classList.add('open'); /* MODIFICADO: vista compacta del servicio. */
 if(!gallery.querySelector('.vibra-compact-service-tabs')){
   const tabs=vibraCompactControls(['Galería','Información'],index=>{
@@ -7369,4 +7399,69 @@ function vibraCompactControls(labels,select){
 }
 </script>
 
+
+<!-- NUEVO: contraste de controles y visores en ambos temas -->
+<style>
+body{--vibra-ui-surface:#fff;--vibra-ui-neutral:#edf1f7;--vibra-ui-text:#19243a;--vibra-ui-muted:#46566d;--vibra-ui-border:#a1aec0;--vibra-ui-stage:#e5eaf2}
+body.dark-mode{--vibra-ui-surface:#181e29;--vibra-ui-neutral:#273242;--vibra-ui-text:#f0f4fc;--vibra-ui-muted:#bdc9da;--vibra-ui-border:#647389;--vibra-ui-stage:#101620}
+html body :is(.vibra-compact-controls button:not([aria-pressed=true]),#vscopeBusinessLinks button,.v18-address-suggestion,.vibra-svg-library button,.ticket-footer-icons label,.vibra-upload-slot){
+  background:var(--vibra-ui-neutral)!important;color:var(--vibra-ui-text)!important;border-color:var(--vibra-ui-border)!important
+}
+html body :is(.notice,.supabase-status,#vibraExternalTransport,#vibraRoutePlan,#vscopeTicketQrSocial,#vscopeTripQuick,.vscope-mini-map){
+  background:var(--vibra-ui-neutral);color:var(--vibra-ui-text)
+}
+html body :is(.modal,.drawer,.section-card,.product-card,.vibra-service-card,.vsm-dialog) :is(.muted,.desc,.meta){color:var(--vibra-ui-muted)}
+html body :is(.modal,.drawer,.section-card,.product-card,.vibra-service-card,.vsm-dialog) :is(input,select,textarea)::placeholder{color:var(--vibra-ui-muted);opacity:1}
+html body :is(#catalogGrid .status-badge,#vibraServiceCatalog .status-badge){background:var(--vibra-ui-neutral)!important;color:var(--vibra-ui-text)!important;border-color:var(--vibra-ui-border)!important}
+html body :is(.btn,.icon-btn,.vsm-media-button,.vibra-compact-controls button,#vscopeBusinessLinks button) > :is(span,svg,small){color:inherit!important;opacity:1}
+html body :is(.btn:not(.ghost):not(.danger):not(.success),.icon-btn,.vsm-media-button){--vibra-ui-on-brand:var(--vibra-on-primary,#fff)}
+html body :is(.btn:not(.secondary):not(.ghost):not(.danger):not(.success),.icon-btn,.vsm-media-button){color:var(--vibra-ui-on-brand)!important}
+body:is(.dark-mode,:not(.dark-mode)) #v15Experience .v15-experience-actions .btn{color:var(--vibra-on-primary,#fff)!important}
+body:is(.dark-mode,:not(.dark-mode)) #vsmGallery #vsmProfileSocial a,
+body:is(.dark-mode,:not(.dark-mode)) #vsmGallery #vsmProfileSocial a :is(span,svg){color:#f7f8fc!important}
+body:is(.dark-mode,:not(.dark-mode)) #vsmGallery #vsmProfileSocial a{background:#303743!important;border-color:#687386}
+body:is(.dark-mode,:not(.dark-mode)) #vsmGallery #vsmViewerDetails{color:var(--vibra-ui-muted)!important;opacity:1}
+body:is(.dark-mode,:not(.dark-mode)) #vsmGallery .vsm-close{background:var(--vibra-ui-neutral)!important;color:var(--vibra-ui-text)!important;border-color:var(--vibra-ui-border)!important}
+#v18BusinessModal .v18-hours-list{gap:0}
+#v18BusinessModal .v18-hours-line{padding-block:3px}
+#v18BusinessModal .v18-hours-status.open{background:#dcefe4!important;color:#145737!important}
+#v18BusinessModal .v18-hours-status.closed{background:#fbe5e5!important;color:#8b2424!important}
+body.dark-mode #v18BusinessModal .v18-hours-status.open{background:#19392d!important;color:#b5efd0!important}
+body.dark-mode #v18BusinessModal .v18-hours-status.closed{background:#43272e!important;color:#ffced2!important}
+html body :is(.modal,.drawer,#vsmGallery) :is(button,a,input,select,textarea):focus-visible{outline:2px solid currentColor;outline-offset:2px}
+
+#productViewerModal.product-viewer .modal-body{max-height:calc(94dvh - 65px)!important;gap:6px 14px}
+#productViewerModal.product-viewer .product-large-view{height:clamp(160px,68dvh,750px)!important;background:var(--vibra-ui-stage)}
+#productViewerModal.product-viewer .product-large-view #productZoomImage{min-width:0;min-height:0}
+#productViewerModal.product-viewer .product-large-view :is(img,svg){max-height:calc(clamp(160px,68dvh,750px) - 12px)!important;max-width:100%!important}
+#productViewerModal.product-viewer .modal-body>h3{margin-block:3px}
+#productViewerModal.product-viewer #productZoomRange{accent-color:var(--primary)}
+body:has(#vsmGallery.open){overflow:hidden}
+#vsmGallery.open{overflow:hidden}
+#vsmGallery .vsm-dialog{height:min(94dvh,1040px);max-height:94dvh!important;padding:8px;background:var(--vibra-ui-surface);color:var(--vibra-ui-text);border-color:var(--vibra-ui-border)}
+#vsmGallery .vsm-viewer-header{min-height:0;padding:5px 8px}
+#vsmGallery .vsm-viewer-body{min-height:0;grid-template-columns:minmax(0,1.2fr) minmax(250px,1fr);gap:8px;overflow:hidden}
+#vsmGallery .vsm-viewer-stage{height:100%;min-height:0;min-width:0;background:var(--vibra-ui-stage);grid-template:minmax(0,1fr)/minmax(0,1fr);isolation:isolate}
+#vsmGallery .vsm-viewer-stage > :is(img,video){position:relative;grid-area:1/1;z-index:1;width:auto;height:100%;min-height:0;max-height:100%;max-width:100%;object-fit:contain;margin:0}
+#vsmGallery .vsm-viewer-sidebar{padding:8px!important;min-height:0;max-height:100%!important;overflow:auto;overscroll-behavior:contain}
+#vsmGallery #vsmProfileInfo{gap:4px}
+#vsmGallery #vsmProfileInfo p{margin:4px 0;line-height:1.34;padding:5px 8px}
+#vsmGallery .vibra-availability-note{color:var(--vibra-ui-muted)!important}
+#vsmGallery .vsm-info-row,#vsmGallery #vsmProfileInfo>div{padding-block:5px}
+#vsmGallery #vsmProfileSocial{gap:5px;margin-block:5px}
+#vsmGallery .vsm-viewer-interact{padding-top:5px}
+#vsmGallery .vsm-actions{padding:2px 0;color:var(--vibra-ui-text)}
+#vsmGallery .vsm-actions button{background:var(--vibra-ui-neutral);color:var(--vibra-ui-text);border-color:var(--vibra-ui-border)}
+#vsmGallery .vibra-portrait-logos{position:absolute;inset:0;z-index:0;pointer-events:none;overflow:hidden}
+#vsmGallery .vibra-portrait-logos img{position:absolute;width:clamp(26px,9%,68px);height:auto;opacity:.13;transform:translate(-50%,-50%) rotate(var(--vibra-logo-angle));object-fit:contain}
+body.dark-mode #vsmGallery .vibra-portrait-logos img{opacity:.23}
+#vsmGallery .vsm-media-changing:after{z-index:2}
+@media(max-width:820px){
+  #productViewerModal.product-viewer .product-large-view{height:clamp(130px,46dvh,520px)!important}
+  #productViewerModal.product-viewer .product-large-view :is(img,svg){max-height:calc(clamp(130px,46dvh,520px) - 10px)!important}
+}
+@media(max-width:760px){
+  #vsmGallery .vsm-viewer-body{display:block;max-height:none}
+}
+</style>
 </html>
