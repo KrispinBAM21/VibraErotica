@@ -808,35 +808,37 @@ function showMapConfigNeeded(containerId){
   if(!el)return;
   el.innerHTML=`<div class="empty-state" style="height:100%;min-height:220px;display:grid;place-items:center;padding:24px;text-align:center"><div>${UI.map}<strong style="display:block;margin:8px 0">Falta configurar CARTO</strong><span class="small muted">El administrador debe guardar una clave CARTO y desplegar la función carto-tiles.</span></div></div>`;
 }
+// MODIFICADO: respaldo inmediato en el mismo mapa y ajuste al mostrar su contenedor.
 function addConfiguredTileLayer(map,containerId){
   const url=cartoTileUrl();
-  if(!url){showMapConfigNeeded(containerId);return false}
+  const host=map.getContainer();
+  const resize=new ResizeObserver(()=>{
+    if(host.clientWidth&&host.clientHeight)map.invalidateSize({pan:false});
+  });
+  resize.observe(host);
+  map.once('unload',()=>resize.disconnect());
+
+  function fallback(tiles){
+    if(map._vibraFallbackTiles)return true;
+    try{
+      if(tiles&&map.hasLayer(tiles))map.removeLayer(tiles);
+      map._vibraFallbackTiles=L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png',{
+        maxZoom:20,maxNativeZoom:19,subdomains:'abc',attribution:'&copy; OpenStreetMap contributors'
+      }).addTo(map);
+      return true;
+    }catch(fallbackError){console.warn('Mapa alternativo:',fallbackError);return false}
+  }
+  if(!url)return fallback();
+  let tiles;
   try{
-    const tiles=L.tileLayer(url,{
+    tiles=L.tileLayer(url,{
       maxZoom:20,
       attribution:'&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors, &copy; <a href="https://carto.com/attribution/">CARTO</a>'
-    }).addTo(map);
-    let failures=0;
-    tiles.on('tileerror',async()=>{
-      if(++failures!==2)return;
-      if(!map._vibraFallbackTiles){
-        try{
-          map.removeLayer(tiles);
-          map._vibraFallbackTiles=L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png',{
-            maxZoom:19,subdomains:'abc',attribution:'&copy; OpenStreetMap contributors'
-          }).addTo(map);
-        }catch(fallbackError){console.warn('Mapa alternativo:',fallbackError)}
-      }
-      let detail='No fue posible descargar las teselas CARTO; se intentó usar OpenStreetMap como respaldo.';
-      try{const probe=url.replace('{z}','4').replace('{x}','3').replace('{y}','7');const response=await fetch(probe);if(!response.ok)detail+=' HTTP '+response.status+': '+(await response.text()).slice(0,180)}catch(error){detail+=' '+error.message}
-      const host=document.getElementById(containerId);
-      if(host&&!host.querySelector('.vibra-map-error')&&!map._vibraFallbackTiles){const note=document.createElement('div');note.className='vibra-map-error';note.textContent=detail;host.append(note)}
     });
+    tiles.once('tileerror',()=>fallback(tiles));
+    tiles.addTo(map);
     return true;
-  }catch(e){
-    showMapConfigNeeded(containerId);
-    return false;
-  }
+  }catch(e){return fallback(tiles)}
 }
 
 function initClientMap(){if(!document.getElementById('clientMap')||typeof L==='undefined')return;const center=checkout.lat!=null?[checkout.lat,checkout.lng]:[state.config.origin.lat,state.config.origin.lng];if(clientMap){clientMap.remove();clientMap=null}clientMap=L.map('clientMap',{rotate:true,touchRotate:true,dragRotate:true,shiftKeyRotate:true,rotateControl:{position:"topright",behavior:"reset",closeOnZeroBearing:false}}).setView(center,13);if(!addConfiguredTileLayer(clientMap,'clientMap')){clientMap.remove();clientMap=null;return;}customerMarker=L.marker(center,{draggable:true}).addTo(clientMap);customerMarker.on('dragend',async e=>{const ll=e.target.getLatLng();checkout.lat=ll.lat;checkout.lng=ll.lng;await computeClientRoute()});clientMap.on('click',e=>{customerMarker.setLatLng(e.latlng);checkout.lat=e.latlng.lat;checkout.lng=e.latlng.lng;computeClientRoute()})}
@@ -4514,7 +4516,9 @@ let paintExperience=window.vibraPaintExperience||function(){};
 paintExperience=function(){
   let h=document.getElementById('v15Experience');if(!h){h=document.createElement('section');h.id='v15Experience';document.querySelector('.container.controls')?.before(h)}
   h.className='container v17-experience';const s=summary?.scores||{},avg=Number(s.overall||0);
-  h.innerHTML=`<button class="v17-experience-toggle" id="v17ExperienceToggle" aria-expanded="false"><div><h3>Tu experiencia importa</h3><p>Califica el negocio, conoce el perfil, consulta opiniones y síguenos.</p></div><span class="v17-experience-chevron">${V17_ICON.chev}</span></button><div class="v17-experience-panel"><div><div class="v17-experience-inner"><div class="v17-experience-summary"><span class="v17-stars">${avg?'★'.repeat(Math.round(avg)):'☆☆☆☆☆'}</span><span>${avg?avg.toFixed(1):'Sin calificaciones'} · ${Number(s.reviews||0)} opiniones · ${Number(summary?.followers||0)} seguidores</span></div><div class="v17-experience-actions"><button class="btn v16-glow-btn" id="v17KnowBusiness">🏪 <span>Conocer el negocio</span></button><button class="btn" id="v17Rate">${V12I.comment}<span>Opiniones y calificar</span></button><button class="btn secondary" id="v17Follow">${UI.check}<span>${summary?.following?'Siguiendo':'Seguir'}</span></button></div></div></div></div>`;
+  // MODIFICADO: iconos propios para las acciones y la puntuación de la barra.
+  const experienceSvg=path=>`<svg aria-hidden="true" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round">${path}</svg>`;
+  h.innerHTML=`<button class="v17-experience-toggle" id="v17ExperienceToggle" aria-expanded="false"><div><h3>Tu experiencia importa</h3><p>Califica el negocio, conoce el perfil, consulta opiniones y síguenos.</p></div><span class="v17-experience-chevron">${V17_ICON.chev}</span></button><div class="v17-experience-panel"><div><div class="v17-experience-inner"><div class="v17-experience-summary"><span class="v17-stars">${Array.from({length:avg?Math.min(5,Math.max(0,Math.round(avg))):5},()=>experienceSvg('<path d="m12 3 2.8 5.7 6.2.9-4.5 4.4 1 6.2-5.5-2.9-5.5 2.9 1-6.2L3 9.6l6.2-.9L12 3Z"/>')).join('')}</span><span>${avg?avg.toFixed(1):'Sin calificaciones'} · ${Number(s.reviews||0)} opiniones · ${Number(summary?.followers||0)} seguidores</span></div><div class="v17-experience-actions"><button class="btn v16-glow-btn" id="v17KnowBusiness">${experienceSvg('<path d="M3 21h18M5 21V9l7-6 7 6v12M10 21v-6h4v6M8 10h1m6 0h1"/>')}<span>Conocer el negocio</span></button><button class="btn" id="v17Rate">${experienceSvg('<path d="M4 4h16v12H9l-5 4V4Z"/><path d="m12 6 1 2.2 2.4.3-1.7 1.7.4 2.4-2.1-1.1-2.1 1.1.4-2.4-1.7-1.7 2.4-.3Z"/>')}<span>Opiniones y calificar</span></button><button class="btn secondary" id="v17Follow">${experienceSvg(summary?.following?'<path d="M10 4a6 6 0 0 0-6 6v5l-2 3h16l-2-3v-5a6 6 0 0 0-6-6Zm-2 16a2 2 0 0 0 4 0M18 5h4"/>':'<path d="M10 4a6 6 0 0 0-6 6v5l-2 3h16l-2-3v-3m-8 8a2 2 0 0 0 4 0M19 3v6m-3-3h6"/>')}<span>${summary?.following?'Siguiendo':'Seguir'}</span></button></div></div></div></div>`;
   const toggle=document.getElementById('v17ExperienceToggle');toggle.onclick=()=>{const open=!h.classList.contains('open');h.classList.toggle('open',open);toggle.setAttribute('aria-expanded',String(open));clearTimeout(v17ExperienceTimer);if(open)v17ExperienceTimer=setTimeout(()=>{if(h.isConnected){h.classList.remove('open');toggle.setAttribute('aria-expanded','false')}},10*60*1000)};
   document.getElementById('v17KnowBusiness').onclick=()=>openBusinessShowcase();document.getElementById('v17Rate').onclick=()=>openRateBusinessModal();document.getElementById('v17Follow').onclick=async e=>{if(!customerSession){renderCustomerProfile();openModal('customerProfileModal');return toast('Inicia sesión para seguir al negocio.','info')}try{const r=await v16Community('toggle_follow',{});summary.following=r.following;summary.followers=r.followers;paintExperience()}catch(err){toast(err.message,'error')}};
 };
@@ -4807,11 +4811,9 @@ function showAuthenticated(session){
   if(customerSession?.user?.id&&customerSession.user.id!==id)return;
   customerSession=session;
   adminSession=session;
-  customerAuthView='login';
+  // MODIFICADO: reconciliar la identidad sin reiniciar la vista de cuenta.
   renderAccountButton();
   renderTrackingButtons();
-  const modal=document.getElementById('customerProfileModal');
-  if(modal?.classList.contains('show'))renderCustomerProfile();
   // Nunca conceder permisos: panelVerify debe confirmarlos con el servidor.
 }
 window.v22AuthSync=showAuthenticated;
@@ -4843,13 +4845,22 @@ setTimeout(reconcileSession,1500);
 <script id="vibra-admin-role-fix">
 (function(){
   'use strict';
+  // MODIFICADO: conservar la visibilidad durante la consulta y descartar respuestas de otra sesión.
   let verifiedUserId=null;
   let verifying=null;
+  let sessionUserId=null;
+  let sessionRevision=0;
   syncAdminVisibility=function(){
     const btn=document.getElementById('adminBtn');
     if(!btn)return;
+    const userId=customerSession?.user?.id||null;
+    if(userId!==sessionUserId){
+      sessionUserId=userId;
+      sessionRevision++;
+      verifiedUserId=null;
+    }
     const allowed=!!verifiedUserId&&adminSession?.user?.id===verifiedUserId&&
-      customerSession?.user?.id===verifiedUserId&&panelAccess?.owner===true;
+      userId===verifiedUserId&&panelAccess?.owner===true;
     btn.hidden=!allowed;
     btn.style.display=allowed?'':'none';
     btn.dataset.authorized=allowed?'true':'false';
@@ -4857,31 +4868,43 @@ setTimeout(reconcileSession,1500);
     btn.tabIndex=allowed?0:-1;
   };
   panelVerify=async function(){
-    if(verifying)return verifying;
-    verifying=(async()=>{
+    syncAdminVisibility();
+    const userId=sessionUserId,revision=sessionRevision;
+    if(!supabaseClient||!userId)return false;
+    if(verifying?.revision===revision)return verifying.promise;
+    const current=()=>sessionRevision===revision&&customerSession?.user?.id===userId&&adminSession?.user?.id===userId;
+    const clear=()=>{
       verifiedUserId=null;
       panelAccess={owner:false,master:false,modules:[]};
       syncAdminVisibility();
-      if(!supabaseClient)return false;
+    };
+    const promise=(async()=>{
       const {data:auth,error:authError}=await supabaseClient.auth.getUser();
-      const user=auth?.user;
-      if(authError||!user){adminSession=null;return false;}
-      const {data:sesh}=await supabaseClient.auth.getSession();
-      if(!sesh?.session||sesh.session.user?.id!==user.id)return false;
-      customerSession=sesh.session;
-      adminSession=sesh.session;
+      if(!current())return false;
+      if(authError){
+        if(authError.name==='AuthSessionMissingError'||[401,403].includes(authError.status))clear();
+        return false;
+      }
+      if(auth?.user?.id!==userId){clear();return false}
       // La fila solo puede leerse con RLS para el propio usuario.
       const {data:role,error:roleError}=await supabaseClient
-        .from('staff_roles').select('role').eq('user_id',user.id).maybeSingle();
-      if(roleError){console.warn('No se pudo consultar staff_roles:',roleError.message);return false;}
-      if(role?.role!=='admin')return false;
+        .from('staff_roles').select('role').eq('user_id',userId).maybeSingle();
+      if(!current())return false;
+      if(roleError){
+        console.warn('No se pudo consultar staff_roles:',roleError.message);
+        if(['42501','PGRST301'].includes(roleError.code))clear();
+        return false;
+      }
+      if(role?.role!=='admin'){clear();return false}
       // No se concede acceso basándose en caché local o metadatos editables.
-      verifiedUserId=user.id;
+      verifiedUserId=userId;
       panelAccess={owner:true,master:false,modules:adminTabs.map(([id])=>id)};
       syncAdminVisibility();
       return true;
-    })();
-    try{return await verifying}finally{verifying=null;syncAdminVisibility()}
+    })().catch(error=>{console.warn('Verificación de permisos:',error.message);return false});
+    verifying={revision,promise};
+    try{return await promise}
+    finally{if(verifying?.promise===promise)verifying=null;syncAdminVisibility()}
   };
   const button=document.getElementById('adminBtn');
   if(button){
@@ -5907,23 +5930,8 @@ if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',
 </script>
 
 <script id="vibra-authorized-functional-fixes">
-/* NUEVO: verificación administrativa sin vaciar permisos mientras se comprueba la misma sesión */
+/* MODIFICADO: la verificación y su concurrencia se gestionan en vibra-admin-role-fix. */
 (function(){
- if(typeof panelVerify==='function'){
-  const originalVerify=panelVerify;let pending=null,verifiedUser=null,verifiedUntil=0;
-  panelVerify=async function(){
-   if(!supabaseClient)return false;
-   let session=null;try{const r=await supabaseClient.auth.getSession();session=r.data?.session||null;}catch{}
-   if(!session?.user){verifiedUser=null;verifiedUntil=0;panelAccess={owner:false,modules:[]};return false}
-   const uid=session.user.id;
-   if(verifiedUser===uid&&Date.now()<verifiedUntil&&(panelAccess.owner||panelAccess.modules?.length))return true;
-   if(pending)return pending;
-   const last=(verifiedUser===uid)?{owner:panelAccess.owner,modules:[...(panelAccess.modules||[])]}:null;
-   pending=(async()=>{try{const ok=await originalVerify();if(ok){verifiedUser=uid;verifiedUntil=Date.now()+45000;}else if(last&&(last.owner||last.modules.length)){panelAccess=last;verifiedUntil=Date.now()+8000;return true;}return ok;}finally{pending=null}})();
-   return pending;
-  };
-  if(supabaseClient?.auth?.onAuthStateChange)supabaseClient.auth.onAuthStateChange((event)=>{if(event==='SIGNED_OUT'){verifiedUser=null;verifiedUntil=0;panelAccess={owner:false,modules:[]}}});
- }
  /* NUEVO: navegar con permisos comprobados, evitando alertas durante la reconexión. */
  const priorAdminPane=renderAdminPane;
  renderAdminPane=async function(id){if(adminSession&&!panelCan(id)){try{await panelVerify()}catch(e){console.warn('Verificación de permisos',e)}}return priorAdminPane(id)};
@@ -6513,7 +6521,7 @@ async function renderRoomPreview(){
 }
 function replaceEmojiBusinessButtons(){
   $$('.v16-glow-btn,#v17KnowBusiness,#v18BusinessBack,#v18BusinessDirections').forEach(btn=>{
-    if(/Conocer el negocio/i.test(btn.textContent||'') && !btn.dataset.svgClean){
+    if(btn.id!=='v17KnowBusiness' && /Conocer el negocio/i.test(btn.textContent||'') && !btn.dataset.svgClean){ // MODIFICADO: conservar el SVG propio de la barra.
       btn.dataset.svgClean='1';
       btn.innerHTML=`${icon.store}<span>Conocer el negocio</span>`;
     }
@@ -6933,4 +6941,80 @@ if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',
 #whatsappFab svg{animation:vibraWaLeftToRightHalf 7s ease-in-out infinite!important;backface-visibility:visible;transform-origin:center}
 @media(prefers-reduced-motion:reduce){#whatsappFab svg{animation:none!important}}
 </style>
+
+<!-- NUEVO: contraste de superficies y ajuste del formulario de acceso -->
+<style>
+/* La portada fotográfica conserva una paleta propia en ambos modos. */
+#v18BusinessModal .v18-business-hero::before{content:"";position:absolute;inset:0;z-index:1;background:linear-gradient(90deg,#180b19e6,#180b1966);pointer-events:none}
+#v18BusinessModal .v18-business-title :is(h2,p){color:#fff!important}
+#v18BusinessModal .v18-business-meta .v18-business-chip,
+#v16BusinessModal .v16-meta-chip{background:#261525!important;color:#fff!important;border:1px solid #a8819e}
+#v18BusinessModal .v18-business-meta .v18-business-chip :is(span,svg),
+#v16BusinessModal .v16-meta-chip :is(span,svg){color:inherit!important}
+#v18BusinessModal .v18-business-card .muted{color:var(--muted)}
+body:not(.dark-mode) #v18BusinessModal .v18-business-card .muted{color:#495a70}
+body:not(.dark-mode) #vsmGallery .vsm-viewer-sidebar .vsm-viewer-social a{color:#fff!important}
+
+/* Los controles neutros se leen sobre su propia superficie y conservan sus estados. */
+:is(.modal,.drawer,.section-card,.leaflet-popup,.vscope-route-box,.vibra-room-preview,.vibra-experience-balanced) :is(input,textarea)::placeholder{color:var(--muted);opacity:1}
+:is(.modal,.drawer,.section-card,.vibra-experience-balanced,.vscope-route-box) :is(button,a,input,select,textarea):focus-visible{outline:2px solid currentColor;outline-offset:2px}
+#v15Experience .v17-experience-summary{color:var(--text)}
+#v15Experience .v17-stars{color:#8b5300;display:inline-flex;gap:2px}
+body.dark-mode #v15Experience .v17-stars{color:#ffca64}
+#v15Experience .v17-stars svg{width:17px;height:17px;flex:none}
+#v15Experience .v17-experience-actions svg{width:20px;height:20px;flex:none}
+#v15Experience .v17-experience-chevron{color:var(--text)}
+[data-vibra-match-pending]{color:#6c4300!important;background:#fff0bf!important;border:1px solid #a36d12;border-radius:6px;padding:1px 5px}
+body.dark-mode [data-vibra-match-pending],#adminModal [data-vibra-match-pending]{color:#ffdf92!important;background:#3e2b15!important;border-color:#c69236}
+
+/* En pantallas muy bajas, el teclado, la rueda y el gesto mantienen el acceso al formulario. */
+body.vibra-entry-login #customerProfileModal{top:clamp(8px,3dvh,32px)!important;max-height:94dvh!important}
+body.vibra-entry-login #customerProfileModal .modal-body{max-height:calc(94dvh - 2px)!important;overflow-y:auto!important;scrollbar-width:none;padding:clamp(10px,2dvh,18px) 18px!important}
+body.vibra-entry-login #customerProfileModal .modal-body::-webkit-scrollbar{display:none}
+body.vibra-entry-login #customerProfileModal .auth-intro{padding:0!important;margin:0!important}
+body.vibra-entry-login #customerProfileModal .auth-intro :is(h3,p){margin:0 0 clamp(4px,1dvh,10px)!important}
+body.vibra-entry-login #customerProfileModal :is(.auth-tabs,.auth-divider){margin:clamp(5px,1.1dvh,10px) 0!important}
+body.vibra-entry-login #customerProfileModal #foodAuthForm .field{margin:0 0 clamp(5px,1dvh,10px)!important}
+body.vibra-entry-login #customerProfileModal :is(.btn,#vibraGuestAccess,#foodAuthForm input){min-height:40px!important;padding-block:clamp(6px,1.2dvh,10px)!important}
+body.vibra-entry-login #customerProfileModal #foodAuthStatus:empty{display:none}
+body.vibra-entry-login #customerProfileModal #foodAuthSubmit{margin-bottom:0!important}
+body.vibra-entry-login #customerProfileModal :is(#authRecover,#vibraGuestAccess){margin-top:clamp(5px,1.1dvh,10px)!important}
+@media(max-width:700px){
+  body.vibra-entry-login #customerProfileModal{top:clamp(8px,calc(100dvh - 570px),20dvh)!important;max-height:calc(100dvh - clamp(8px,calc(100dvh - 570px),20dvh) - 8px)!important}
+  body.vibra-entry-login #customerProfileModal .modal-body{max-height:calc(100dvh - clamp(8px,calc(100dvh - 570px),20dvh) - 10px)!important}
+}
+</style>
+
+<!-- NUEVO: identificación visual de notas pendientes cargadas dinámicamente -->
+<script>
+(()=>{
+  const note=/emparejamiento\s+por\s+confirmar/i;
+  const recordArea='#catalogGrid,#vibraServiceCatalog,#viPublicWrap,#adminContent,.modal-body,.drawer-body,#vibraReserveShell';
+  const excluded='script,style,textarea,select,button,[contenteditable],[data-vibra-match-pending]';
+  function mark(root){
+    if(root.nodeType===1&&(!root.textContent||!note.test(root.textContent)))return;
+    const walker=document.createTreeWalker(root,NodeFilter.SHOW_TEXT);
+    const nodes=[];
+    if(root.nodeType===3)nodes.push(root);
+    while(walker.nextNode())nodes.push(walker.currentNode);
+    for(const node of nodes){
+      const parent=node.parentElement,match=node.data.match(note);
+      if(!match||!parent?.closest(recordArea)||parent.closest(excluded))continue;
+      const original=node.splitText(match.index);
+      original.splitText(match[0].length);
+      const badge=document.createElement('span');
+      badge.dataset.vibraMatchPending='';
+      original.replaceWith(badge);
+      badge.append('Pendiente · ',original);
+    }
+  }
+  mark(document.body);
+  new MutationObserver(changes=>{
+    for(const change of changes){
+      if(change.type==='characterData')mark(change.target);
+      else for(const node of change.addedNodes)mark(node);
+    }
+  }).observe(document.body,{subtree:true,childList:true,characterData:true});
+})();
+</script>
 </html>
