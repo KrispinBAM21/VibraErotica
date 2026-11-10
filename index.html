@@ -800,7 +800,7 @@ function cartoTileUrl(){
   const key=(m.apiKey||'').trim();
   const style=['voyager','light_all','dark_all'].includes(m.style)?m.style:'voyager';
   if(!/^https:\/\/.+\.supabase\.co$/i.test(SUPABASE_URL))return '';
-  return `${SUPABASE_URL}/functions/v1/carto-tiles/${style}/{z}/{x}/{y}.png`;
+  return `${SUPABASE_URL}/functions/v1/carto-tiles/${style}/{z}/{x}/{y}.png?rev=2`; // MODIFICADO: separar teselas del caché anterior.
 }
 function mapConfigured(){return !!cartoTileUrl()}
 function showMapConfigNeeded(containerId){
@@ -808,37 +808,57 @@ function showMapConfigNeeded(containerId){
   if(!el)return;
   el.innerHTML=`<div class="empty-state" style="height:100%;min-height:220px;display:grid;place-items:center;padding:24px;text-align:center"><div>${UI.map}<strong style="display:block;margin:8px 0">Falta configurar CARTO</strong><span class="small muted">El administrador debe guardar una clave CARTO y desplegar la función carto-tiles.</span></div></div>`;
 }
-// MODIFICADO: respaldo inmediato en el mismo mapa y ajuste al mostrar su contenedor.
+// MODIFICADO: comprobar el proxy actualizado y resolver la capa inicial antes de cualquier clic.
 function addConfiguredTileLayer(map,containerId){
-  const url=cartoTileUrl();
   const host=map.getContainer();
+  if(map._vibraTileState)return true;
+  const state=map._vibraTileState={active:true};
   const resize=new ResizeObserver(()=>{
     if(host.clientWidth&&host.clientHeight)map.invalidateSize({pan:false});
   });
   resize.observe(host);
-  map.once('unload',()=>resize.disconnect());
+  const controller=new AbortController();
+  let tiles,deadline;
 
-  function fallback(tiles){
-    if(map._vibraFallbackTiles)return true;
-    try{
-      if(tiles&&map.hasLayer(tiles))map.removeLayer(tiles);
-      map._vibraFallbackTiles=L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png',{
-        maxZoom:20,maxNativeZoom:19,subdomains:'abc',attribution:'&copy; OpenStreetMap contributors'
-      }).addTo(map);
-      return true;
-    }catch(fallbackError){console.warn('Mapa alternativo:',fallbackError);return false}
+  function fallback(){
+    if(!state.active||map._vibraFallbackTiles)return;
+    clearTimeout(deadline);
+    controller.abort();
+    if(tiles&&map.hasLayer(tiles))map.removeLayer(tiles);
+    map._vibraFallbackTiles=L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png',{
+      maxZoom:20,maxNativeZoom:19,subdomains:'abc',attribution:'&copy; OpenStreetMap contributors'
+    }).addTo(map);
   }
-  if(!url)return fallback();
-  let tiles;
-  try{
+  map.once('unload',()=>{
+    state.active=false;
+    resize.disconnect();
+    clearTimeout(deadline);
+    controller.abort();
+  });
+  const url=cartoTileUrl();
+  if(!url){fallback();return true}
+  deadline=setTimeout(fallback,4500);
+  (async()=>{
+    const zoom=Math.max(0,Math.min(20,Math.round(map.getZoom())));
+    const point=map.project(map.getCenter(),zoom).divideBy(256).floor();
+    const world=2**zoom;
+    const probe=url.replace('{z}',zoom).replace('{x}',((point.x%world)+world)%world)
+      .replace('{y}',Math.max(0,Math.min(world-1,point.y)));
+    const response=await fetch(probe,{signal:controller.signal});
+    const verified=response.ok&&response.headers.get('X-Vibra-Carto-Proxy')==='2'&&
+      (response.headers.get('Content-Type')||'').startsWith('image/');
+    if(!verified){response.body?.cancel().catch(()=>{});fallback();return}
+    await response.arrayBuffer();
+    if(!state.active||controller.signal.aborted)return;
     tiles=L.tileLayer(url,{
-      maxZoom:20,
+      maxZoom:20,crossOrigin:true,
       attribution:'&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors, &copy; <a href="https://carto.com/attribution/">CARTO</a>'
     });
-    tiles.once('tileerror',()=>fallback(tiles));
+    tiles.once('tileerror',fallback);
+    tiles.once('load',()=>clearTimeout(deadline));
     tiles.addTo(map);
-    return true;
-  }catch(e){return fallback(tiles)}
+  })().catch(()=>fallback());
+  return true;
 }
 
 function initClientMap(){if(!document.getElementById('clientMap')||typeof L==='undefined')return;const center=checkout.lat!=null?[checkout.lat,checkout.lng]:[state.config.origin.lat,state.config.origin.lng];if(clientMap){clientMap.remove();clientMap=null}clientMap=L.map('clientMap',{rotate:true,touchRotate:true,dragRotate:true,shiftKeyRotate:true,rotateControl:{position:"topright",behavior:"reset",closeOnZeroBearing:false}}).setView(center,13);if(!addConfiguredTileLayer(clientMap,'clientMap')){clientMap.remove();clientMap=null;return;}customerMarker=L.marker(center,{draggable:true}).addTo(clientMap);customerMarker.on('dragend',async e=>{const ll=e.target.getLatLng();checkout.lat=ll.lat;checkout.lng=ll.lng;await computeClientRoute()});clientMap.on('click',e=>{customerMarker.setLatLng(e.latlng);checkout.lat=e.latlng.lat;checkout.lng=e.latlng.lng;computeClientRoute()})}
@@ -1663,7 +1683,27 @@ const v7AccountButton=renderAccountButton;renderAccountButton=function(){v7Accou
 const v7DrawAuth=drawCustomerAuth;drawCustomerAuth=function(host){v7DrawAuth(host);const button=document.getElementById('foodGoogle');if(!button)return;button.onclick=async()=>{if(button.disabled)return;button.disabled=true;const out=document.getElementById('foodAuthStatus');try{if(!supabaseClient)throw Error('Espera a que conecte el sitio.');persistCheckout();await storeProof();sessionStorage.setItem('VibraErotica.oauthPending','1');const {data,error}=await supabaseClient.auth.signInWithOAuth({provider:'google',options:{redirectTo:location.origin+location.pathname,skipBrowserRedirect:true,queryParams:{prompt:'select_account'}}});if(error)throw error;if(!data?.url)throw Error('Google no devolvió una dirección de acceso. Comprueba la configuración OAuth.');location.assign(data.url)}catch(e){sessionStorage.removeItem('VibraErotica.oauthPending');if(out)out.textContent=e.message;button.disabled=false}};document.getElementById('foodAuthStatus')?.classList.add('auth-feedback')};
 // Única suscripción Auth: sus callbacks aplazan cualquier consulta fuera del bloqueo de sesión.
 let v7AuthSubscription,v7LiveChannel;
-initSupabase=async function(){v6Restoring=true;try{if(!window.supabase||!supabaseConfigured())throw Error('No se pudo cargar la conexión al sitio.');if(!supabaseClient)supabaseClient=window.supabase.createClient(SUPABASE_URL,SUPABASE_ANON_KEY,{auth:{persistSession:true,autoRefreshToken:true,detectSessionInUrl:true,flowType:'implicit'}});if(!v7AuthSubscription){const result=supabaseClient.auth.onAuthStateChange((event,session)=>{if(v6Restoring&&event==='INITIAL_SESSION')return;if(v6Restoring&&event==='SIGNED_IN'){customerSession=session;adminSession=session;renderAccountButton();setTimeout(()=>window.v22AuthSync?.(session),0);return;}if(event==='TOKEN_REFRESHED'){customerSession=session;adminSession=session;renderAccountButton();return}setTimeout(()=>{if(event==='SIGNED_OUT'){clearCustomerState();return}if(event==='PASSWORD_RECOVERY'){customerAuthView='update';customerSession=session;renderCustomerProfile();openModal('customerProfileModal');return}customerAuthChanged(session).then(()=>{renderAccountButton();refreshTracking().catch(()=>{})}).catch(e=>toast(e.message,'error'))},0)});v7AuthSubscription=result.data.subscription}let{data,error}=await supabaseClient.auth.getSession();if(error)throw error;
+let v7AuthRevision=0; // NUEVO: invalidar lecturas pendientes ante cambios de identidad.
+initSupabase=async function(){v6Restoring=true;try{if(!window.supabase||!supabaseConfigured())throw Error('No se pudo cargar la conexión al sitio.');if(!supabaseClient)supabaseClient=window.supabase.createClient(SUPABASE_URL,SUPABASE_ANON_KEY,{auth:{persistSession:true,autoRefreshToken:true,detectSessionInUrl:true,flowType:'implicit'}});if(!v7AuthSubscription){const result=supabaseClient.auth.onAuthStateChange((event,session)=>{
+  // MODIFICADO: una sola transición por cambio real de sesión; el refresco no reinicia la cuenta.
+  if(v6Restoring&&event==='INITIAL_SESSION')return;
+  const uid=session?.user?.id;
+  if(uid&&uid===customerSession?.user?.id&&uid===adminSession?.user?.id&&event!=='PASSWORD_RECOVERY'){
+    customerSession=adminSession=session;
+    return;
+  }
+  const revision=++v7AuthRevision;
+  setTimeout(()=>{
+    if(revision!==v7AuthRevision)return;
+    if(!uid||event==='SIGNED_OUT'){clearCustomerState();return}
+    if(event==='PASSWORD_RECOVERY'){
+      customerAuthView='update';customerSession=adminSession=session;
+      syncAdminVisibility();renderCustomerProfile();openModal('customerProfileModal');return;
+    }
+    if(uid===customerSession?.user?.id&&uid===adminSession?.user?.id){customerSession=adminSession=session;return}
+    customerAuthChanged(session).then(()=>{renderAccountButton();refreshTracking().catch(()=>{})}).catch(e=>toast(e.message,'error'));
+  },0);
+});v7AuthSubscription=result.data.subscription}let{data,error}=await supabaseClient.auth.getSession();if(error)throw error;
 if(!data?.session&&customerSession?.access_token){data={session:customerSession}}
 if(!data?.session&&sessionStorage.getItem('VibraErotica.oauthPending')){
   for(let retry=0;retry<4&&!data?.session;retry++){
@@ -4518,7 +4558,8 @@ paintExperience=function(){
   h.className='container v17-experience';const s=summary?.scores||{},avg=Number(s.overall||0);
   // MODIFICADO: iconos propios para las acciones y la puntuación de la barra.
   const experienceSvg=path=>`<svg aria-hidden="true" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round">${path}</svg>`;
-  h.innerHTML=`<button class="v17-experience-toggle" id="v17ExperienceToggle" aria-expanded="false"><div><h3>Tu experiencia importa</h3><p>Califica el negocio, conoce el perfil, consulta opiniones y síguenos.</p></div><span class="v17-experience-chevron">${V17_ICON.chev}</span></button><div class="v17-experience-panel"><div><div class="v17-experience-inner"><div class="v17-experience-summary"><span class="v17-stars">${Array.from({length:avg?Math.min(5,Math.max(0,Math.round(avg))):5},()=>experienceSvg('<path d="m12 3 2.8 5.7 6.2.9-4.5 4.4 1 6.2-5.5-2.9-5.5 2.9 1-6.2L3 9.6l6.2-.9L12 3Z"/>')).join('')}</span><span>${avg?avg.toFixed(1):'Sin calificaciones'} · ${Number(s.reviews||0)} opiniones · ${Number(summary?.followers||0)} seguidores</span></div><div class="v17-experience-actions"><button class="btn v16-glow-btn" id="v17KnowBusiness">${experienceSvg('<path d="M3 21h18M5 21V9l7-6 7 6v12M10 21v-6h4v6M8 10h1m6 0h1"/>')}<span>Conocer el negocio</span></button><button class="btn" id="v17Rate">${experienceSvg('<path d="M4 4h16v12H9l-5 4V4Z"/><path d="m12 6 1 2.2 2.4.3-1.7 1.7.4 2.4-2.1-1.1-2.1 1.1.4-2.4-1.7-1.7 2.4-.3Z"/>')}<span>Opiniones y calificar</span></button><button class="btn secondary" id="v17Follow">${experienceSvg(summary?.following?'<path d="M10 4a6 6 0 0 0-6 6v5l-2 3h16l-2-3v-5a6 6 0 0 0-6-6Zm-2 16a2 2 0 0 0 4 0M18 5h4"/>':'<path d="M10 4a6 6 0 0 0-6 6v5l-2 3h16l-2-3v-3m-8 8a2 2 0 0 0 4 0M19 3v6m-3-3h6"/>')}<span>${summary?.following?'Siguiendo':'Seguir'}</span></button></div></div></div></div>`;
+  // MODIFICADO: toldo de comercio, conversación con lápiz, corazón de seguimiento y apertura.
+  h.innerHTML=`<button class="v17-experience-toggle" id="v17ExperienceToggle" aria-expanded="false"><div><h3>Tu experiencia importa</h3><p>Califica el negocio, conoce el perfil, consulta opiniones y síguenos.</p></div><span class="v17-experience-chevron">${experienceSvg('<path d="M7 9l5 5 5-5m-9 7 4 4 4-4"/>')}</span></button><div class="v17-experience-panel"><div><div class="v17-experience-inner"><div class="v17-experience-summary"><span class="v17-stars">${Array.from({length:avg?Math.min(5,Math.max(0,Math.round(avg))):5},()=>experienceSvg('<path d="m12 3 2.8 5.7 6.2.9-4.5 4.4 1 6.2-5.5-2.9-5.5 2.9 1-6.2L3 9.6l6.2-.9L12 3Z"/>')).join('')}</span><span>${avg?avg.toFixed(1):'Sin calificaciones'} · ${Number(s.reviews||0)} opiniones · ${Number(summary?.followers||0)} seguidores</span></div><div class="v17-experience-actions"><button class="btn v16-glow-btn" id="v17KnowBusiness">${experienceSvg('<path d="M3 10 5 4h14l2 6M3 10c0 3 4 3 4.5 0 .5 3 4 3 4.5 0 .5 3 4 3 4.5 0 .5 3 4.5 3 4.5 0M5 13v7h14v-7M9 20v-5h5v5"/>')}<span>Conocer el negocio</span></button><button class="btn" id="v17Rate">${experienceSvg('<path d="M4 4h13v9H9l-5 4V4Z"/><path d="M7 8h7m-7 3h4m2 8 5-5 3 3-5 5h-3v-3Z"/>')}<span>Opiniones y calificar</span></button><button class="btn secondary" id="v17Follow">${experienceSvg(summary?.following?'<path d="M12 20 4 12a4.5 4.5 0 0 1 6.4-6.4L12 7l1.6-1.4A4.5 4.5 0 0 1 20 12l-8 8Z M9 12h6"/>':'<path d="M12 20 4 12a4.5 4.5 0 0 1 6.4-6.4L12 7l1.6-1.4A4.5 4.5 0 0 1 20 12l-8 8Z M9 12h6m-3-3v6"/>')}<span>${summary?.following?'Siguiendo':'Seguir'}</span></button></div></div></div></div>`;
   const toggle=document.getElementById('v17ExperienceToggle');toggle.onclick=()=>{const open=!h.classList.contains('open');h.classList.toggle('open',open);toggle.setAttribute('aria-expanded',String(open));clearTimeout(v17ExperienceTimer);if(open)v17ExperienceTimer=setTimeout(()=>{if(h.isConnected){h.classList.remove('open');toggle.setAttribute('aria-expanded','false')}},10*60*1000)};
   document.getElementById('v17KnowBusiness').onclick=()=>openBusinessShowcase();document.getElementById('v17Rate').onclick=()=>openRateBusinessModal();document.getElementById('v17Follow').onclick=async e=>{if(!customerSession){renderCustomerProfile();openModal('customerProfileModal');return toast('Inicia sesión para seguir al negocio.','info')}try{const r=await v16Community('toggle_follow',{});summary.following=r.following;summary.followers=r.followers;paintExperience()}catch(err){toast(err.message,'error')}};
 };
@@ -4818,14 +4859,17 @@ function showAuthenticated(session){
 }
 window.v22AuthSync=showAuthenticated;
 async function reconcileSession(){
-  if(!supabaseClient||reconciling)return;
+  if(!supabaseClient||reconciling||v6Restoring)return; // MODIFICADO: la restauración inicial gestiona su propia sesión.
   reconciling=true;
+  const revision=v7AuthRevision; // NUEVO
   try{
     const {data,error}=await supabaseClient.auth.getSession();
     if(error)throw error;
     const session=data?.session;
-    if(!session?.user?.id)return;
+    if(revision!==v7AuthRevision)return; // MODIFICADO: descartar una lectura anterior a un evento de Auth.
+    if(!session?.user?.id){if(customerSession)clearCustomerState();return}
     if(customerSession?.user?.id!==session.user.id)await customerAuthChanged(session);
+    if(revision!==v7AuthRevision)return;
     showAuthenticated(session);
     if(sessionStorage.getItem('VibraErotica.oauthPending')){
       sessionStorage.removeItem('VibraErotica.oauthPending');
@@ -4860,7 +4904,7 @@ setTimeout(reconcileSession,1500);
       verifiedUserId=null;
     }
     const allowed=!!verifiedUserId&&adminSession?.user?.id===verifiedUserId&&
-      userId===verifiedUserId&&panelAccess?.owner===true;
+      userId===verifiedUserId; // MODIFICADO: la visibilidad depende del último rol confirmado para esta sesión.
     btn.hidden=!allowed;
     btn.style.display=allowed?'':'none';
     btn.dataset.authorized=allowed?'true':'false';
@@ -4882,7 +4926,8 @@ setTimeout(reconcileSession,1500);
       const {data:auth,error:authError}=await supabaseClient.auth.getUser();
       if(!current())return false;
       if(authError){
-        if(authError.name==='AuthSessionMissingError'||[401,403].includes(authError.status))clear();
+        // MODIFICADO: un error durante la renovación bloquea la apertura; Auth sincroniza el cierre.
+        if(authError.name==='AuthSessionMissingError')clear();
         return false;
       }
       if(auth?.user?.id!==userId){clear();return false}
@@ -4892,7 +4937,7 @@ setTimeout(reconcileSession,1500);
       if(!current())return false;
       if(roleError){
         console.warn('No se pudo consultar staff_roles:',roleError.message);
-        if(['42501','PGRST301'].includes(roleError.code))clear();
+        if(roleError.code==='42501')clear(); // MODIFICADO: conservar la visibilidad si falla el token transitoriamente.
         return false;
       }
       if(role?.role!=='admin'){clear();return false}
