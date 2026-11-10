@@ -5603,7 +5603,34 @@ if(actions){
   vibraStepZoom(controls,v);
 }
 if(m.type==='video')v.play().catch(()=>{});q('#vsmCount').textContent=(galleryIndex+1)+' de '+galleryItems.length;}
-function showViewer(id){const m=allMedia.filter(x=>x.practitioner_id===id&&x.object_path).map(x=>({url:mediaUrl(x.object_path),type:x.media_type==='video'?'video':'image',alt:'Imagen del servicio'})).filter(x=>x.url);if(!m.length)return;galleryItems=m;galleryIndex=0;const gallery=viewer();gallery.classList.add('open'); /* MODIFICADO: vista compacta del servicio. */
+// NUEVO: solicitar y decodificar una sola vez el fondo local antes de mostrarlo.
+const vsmBackdrop=new Image();
+let vsmBackdropState='pending',vsmOpenRevision=0;
+const vsmBackdropReady=new Promise(resolve=>{
+  vsmBackdrop.onload=async()=>{
+    try{
+      if(vsmBackdrop.decode)await vsmBackdrop.decode();
+      vsmBackdropState='ready';
+    }catch{vsmBackdropState='unavailable'}
+    resolve(vsmBackdropState==='ready');
+  };
+  vsmBackdrop.onerror=()=>{vsmBackdropState='unavailable';resolve(false)};
+  vsmBackdrop.src='./Img/Fondo%20productos';
+});
+async function showViewer(id){const m=allMedia.filter(x=>x.practitioner_id===id&&x.object_path).map(x=>({url:mediaUrl(x.object_path),type:x.media_type==='video'?'video':'image',alt:'Imagen del servicio'})).filter(x=>x.url);if(!m.length)return;
+const revision=++vsmOpenRevision;
+const gallery=viewer();
+if(!gallery.classList.contains('open')){
+  let timer;
+  const ready=vsmBackdropState==='pending'?await Promise.race([
+    vsmBackdropReady,new Promise(resolve=>{timer=setTimeout(()=>resolve(false),850)})
+  ]):vsmBackdropState==='ready';
+  clearTimeout(timer);
+  if(revision!==vsmOpenRevision)return;
+  // MODIFICADO: fijar el fondo para esta apertura y evitar cambios detrás del contenido.
+  gallery.dataset.vsmBackdrop=ready?'ready':'fallback';
+}
+galleryItems=m;galleryIndex=0;gallery.classList.add('open');
 if(!gallery.querySelector('.vibra-compact-service-tabs')){
   const tabs=vibraCompactControls(['Galería','Información'],index=>{
     gallery.dataset.vibraServicePane=index===0?'gallery':'info';
@@ -7190,53 +7217,8 @@ body.dark-mode #vibraCartBooking{--booking-bg:#2b2031;--booking-ink:#fff0fa;--bo
 <template id="vibraCartBookingTemplate">
   <section id="vibraCartBooking" aria-label="Reservas desde el carrito">
     <div class="vibra-booking-intro">
-      <!-- MODIFICADO: escena vectorial con extremidades articuladas y cama -->
-      <svg data-vibra-pose-image viewBox="0 0 300 238" width="440" height="350" tabindex="0" role="button" aria-expanded="false" aria-label="Hablar con el personaje del carrito" aria-describedby="vibraCartDragHelp">
-        <defs>
-          <pattern id="vibraCartPlaid" width="9" height="9" patternUnits="userSpaceOnUse">
-            <rect width="9" height="9" fill="#202b3d"/>
-            <path d="M2 0v9M0 2h9" stroke="#8191a6" stroke-width="1.3"/>
-            <path d="M5 0v9M0 5h9" stroke="#c9b8c6" stroke-width=".45"/>
-          </pattern>
-          <linearGradient id="vibraCartCopper" x2="1" y2="1">
-            <stop stop-color="#633326"/><stop offset=".48" stop-color="#b45c3d"/><stop offset="1" stop-color="#733726"/>
-          </linearGradient>
-        </defs>
-        <rect width="300" height="238" class="vibra-scene-wall"/>
-        <path d="M0 190h300v48H0z" class="vibra-scene-floor"/>
-        <path d="M0 190h300M18 220h264" class="vibra-scene-trim" fill="none"/>
-        <rect x="215" y="39" width="52" height="61" rx="5" class="vibra-scene-frame"/>
-        <path d="M241 84c-14-4-13-12-13-17 5 3 8 3 13 9 3-6 8-9 13-13 0 9-1 17-13 21Zm0-7c-5-5-5-10 0-19 4 7 6 11 0 19Z" fill="#ad4378"/>
-        <ellipse cx="226" cy="217" rx="68" ry="7" fill="#32182d" opacity=".2"/>
-        <!-- Cama, colchón y almohada. -->
-        <path d="M267 116q0-7 8-7h7q7 0 7 7v91h-22z" fill="#73415f"/>
-        <path d="M156 168h132v40H156z" fill="#754360"/>
-        <path d="M158 203h8v17h-8zm119 0h8v17h-8z" fill="#4b2a43"/>
-        <rect x="153" y="155" width="136" height="22" rx="10" fill="#ead4e0"/>
-        <path d="M153 170h136v18H153z" fill="#b3658e"/>
-        <path d="M155 178h130" stroke="#e0a2bf" stroke-width="2"/>
-        <rect x="241" y="147" width="33" height="12" rx="6" fill="#fff2f7"/>
-        <ellipse data-vibra-avatar-shadow cx="42" cy="218" rx="17" ry="3" fill="#32182d" opacity=".23"/>
-        <g data-vibra-avatar>
-          <path data-vibra-limb="back-leg" fill="none" stroke="#a96052" stroke-width="10" stroke-linecap="round" stroke-linejoin="round"/>
-          <path data-vibra-limb="back-shoe" fill="none" stroke="#222438" stroke-width="7" stroke-linecap="round"/>
-          <path data-vibra-limb="back-arm" fill="none" stroke="#b67464" stroke-width="7" stroke-linecap="round" stroke-linejoin="round"/>
-          <path data-vibra-limb="front-leg" fill="none" stroke="#d99b83" stroke-width="11" stroke-linecap="round" stroke-linejoin="round"/>
-          <path data-vibra-limb="front-shoe" fill="none" stroke="#252739" stroke-width="8" stroke-linecap="round"/>
-          <g data-vibra-torso>
-            <path d="M-13-74Q-16-97 1-99q19 0 18 20l-2 29-9-1-16-4Z" fill="url(#vibraCartCopper)"/>
-            <path d="M-5-63v-11H5v11l9 5-6 26-16 1-7-26Z" fill="#d99b83"/>
-            <path d="M-15-57l9-6 6 7 6-7 9 6-4 17-11-3-11 3Z" fill="#f7f3f4"/>
-            <path d="m0-55-5-4v8l5-2 5 2v-8z" fill="#222a40"/>
-            <path d="M-9-32H9l9 30q-17 7-36 0Z" fill="url(#vibraCartPlaid)" stroke="#29364b"/>
-            <ellipse cx="1" cy="-79" rx="11" ry="14" fill="#dda48b"/>
-            <path d="M-10-80Q-14-98 0-97q12-1 15 13l-5 17-4-13Q0-89-8-81Z" fill="url(#vibraCartCopper)"/>
-            <path d="M-6-79h2m7 0h2" stroke="#352739" stroke-width="1.6" stroke-linecap="round"/>
-            <path d="M-2-73q3 3 6 0" stroke="#8c414d" fill="none" stroke-linecap="round"/>
-          </g>
-          <path data-vibra-limb="front-arm" fill="none" stroke="#dda48b" stroke-width="7" stroke-linecap="round" stroke-linejoin="round"/>
-        </g>
-      </svg>
+      <!-- MODIFICADO: personaje y cama con geometría 3D proyectada -->
+      <canvas data-vibra-pose-image width="440" height="350" tabindex="0" role="button" aria-expanded="false" aria-label="Hablar con el personaje del carrito" aria-describedby="vibraCartDragHelp">Usa el letrero para consultar las opciones.</canvas>
       <div class="vibra-booking-sign">
         <!-- MODIFICADO: letrero interactivo del carrito -->
         <p><strong data-vibra-cart-message aria-live="polite">¡Hola! Voy a sentarme y te ayudo con tu pedido.</strong></p>
@@ -7271,39 +7253,155 @@ body.dark-mode #vibraCartBooking{--booking-bg:#2b2031;--booking-ink:#fff0fa;--bo
   const drawer=document.getElementById('cartDrawer');
   const options=panel.querySelectorAll('[data-booking-kind],[data-vibra-cart-answer]');
   const reducedMotion=matchMedia('(prefers-reduced-motion: reduce)');
-  const avatar=poseImage.querySelector('[data-vibra-avatar]');
-  const torso=poseImage.querySelector('[data-vibra-torso]');
-  const shadow=poseImage.querySelector('[data-vibra-avatar-shadow]');
-  const limbs=Object.fromEntries([...poseImage.querySelectorAll('[data-vibra-limb]')].map(path=>[path.dataset.vibraLimb,path]));
   let frame=0,drawerOpen=false,hasSpoken=false,facing=1,lastElapsed=0,drag=null,ignoreClick=false;
-  const walkTime=2450,sitTime=720;
+  const walkTime=3200,sitTime=980; // MODIFICADO: paso continuo y descenso gradual al colchón.
   const mix=(from,to,t)=>from+(to-from)*t;
+  // NUEVO: geometría tridimensional, iluminación y proyección sin dependencias.
+  const ctx=poseImage.getContext('2d');
+  const rgb={
+    skin:[222,159,134],shade:[197,126,105],copper:[149,68,44],hair:[101,43,32],shine:[182,92,59],
+    ivory:[247,235,233],navy:[46,58,79],boot:[42,36,52],eye:[57,38,43],lip:[153,74,81],
+    linen:[239,214,228],rose:[166,87,134],wood:[86,49,77]
+  };
+  const subtract=(a,b)=>a.map((v,i)=>v-b[i]);
+  const dot=(a,b)=>a.reduce((n,v,i)=>n+v*b[i],0);
+  const cross=(a,b)=>[a[1]*b[2]-a[2]*b[1],a[2]*b[0]-a[0]*b[2],a[0]*b[1]-a[1]*b[0]];
+  const unit=a=>{const n=Math.hypot(...a)||1;return a.map(v=>v/n)};
+  const camera=unit([-.294,.188,1]),light=unit([-.55,.85,.85]);
+  const project=([x,y,z])=>[220+x*1.26+z*.37,286-y*1.22+z*.23];
+  const sphere=[];
+  for(let row=0;row<=10;row++){
+    const theta=Math.PI*row/10;
+    for(let col=0;col<14;col++){
+      const phi=Math.PI*2*col/14;
+      sphere.push([Math.sin(theta)*Math.cos(phi),Math.cos(theta),Math.sin(theta)*Math.sin(phi)]);
+    }
+  }
 
   function paintCharacter(elapsed){
     lastElapsed=elapsed;
+    if(!ctx)return;
+    const facets=[];
+    const dark=document.body.classList.contains('dark-mode');
+    const wall=ctx.createLinearGradient(0,0,440,286);
+    wall.addColorStop(0,dark?'#292138':'#f8e9f0');
+    wall.addColorStop(1,dark?'#503448':'#e7c8da');
+    ctx.fillStyle=wall;ctx.fillRect(0,0,440,350);
+    ctx.fillStyle=dark?'#453247':'#ceb0c3';ctx.fillRect(0,281,440,69);
+    ctx.strokeStyle=dark?'#74516b':'#aa7797';ctx.beginPath();ctx.moveTo(0,281);ctx.lineTo(440,281);ctx.stroke();
+
+    function face(points,center,color){
+      let normal=cross(subtract(points[1],points[0]),subtract(points[2],points[0]));
+      if(Math.hypot(...normal)<.0001)return;
+      if(dot(normal,subtract(points[0],center))<0)normal=normal.map(v=>-v);
+      normal=unit(normal);
+      if(dot(normal,camera)<=0)return;
+      const shade=.55+.49*Math.max(0,dot(normal,light));
+      const fill='rgb('+color.map(v=>Math.min(255,Math.round(v*shade))).join(',')+')';
+      facets.push({points:points.map(project),depth:points.reduce((n,p)=>n+dot(p,camera),0)/points.length,fill});
+    }
+    function box(center,size,color){
+      const [x,y,z]=center,[a,b,c]=size.map(n=>n/2);
+      const vertices=[[-a,-b,-c],[a,-b,-c],[a,b,-c],[-a,b,-c],[-a,-b,c],[a,-b,c],[a,b,c],[-a,b,c]].map(([i,j,k])=>[x+i,y+j,z+k]);
+      for(const indices of [[0,1,2,3],[4,5,6,7],[0,4,7,3],[1,5,6,2],[3,2,6,7],[0,1,5,4]])face(indices.map(i=>vertices[i]),center,color);
+    }
+    function volume(center,size,color,axis=[0,1,0]){
+      const up=unit(axis),right=unit(cross(up,Math.abs(up[2])<.92?[0,0,1]:[1,0,0])),front=cross(right,up);
+      const vertices=sphere.map(([a,b,c])=>center.map((v,i)=>v+a*size[0]*right[i]+b*size[1]*up[i]+c*size[2]*front[i]));
+      for(let row=0;row<10;row++)for(let col=0;col<14;col++){
+        const next=(col+1)%14,base=row*14;
+        const points=[vertices[base+col],vertices[base+14+col],vertices[base+14+next],vertices[base+next]];
+        if(row===0)face(points.slice(1),center,color);
+        else if(row===9)face([points[0],points[1],points[3]],center,color);
+        else face(points,center,color);
+      }
+    }
+    function segment(a,b,width,color){
+      const vector=subtract(b,a);
+      volume(a.map((v,i)=>(v+b[i])/2),[width,Math.hypot(...vector)/2+width*.68,width],color,vector);
+    }
+
+    // Cama con profundidad, colchón, cabecera y almohada.
+    box([89,28,-25],[131,29,69],rgb.wood);
+    box([89,45,-25],[135,12,72],rgb.linen);
+    box([69,51,-18],[87,4,69],rgb.rose);
+    box([151,50,-27],[10,83,77],rgb.wood);
+    volume([126,55,-30],[20,7,25],rgb.ivory);
+    for(const x of [29,147])for(const z of [-53,3])box([x,8,z],[8,19,8],rgb.wood);
+
     const progress=Math.min(1,elapsed/walkTime);
-    const sitting=Math.min(1,Math.max(0,(elapsed-walkTime)/sitTime));
-    const settle=sitting*sitting*(3-2*sitting);
-    const cycle=progress*Math.PI*12;
-    const gait=progress<1?Math.min(1,progress*15,(1-progress)*15):0;
-    const x=mix(41,187,progress)+settle*8;
-    const y=mix(151,158,settle)-Math.abs(Math.sin(cycle))*3*gait;
-    avatar.setAttribute('transform','translate('+x+' '+y+') scale('+facing+' 1)');
-    torso.setAttribute('transform','rotate('+(Math.sin(cycle)*2*gait+Math.sin(settle*Math.PI)*12)+')');
-    shadow.setAttribute('cx',x);
-    shadow.setAttribute('opacity',String(.23*(1-settle)));
-    for(const [side,direction] of [['back',-1],['front',1]]){
-      const stride=Math.sin(cycle)*direction*gait;
-      const offset=direction*5;
-      const kneeX=mix(offset+stride*14,offset+27,settle);
-      const kneeY=mix(31,13,settle);
-      const footX=mix(offset+stride*24,offset+32,settle);
-      const footY=mix(63+151-y-Math.max(0,stride)*9,55,settle);
-      limbs[side+'-leg'].setAttribute('d','M '+offset+' -5 L '+kneeX+' '+kneeY+' L '+footX+' '+footY);
-      limbs[side+'-shoe'].setAttribute('d','M '+footX+' '+footY+' h '+(direction===1?10:8));
-      const wristX=mix(direction*14-stride*11,direction===1?25:-13,settle);
-      const wristY=mix(-15,direction===1?4:-1,settle);
-      limbs[side+'-arm'].setAttribute('d','M '+direction*12+' -53 L '+direction*17+' -31 L '+wristX+' '+wristY);
+    const phase=progress*3;
+    const settleLinear=Math.min(1,Math.max(0,(elapsed-walkTime)/sitTime));
+    const settle=settleLinear*settleLinear*(3-2*settleLinear);
+    const swingFade=Math.min(1,progress*14,(1-progress)*14);
+    const gait=Math.sin(phase*2*Math.PI)*swingFade;
+    const hipX=mix(-123,53,progress)+settle*10;
+    const hipY=mix(72,56,settle)+Math.abs(gait)*2;
+    const hipZ=mix(24,4,settle);
+    const yaw=(1-settle)*.59*facing+settle*.15*facing;
+    const rotation=([x,y,z])=>[hipX+x*Math.cos(yaw)+z*Math.sin(yaw),hipY+y,hipZ-x*Math.sin(yaw)+z*Math.cos(yaw)];
+    const torsoLean=Math.sin(settle*Math.PI)*5;
+    const part=(p,size,color)=>volume(rotation(p),size,color);
+    const limb=(a,b,width,color)=>segment(rotation(a),rotation(b),width,color);
+    ctx.fillStyle=dark?'#21162770':'#593a4b45';ctx.beginPath();
+    const shadow=project([hipX,0,hipZ]);ctx.ellipse(shadow[0],shadow[1],19,5,0,0,Math.PI*2);ctx.fill();
+
+    for(const side of [-1,1]){
+      const stridePhase=(phase+(side===1?0:.5))%1;
+      const swing=stridePhase>.58?(stridePhase-.58)/.42:0;
+      const forward=stridePhase<.58?mix(15,-15,stridePhase/.58):mix(-15,15,swing*swing*(3-2*swing));
+      const lift=swing>0?Math.sin(swing*Math.PI)*10:0;
+      const start=[side*6,-3,0];
+      const foot=[mix(side*7+forward*swingFade,side*8+9,settle),7-hipY+lift*swingFade,mix(1,31,settle)];
+      const end=foot.map((v,i)=>v-start[i]),length=Math.hypot(...end);
+      const bend=Math.sqrt(Math.max(0,34**2-(length/2)**2));
+      const axis=unit(end),normal=unit([0,-axis[2],axis[1]]);
+      const knee=start.map((v,i)=>v+end[i]/2-normal[i]*bend);
+      limb(start,knee,6.5,side===1?rgb.skin:rgb.shade);
+      limb(knee,foot,4.8,side===1?rgb.skin:rgb.shade);
+      limb([foot[0],foot[1]-2,foot[2]-3],[foot[0]+2,foot[1]-2,foot[2]+8],4.2,rgb.boot);
+      const swingArm=gait*side*9;
+      const elbow=[side*18+mix(-swingArm,3,settle),23,3+settle*5];
+      const wrist=[side*17+mix(-swingArm*1.2,8,settle),mix(8,5,settle),mix(5,15,settle)];
+      limb([side*13+torsoLean,43,0],elbow,4.1,rgb.ivory);
+      limb(elbow,wrist,3.4,side===1?rgb.skin:rgb.shade);
+      part(wrist,[3.5,4.2,3],rgb.skin);
+    }
+
+    // Falda a cuadros sobre un volumen troncocónico.
+    const center=rotation([0,6,0]);
+    for(let row=0;row<5;row++)for(let col=0;col<28;col++){
+      const vertex=(r,c)=>{
+        const t=r/5,a=c*Math.PI/14;
+        return rotation([Math.cos(a)*mix(10,18,t),mix(16,-5,t),Math.sin(a)*mix(8,13,t)]);
+      };
+      const base=(col%7===0||row===2)?[115,128,145]:(col%7===1||row===3)?[70,86,110]:rgb.navy;
+      face([vertex(row,col),vertex(row+1,col),vertex(row+1,col+1),vertex(row,col+1)],center,base);
+    }
+    part([torsoLean*.35,19,1],[10,13,7],rgb.skin);
+    part([torsoLean,35,0],[14,15,9],rgb.ivory);
+    part([torsoLean,31,8],[3,3,2],rgb.ivory);
+    part([torsoLean,45,8],[5,2.5,2],rgb.navy);
+    part([torsoLean,51,0],[4.5,8,4.5],rgb.skin);
+    part([torsoLean,64,-4],[12,17,10],rgb.hair);
+    part([torsoLean,64,2],[9,12,8],rgb.skin);
+    for(const side of [-1,1]){
+      part([torsoLean+side*9,62,-1],[4.6,13,6],rgb.copper);
+      part([torsoLean+side*10,51,-3],[4.5,12,5],rgb.hair);
+      part([torsoLean+side*7,54,1],[3.5,9,3],rgb.shine);
+      part([torsoLean+side*3.1,65,9.35],[1.7,1.05,.75],rgb.eye);
+      part([torsoLean+side*3,65.3,10],[.44,.37,.36],rgb.ivory);
+    }
+    part([torsoLean-3,73,4],[8,5,6.5],rgb.copper);
+    part([torsoLean+3,72,4],[6,4,6.5],rgb.shine);
+    part([torsoLean,62,9.4],[1.65,2.4,1.8],rgb.skin);
+    part([torsoLean,58.8,8.9],[2.7,.9,.75],rgb.lip);
+
+    facets.sort((a,b)=>a.depth-b.depth);
+    ctx.lineWidth=.65;
+    for(const {points,fill} of facets){
+      ctx.beginPath();points.forEach(([x,y],i)=>i?ctx.lineTo(x,y):ctx.moveTo(x,y));ctx.closePath();
+      ctx.fillStyle=ctx.strokeStyle=fill;ctx.fill();ctx.stroke();
     }
   }
   function talk(){
@@ -7452,6 +7550,9 @@ body.dark-mode #vibraCartBooking{--booking-bg:#2b2031;--booking-ink:#fff0fa;--bo
     status.textContent='';
   });
   paintCharacter(0); // NUEVO: preparar la escena antes de abrir el carrito.
+  new MutationObserver(()=>{
+    if(drawerOpen&&!frame)paintCharacter(lastElapsed);
+  }).observe(document.body,{attributes:true,attributeFilter:['class']});
 })();
 </script>
 <!-- NUEVO: marco estático y controles de pose del carrito -->
@@ -7633,7 +7734,9 @@ body.dark-mode #vsmGallery .vibra-portrait-logos img{opacity:.23}
 .vibra-step-zoom button{width:36px;min-height:36px;border:1px solid var(--vibra-ui-border);border-radius:8px;background:var(--vibra-ui-neutral);color:var(--vibra-ui-text);font:700 1.15rem var(--font);cursor:pointer}
 .vibra-step-zoom button:disabled{opacity:.58;cursor:default}
 .vibra-step-zoom output{min-width:3.5ch;text-align:center;font-variant-numeric:tabular-nums}
-#vsmGallery #vsmGalleryMedia{background:var(--vibra-ui-stage) url('./Img/Fondo%20productos') center/cover no-repeat}
+/* MODIFICADO: la imagen se usa solo si ya está lista al abrir la galería. */
+#vsmGallery #vsmGalleryMedia{background:var(--vibra-ui-stage)}
+#vsmGallery[data-vsm-backdrop=ready] #vsmGalleryMedia{background:var(--vibra-ui-stage) url('./Img/Fondo%20productos') center/cover no-repeat}
 #vsmGallery #vsmGalleryMedia > :is(img,video){transform-origin:center}
 #vsmGallery .vsm-actions{flex-wrap:wrap}
 #v18BusinessModal .v18-hours-line strong{display:inline-flex;align-items:center;gap:7px;color:var(--vibra-ui-text)}
@@ -7795,5 +7898,11 @@ body.dark-mode #vibraCartBooking .vibra-scene-frame{fill:#4f3550;stroke:#ae779d}
   #vibraCartBooking .vibra-booking-intro{grid-template-columns:minmax(0,1fr)}
   #vibraCartBooking svg[data-vibra-pose-image]{max-height:35dvh}
 }
+</style>
+
+<!-- NUEVO: conservar la proporción de la escena 3D en el carrito -->
+<style>
+#vibraCartBooking canvas[data-vibra-pose-image]{height:auto;max-height:44dvh;aspect-ratio:44/35;object-fit:contain;background:var(--booking-bg);touch-action:pan-y}
+@media(max-width:460px){#vibraCartBooking canvas[data-vibra-pose-image]{max-height:35dvh}}
 </style>
 </html>
