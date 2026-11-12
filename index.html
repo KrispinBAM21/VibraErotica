@@ -16,7 +16,8 @@
 <link rel="preload" as="image" href="./Img/Movil" media="(max-width:700px)" fetchpriority="high">
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&family=Nunito:wght@400;600;700;800&family=Poppins:wght@400;500;600;700&family=Roboto:wght@400;500;700&display=swap" rel="stylesheet">
+<!-- MODIFICADO -->
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&family=Nunito:wght@400;600;700;800&family=Outfit:wght@400;500;600;700;800&family=Plus+Jakarta+Sans:wght@400;500;600;700;800&family=Poppins:wght@400;500;600;700&family=Roboto:wght@400;500;700&display=swap" rel="stylesheet">
 <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css">
 
 <style>
@@ -404,7 +405,7 @@ body:not(.dark-mode) #catalogGrid [style*="background:var(--secondary)"]{color:#
   <!-- NUEVO: encabezado del catálogo con resultados de la vista actual. -->
   <header class="container ve-catalog-heading" id="veCatalogHeading">
     <div><h2>Catálogo destacado y terapeutas</h2><p>Explora los productos y servicios disponibles.</p></div>
-    <span id="veCatalogCount"></span>
+    <span id="veCatalogCount" role="status"></span><!-- MODIFICADO -->
   </header>
   <section class="container grid" id="catalogGrid"></section>
 </main>
@@ -809,6 +810,8 @@ function categories(){const configured=Array.isArray(state.config?.catalogCatego
 // NUEVO: iconografía específica para los controles públicos intervenidos.
 function vibraReferenceIcon(name){
   const paths={
+    // NUEVO: capas de catálogo, distinto del selector de categorías.
+    catalog:'<path d="m3 8 9-5 9 5-9 5zM3 12l9 5 9-5M3 16l9 5 9-5"/>',
     home:'<path d="m3 10 9-7 9 7M5 9v11h5v-6h4v6h5V9"/>',
     categories:'<path d="M4 5h6v6H4zm10 0h6v6h-6zM4 15h6v6H4zm10 3h6m-3-3v6"/>',
     timed:'<path d="M8 3h8m-4 0v3m5 2 2-2M12 10v4l3 2"/><circle cx="12" cy="14" r="7"/>',
@@ -1625,7 +1628,7 @@ async function renderSubscription(c,epoch){await refreshSiteStatus();const histo
 const v4Catalog=renderCatalog;renderCatalog=function(){if(siteStatus&&!siteStatus.active&&!siteStatus.master){document.getElementById('catalogGrid').replaceChildren();return}v4Catalog()};
 state.orders=[];saveLocal();
 // Inicialización pública: el mapa no depende de iniciar sesión ni de guardar un domicilio.
-const foodPublic=document.createElement('section');foodPublic.id='foodDeliveryPlanner';foodPublic.className='food-delivery-planner';foodPublic.innerHTML=`<div class="section-card"><span class="eyebrow">${/* NUEVO */ vibraReferenceIcon('location')}UBICACIÓN DEL LOCAL</span><p class="small muted" id="foodOriginLabel">${esc(state.config.origin.address)}</p><div id="foodSavedAddresses"></div><div class="address-picker-row"><label class="field">Calle o dirección de entrega<input class="input" id="foodDestination" placeholder="Busca una calle o marca tu destino en el mapa"></label>${panelButton('foodSearchDestination','Buscar',UI.search,'secondary')}${panelButton('foodGpsDestination','Mi ubicación',UI.pin,'secondary')}</div><div class="map" id="foodPublicMap"></div><p class="small muted">El marcador Local indica el punto de salida. Ajusta el marcador de entrega a la entrada.</p></div><aside class="section-card"><h3>Información de la ruta</h3><div id="foodQuote">Utiliza tu ubicación para localizar el establecimiento.</div><div id="foodSocials" class="toolbar"></div></aside>`;document.querySelector('main .hero').after(foodPublic);/* MODIFICADO: ubicación antes de los filtros. */document.getElementById('foodGoCart')?.addEventListener('click',openDrawer);document.getElementById('foodCalculate')?.addEventListener('click',e=>panelRun(e.currentTarget,()=>quoteFoodRoute()));document.getElementById('foodDestination').oninput=e=>{checkout.address=e.target.value;checkout.savedAddressId=''};document.getElementById('foodSearchDestination').onclick=e=>panelRun(e.currentTarget,async()=>{const p=await foodSearch(document.getElementById('foodDestination').value);checkout.address=p.address;document.getElementById('foodDestination').value=p.address;await chooseFoodDestination(p.lat,p.lng)});document.getElementById('foodGpsDestination').onclick=e=>panelRun(e.currentTarget,async()=>{const p=await foodGps();checkout.address=document.getElementById('foodDestination').value||'Ubicación actual';await chooseFoodDestination(p.coords.latitude,p.coords.longitude);if(p.coords.accuracy>100)toast('Precisión GPS aproximada: ±'+Math.round(p.coords.accuracy)+' metros. Ajusta el pin manualmente.');});renderAccountButton();renderSavedAddressShortcut();setTimeout(initFoodPublicMap,200);const v4Cloud=loadPublicCloudState;loadPublicCloudState=async function(){await v4Cloud();const o=state.config.origin;document.getElementById('foodOriginLabel').textContent=o.address;publicFoodOrigin?.setLatLng([o.lat,o.lng]);renderSavedAddressShortcut()};
+const foodPublic=document.createElement('section');foodPublic.id='foodDeliveryPlanner';foodPublic.className='food-delivery-planner';foodPublic.innerHTML=`<div class="section-card"><!-- MODIFICADO --><header class="ve-location-heading"><h2 class="eyebrow">${vibraReferenceIcon('location')}Ubicación del local</h2><p class="small muted" id="foodOriginLabel">${esc(state.config.origin.address)}</p></header><div id="foodSavedAddresses"></div><div class="address-picker-row"><label class="field">Calle o dirección de entrega<input class="input" id="foodDestination" placeholder="Busca una calle o marca tu destino en el mapa"></label>${panelButton('foodSearchDestination','Buscar',UI.search,'secondary')}${panelButton('foodGpsDestination','Mi ubicación',UI.pin,'secondary')}</div><div class="map" id="foodPublicMap"></div><p class="small muted">El marcador Local indica el punto de salida. Ajusta el marcador de entrega a la entrada.</p></div><aside class="section-card"><h3>Información de la ruta</h3><div id="foodQuote">Utiliza tu ubicación para localizar el establecimiento.</div><div id="foodSocials" class="toolbar"></div></aside>`;document.querySelector('main .hero').after(foodPublic);/* MODIFICADO: ubicación antes de los filtros. */document.getElementById('foodGoCart')?.addEventListener('click',openDrawer);document.getElementById('foodCalculate')?.addEventListener('click',e=>panelRun(e.currentTarget,()=>quoteFoodRoute()));document.getElementById('foodDestination').oninput=e=>{checkout.address=e.target.value;checkout.savedAddressId=''};document.getElementById('foodSearchDestination').onclick=e=>panelRun(e.currentTarget,async()=>{const p=await foodSearch(document.getElementById('foodDestination').value);checkout.address=p.address;document.getElementById('foodDestination').value=p.address;await chooseFoodDestination(p.lat,p.lng)});document.getElementById('foodGpsDestination').onclick=e=>panelRun(e.currentTarget,async()=>{const p=await foodGps();checkout.address=document.getElementById('foodDestination').value||'Ubicación actual';await chooseFoodDestination(p.coords.latitude,p.coords.longitude);if(p.coords.accuracy>100)toast('Precisión GPS aproximada: ±'+Math.round(p.coords.accuracy)+' metros. Ajusta el pin manualmente.');});renderAccountButton();renderSavedAddressShortcut();setTimeout(initFoodPublicMap,200);const v4Cloud=loadPublicCloudState;loadPublicCloudState=async function(){await v4Cloud();const o=state.config.origin;document.getElementById('foodOriginLabel').textContent=o.address;publicFoodOrigin?.setLatLng([o.lat,o.lng]);renderSavedAddressShortcut()};
 setInterval(()=>{if(!document.hidden&&supabaseClient){refreshSiteStatus().catch(()=>{});if(customerSession)panelVerify().catch(()=>{})}},30000);
 
 /* Estructura del panel y ticket basada en el index de maniobras adjunto. */
@@ -1666,7 +1669,7 @@ async function refreshFoodOffers(){if(!supabaseClient)return;const{data,error}=a
 function offerForProduct(p){const time=Date.now()+offerClockOffset;return foodOffers.filter(o=>o.product_ids.includes(p.id)&&(!o.starts_at||new Date(o.starts_at).getTime()<=time)&&(!o.ends_at||new Date(o.ends_at).getTime()>time)).sort((a,b)=>b.percent-a.percent)[0]}
 function productPrice(p){const o=offerForProduct(p);return o?Math.round(p.price*(1-o.percent/100)*100)/100:p.price}
 subtotal=function(){return cartItems().reduce((s,x)=>s+x.qty*productPrice(x.p),0)};
-renderCatalog=function(){const grid=document.getElementById('catalogGrid');if(siteStatus&&!siteStatus.active&&!siteStatus.master){grid.replaceChildren();return}const arr=state.products.filter(p=>p.active&&(currentCategory==='Todos'||p.category===currentCategory)&&(`${p.name} ${p.description}`.toLowerCase().includes(searchTerm.toLowerCase())));const productMarkup=arr.map(p=>{const q=state.cart[p.id]||0,o=offerForProduct(p);return `<!-- MODIFICADO: composición de la tarjeta de producto --><article class="product-card ve-reference-card"><div class="ve-card-media"><button type="button" class="product-visual product-zoom-trigger" data-view-product="${esc(p.id)}" aria-label="Ver ${esc(p.name)} en grande">${productVisual(p)}<span class="product-zoom-label">${UI.search}<span>Ver producto</span></span></button></div><div class="product-body"><div class="product-head"><h3 class="product-name">${esc(p.name)}</h3><div class="price">${o?`<del>${money(p.price)}</del>`:''}${money(productPrice(p))}</div></div>${o?`<div class="offer-badge">${esc(o.title)} · ${o.percent}%${o.ends_at?`<small>Hasta ${esc(new Date(o.ends_at).toLocaleString('es-MX'))}</small>`:''}</div>`:''}<p class="desc">${esc(p.description)}</p><div class="meta"><span>${esc(p.category)}</span><span>Stock: ${p.stock}</span></div><div class="qty-row">${p.stock<=0?'<span class="stock-out">Agotado</span>':`<div class="qty-control"><button class="icon-btn" data-dec="${esc(p.id)}" aria-label="Quitar cantidad" ${q<=0?'disabled':''}>${UI.minus}</button><span class="qty-value">${q}</span><button class="icon-btn" data-inc="${esc(p.id)}" aria-label="Agregar cantidad" ${q>=p.stock?'disabled':''}>${UI.plus}</button></div>`}<button class="btn secondary" data-inc="${esc(p.id)}" ${p.stock<=0||q>=p.stock?'disabled':''}>${UI.cart}<span>Agregar</span></button></div></div></article>`}).join('')||'<div class="section-card">No hay productos para mostrar.</div>';const serviceSection=grid.querySelector(':scope > #vibraServiceCatalog');if(serviceSection){for(const child of [...grid.childNodes])if(child!==serviceSection)child.remove();serviceSection.insertAdjacentHTML('beforebegin',productMarkup)}else grid.innerHTML=productMarkup;grid.querySelectorAll('[data-view-product]').forEach(b=>b.onclick=()=>openProductViewer(b.dataset.viewProduct,b));updateCartCount()}; // MODIFICADO: mantener montados los servicios al actualizar los productos.
+renderCatalog=function(){const grid=document.getElementById('catalogGrid');if(siteStatus&&!siteStatus.active&&!siteStatus.master){grid.replaceChildren();return}const arr=state.products.filter(p=>p.active&&(currentCategory==='Todos'||p.category===currentCategory)&&(`${p.name} ${p.description}`.toLowerCase().includes(searchTerm.toLowerCase())));const productMarkup=arr.map(p=>{const q=state.cart[p.id]||0,o=offerForProduct(p);return `<!-- MODIFICADO: composición de la tarjeta de producto --><article class="product-card ve-reference-card"><div class="ve-card-media"><button type="button" class="product-visual product-zoom-trigger" data-view-product="${esc(p.id)}" aria-label="Ver ${esc(p.name)} en grande">${productVisual(p)}<span class="product-zoom-label">${UI.search}<span>Ver producto</span></span></button><!-- NUEVO --><div class="ve-media-actions"></div></div><div class="product-body"><div class="product-head"><h3 class="product-name">${esc(p.name)}</h3><div class="price">${o?`<del>${money(p.price)}</del>`:''}${money(productPrice(p))}</div></div>${o?`<div class="offer-badge">${esc(o.title)} · ${o.percent}%${o.ends_at?`<small>Hasta ${esc(new Date(o.ends_at).toLocaleString('es-MX'))}</small>`:''}</div>`:''}<p class="desc">${esc(p.description)}</p><div class="meta"><span>${esc(p.category)}</span><span>Stock: ${p.stock}</span></div><div class="qty-row">${p.stock<=0?'<span class="stock-out">Agotado</span>':`<div class="qty-control"><button class="icon-btn" data-dec="${esc(p.id)}" aria-label="Quitar cantidad" ${q<=0?'disabled':''}>${UI.minus}</button><span class="qty-value">${q}</span><button class="icon-btn" data-inc="${esc(p.id)}" aria-label="Agregar cantidad" ${q>=p.stock?'disabled':''}>${UI.plus}</button></div>`}<button class="btn secondary" data-inc="${esc(p.id)}" ${p.stock<=0||q>=p.stock?'disabled':''}>${UI.cart}<span>Agregar</span></button></div></div></article>`}).join('')||'<div class="section-card">No hay productos para mostrar.</div>';const serviceSection=grid.querySelector(':scope > #vibraServiceCatalog');if(serviceSection){for(const child of [...grid.childNodes])if(child!==serviceSection)child.remove();serviceSection.insertAdjacentHTML('beforebegin',productMarkup)}else grid.innerHTML=productMarkup;grid.querySelectorAll('[data-view-product]').forEach(b=>b.onclick=()=>openProductViewer(b.dataset.viewProduct,b));updateCartCount()}; // MODIFICADO: mantener montados los servicios al actualizar los productos.
 function openProductViewer(id,focus){const p=state.products.find(p=>p.id===id);if(!p)return;productFocus=focus;const m=v4Modal('productViewerModal',p.name),body=m.querySelector('.modal-body');m.classList.add('product-viewer');m.setAttribute('role','dialog');m.setAttribute('aria-modal','true');m.querySelector('.modal-head strong').textContent=p.name;body.innerHTML=`<div class="product-large-view"><div id="productZoomImage">${productVisual(p)}</div></div><!-- MODIFICADO: zoom por pasos --><div class="field vibra-step-zoom" data-vibra-zoom="product"></div><h3>${esc(p.name)} · ${money(productPrice(p))}</h3><p>${esc(p.description)}</p><p class="small">${p.stock} disponibles</p>${panelButton('productViewerAdd','Agregar al pedido',UI.cart,'full')}`;vibraStepZoom(body.querySelector('[data-vibra-zoom]'),body.querySelector('#productZoomImage'),'productZoomRange'); /* MODIFICADO: ampliar únicamente por acción del usuario. */body.querySelector('#productViewerAdd').disabled=p.stock<=0||(state.cart[id]||0)>=p.stock;body.querySelector('#productViewerAdd').onclick=()=>{changeQty(id,1);body.querySelector('#productViewerAdd').disabled=(state.cart[id]||0)>=p.stock;toast('Producto agregado.','ok')};openModal(m.id);m.querySelector('[data-close-modal]').focus()}
 const v5CloseModal=closeModal;closeModal=function(id){v5CloseModal(id);if(id==='productViewerModal')productFocus?.focus()};
 const v5Load=loadPublicCloudState;loadPublicCloudState=async function(){await v5Load();await refreshFoodOffers()};
@@ -1789,7 +1792,7 @@ let catalogPage=1,catalogFilter='',v6Pending=null,v6Restoring=true,v6Logout=fals
 function businessLabel(){return state.config.businessName||'VIBRAEROTICA'}
 couponRandom=function(){const prefix='VEROTICA';const chars='ABCDEFGHJKLMNPQRSTUVWXYZ23456789',bytes=new Uint8Array(8);crypto.getRandomValues(bytes);return prefix+'-'+Array.from(bytes,b=>chars[b%chars.length]).join('')};
 const v6DrawAuth=drawCustomerAuth;drawCustomerAuth=function(host){v6DrawAuth(host);const heading=host.querySelector('.auth-intro h3');if(heading&&['login','signup'].includes(customerAuthView))heading.textContent='Tu cuenta de '+businessLabel();const old=document.getElementById('foodGoogle');if(!old)return;const button=old.cloneNode(true);old.replaceWith(button);button.onclick=async()=>{button.disabled=true;const out=document.getElementById('foodAuthStatus');try{if(!supabaseClient)throw Error('Espera a que conecte el sitio.');persistCheckout();await storeProof();const response=await fetch(SUPABASE_URL+'/auth/v1/settings',{headers:{apikey:SUPABASE_ANON_KEY},signal:AbortSignal.timeout(10000)});if(!response.ok)throw Error('No se pudo comprobar el acceso con Google. Intenta de nuevo.');const settings=await response.json();if(settings.external?.google!==true)throw Error('El acceso con Google aún no está activado por el administrador. Puedes utilizar correo y contraseña.');const r=await supabaseClient.auth.signInWithOAuth({provider:'google',options:{redirectTo:location.origin+location.pathname,skipBrowserRedirect:true}});if(r.error)throw r.error;if(!r.data?.url)throw Error('No se pudo abrir Google.');location.assign(r.data.url)}catch(e){out.textContent=e.message}finally{vsmSaving=false;button.disabled=false;button.textContent="Guardar cambios y horarios"}}};
-const v6Catalog=renderCatalog;renderCatalog=function(){const filter=currentCategory+'|'+searchTerm;if(filter!==catalogFilter){catalogPage=1;catalogFilter=filter}v6Catalog();const grid=document.getElementById('catalogGrid');let pager=document.getElementById('catalogPages');if(!pager){pager=document.createElement('nav');pager.id='catalogPages';pager.className='container catalog-pages';pager.setAttribute('aria-label','Páginas del catálogo');grid.after(pager)}const cards=[...grid.querySelectorAll('.product-card')],pages=Math.max(1,Math.ceil(cards.length/15));catalogPage=Math.min(catalogPage,pages);cards.forEach((card,i)=>{if(i<(catalogPage-1)*15||i>=catalogPage*15){card.remove();return}const view=card.querySelector('[data-view-product]');if(!view)return;const id=view.dataset.viewProduct,p=state.products.find(p=>p.id===id);if(!p)return;const o=typeof offerForProduct==='function'?offerForProduct(p):null;const badge=card.querySelector('.offer-badge');if(o?.ends_at&&badge){const clock=document.createElement('small');clock.className='offer-countdown';clock.dataset.offerEnd=o.ends_at;badge.append(clock)}else if(o&&badge){const t=document.createElement('small');t.textContent='Promoción sin fecha límite';badge.append(t)}});pager.hidden=!cards.length;pager.innerHTML=cards.length?`<p>${cards.length} productos · Página ${catalogPage} de ${pages} · Máximo 15 por página</p>${pages>1?`<button class="btn secondary" data-page="${catalogPage-1}" ${catalogPage===1?'disabled':''} aria-label="Página anterior">${UI.arrowLeft}</button>${Array.from({length:pages},(_,i)=>`<button class="btn ${catalogPage===i+1?'active':'secondary'}" data-page="${i+1}" ${catalogPage===i+1?'aria-current="page"':''}>${i+1}</button>`).join('')}<button class="btn secondary" data-page="${catalogPage+1}" ${catalogPage===pages?'disabled':''} aria-label="Página siguiente">${UI.arrowRight}</button>`:''}`:'';pager.querySelectorAll('[data-page]').forEach(b=>b.onclick=()=>{catalogPage=Number(b.dataset.page);renderCatalog();grid.classList.remove('catalog-enter');void grid.offsetWidth;grid.classList.add('catalog-enter');grid.scrollIntoView?.({behavior:'smooth',block:'start'})});tickOfferCountdown()};
+const v6Catalog=renderCatalog;renderCatalog=function(){const filter=currentCategory+'|'+searchTerm;if(filter!==catalogFilter){catalogPage=1;catalogFilter=filter}v6Catalog();const grid=document.getElementById('catalogGrid');let pager=document.getElementById('catalogPages');if(!pager){pager=document.createElement('nav');pager.id='catalogPages';pager.className='container catalog-pages';pager.setAttribute('aria-label','Páginas del catálogo');grid.after(pager)}const cards=[...grid.querySelectorAll('.product-card')],pages=Math.max(1,Math.ceil(cards.length/15));catalogPage=Math.min(catalogPage,pages);cards.forEach((card,i)=>{if(i<(catalogPage-1)*15||i>=catalogPage*15){card.remove();return}const view=card.querySelector('[data-view-product]');if(!view)return;const id=view.dataset.viewProduct,p=state.products.find(p=>p.id===id);if(!p)return;const o=typeof offerForProduct==='function'?offerForProduct(p):null;const badge=card.querySelector('.offer-badge');if(o?.ends_at&&badge){const clock=document.createElement('small');clock.className='offer-countdown';clock.dataset.offerEnd=o.ends_at;badge.append(clock)}else if(o&&badge){const t=document.createElement('small');t.textContent='Promoción sin fecha límite';badge.append(t)}});pager.hidden=!cards.length;pager.innerHTML=cards.length?`<p>${cards.length} productos · Página ${catalogPage} de ${pages} · Máximo 15 por página</p>${pages>1?`<button class="btn secondary" data-page="${catalogPage-1}" ${catalogPage===1?'disabled':''} aria-label="Página anterior">${UI.arrowLeft}<span>Anterior</span></button><!-- MODIFICADO -->${Array.from({length:pages},(_,i)=>`<button class="btn ${catalogPage===i+1?'active':'secondary'}" data-page="${i+1}" ${catalogPage===i+1?'aria-current="page"':''}>${i+1}</button>`).join('')}<button class="btn secondary" data-page="${catalogPage+1}" ${catalogPage===pages?'disabled':''} aria-label="Página siguiente"><span>Siguiente</span>${UI.arrowRight}</button><!-- MODIFICADO -->`:''}`:'';pager.querySelectorAll('[data-page]').forEach(b=>b.onclick=()=>{catalogPage=Number(b.dataset.page);renderCatalog();grid.classList.remove('catalog-enter');void grid.offsetWidth;grid.classList.add('catalog-enter');grid.scrollIntoView?.({behavior:'smooth',block:'start'})});tickOfferCountdown()};
 function tickOfferCountdown(){document.querySelectorAll('[data-offer-end]').forEach(el=>{let seconds=Math.max(0,Math.ceil((new Date(el.dataset.offerEnd).getTime()-Date.now()-offerClockOffset)/1000));const days=Math.floor(seconds/86400);seconds%=86400;const hours=Math.floor(seconds/3600);seconds%=3600;const mins=Math.floor(seconds/60),secs=seconds%60;el.textContent=days+ ' días '+String(hours).padStart(2,'0')+' h '+String(mins).padStart(2,'0')+' min '+String(secs).padStart(2,'0')+' s';if(!days&&!hours&&!mins&&!secs)el.textContent='Oferta finalizada'})}
 setInterval(()=>{if(!document.hidden)tickOfferCountdown()},1000);
 function checkoutDetails(){return{street:checkout.street||'',number:checkout.number||'',colony:checkout.colony||'',postal_code:checkout.postalCode||'',municipality:checkout.municipality||'',state:checkout.addressState||'',references:checkout.deliveryReferences||''}}
@@ -1849,11 +1852,37 @@ async function registerTracking(order){
 }
 // MODIFICADO: compartir la consulta activa dentro de la misma sesión.
 let veTrackingRequest=null;
-async function refreshTracking(){if(!customerSession?.user?.id){trackingOrders=[];trackingEvents=[];renderTrackingButtons();return}if(!supabaseClient)return;const epoch=trackingEpoch,userId=customerSession.user.id;if(veTrackingRequest?.epoch===epoch&&veTrackingRequest.userId===userId)return veTrackingRequest.promise;const request={epoch,userId};veTrackingRequest=request;trackingBusy=true;request.promise=(async()=>{try{const r=await trackingCall('list',{tokens:[]});if(epoch!==trackingEpoch||customerSession?.user?.id!==userId)return;trackingOrders=(r.orders||[]).filter(o=>!o.customer_user_id||o.customer_user_id===userId);trackingEvents=r.events||[];trackingConfig=r.settings||trackingConfig;const closed=new Set(trackingOrders.filter(o=>!o.chat_open).map(o=>o.id));for(const id of closed){chatDrafts.delete(id);delete chatSeen[id]}if(activeChat?.role==='customer'&&closed.has(activeChat.orderId)){closeChat('La conversación se cerró porque el pedido terminó o el chat fue desactivado.')}renderTrackingButtons();renderPreparation();if(document.getElementById('myOrdersModal')?.classList.contains('show'))paintMyOrders();if(document.getElementById('notificationsModal')?.classList.contains('show'))paintNotifications();}finally{if(veTrackingRequest===request){veTrackingRequest=null;trackingBusy=false}}})();return request.promise}
+// NUEVO: respuesta confirmada en memoria, vinculada a la cuenta y sesión.
+let veTrackingSnapshot=null;
+function veHasTrackingSnapshot(owner,epoch){
+ return veTrackingSnapshot?.owner===owner&&veTrackingSnapshot.epoch===epoch;
+}
+async function refreshTracking(){if(!customerSession?.user?.id){trackingOrders=[];trackingEvents=[];renderTrackingButtons();return}if(!supabaseClient)return;const epoch=trackingEpoch,userId=customerSession.user.id;if(veTrackingRequest?.epoch===epoch&&veTrackingRequest.userId===userId)return veTrackingRequest.promise;const request={epoch,userId};veTrackingRequest=request;trackingBusy=true;request.promise=(async()=>{try{const r=await trackingCall('list',{tokens:[]});if(epoch!==trackingEpoch||customerSession?.user?.id!==userId)return;trackingOrders=(r.orders||[]).filter(o=>!o.customer_user_id||o.customer_user_id===userId);trackingEvents=r.events||[];trackingConfig=r.settings||trackingConfig;/* NUEVO */veTrackingSnapshot={owner:userId,epoch,at:Date.now()};const closed=new Set(trackingOrders.filter(o=>!o.chat_open).map(o=>o.id));for(const id of closed){chatDrafts.delete(id);delete chatSeen[id]}if(activeChat?.role==='customer'&&closed.has(activeChat.orderId)){closeChat('La conversación se cerró porque el pedido terminó o el chat fue desactivado.')}renderTrackingButtons();renderPreparation();if(document.getElementById('myOrdersModal')?.classList.contains('show'))paintMyOrders();if(document.getElementById('notificationsModal')?.classList.contains('show'))paintNotifications();}finally{if(veTrackingRequest===request){veTrackingRequest=null;trackingBusy=false}}})();return request.promise}
 function renderTrackingButtons(){const adminBtn=document.getElementById('adminBtn');let orders=document.getElementById('myOrdersBtn');if(!orders){orders=document.createElement('button');orders.id='myOrdersBtn';orders.className='icon-btn followup-button';orders.innerHTML=UI.receipt;orders.setAttribute('aria-label','Mis reservaciones');orders.title='Mis reservaciones';adminBtn.before(orders);orders.onclick=openMyOrders}orders.hidden=!customerSession?.user?.id;orders.style.display=orders.hidden?'none':'';let bell=document.getElementById('notificationsBtn');if(!bell){bell=document.createElement('button');bell.id='notificationsBtn';bell.className='icon-btn followup-button';bell.title='Notificaciones';bell.setAttribute('aria-label','Notificaciones');adminBtn.before(bell);bell.onclick=openNotifications}bell.hidden=!customerSession?.user?.id;bell.style.display=bell.hidden?'none':'';const count=customerSession?.user?.id&&trackingConfig.notifications_enabled?trackingEvents.filter(e=>Number(e.id)>trackingSeen).length+trackingOrders.filter(o=>o.chat_open&&o.last_message_sender==='admin'&&Number(o.last_message_id)>(chatSeen[o.id]||0)).length:0;bell.innerHTML=BELL_ICON+(count?'<span class="followup-count">'+count+'</span>':'');let bubble=document.getElementById('orderChatBubble');if(!bubble){bubble=document.createElement('button');bubble.id='orderChatBubble';bubble.className='btn order-chat-bubble';document.body.append(bubble);bubble.onclick=()=>{const open=trackingOrders.filter(o=>o.chat_open);if(open.length===1)openOrderChat(open[0].id);else openMyOrders()}}const open=trackingOrders.filter(o=>o.chat_open);bubble.hidden=!open.length;bubble.innerHTML=CHAT_ICON+'<span>Chat de '+(open.length===1?'pedido '+esc(open[0].folio):'mis pedidos')+'</span>';}
 function preparationText(o){if(o?.fulfillment_stage==='listo')return 'Tu pedido está listo.';if(o?.fulfillment_stage==='en_camino')return 'Entrega en camino.';if(o?.status==='entregado')return 'Pedido entregado.';if(o?.estimated_ready_at){const seconds=Math.ceil((new Date(o.estimated_ready_at)-Date.now())/1000);return seconds>0?'Preparación estimada: '+Math.floor(seconds/60)+' min '+String(seconds%60).padStart(2,'0')+' s restantes.':'El tiempo estimado se cumplió; consulta al local.'}return 'Preparación estimada: '+(o?.preparation_minutes??trackingConfig.preparation_minutes)+' minutos desde la confirmación del local.'}
 function renderPreparation(){document.querySelectorAll('[data-prep-order]').forEach(el=>el.textContent=preparationText(trackingOrders.find(o=>o.id===el.dataset.prepOrder)));const info=document.getElementById('catalogPreparation');if(info)info.textContent='Tiempo habitual de preparación: '+trackingConfig.preparation_minutes+' min. El local confirma el tiempo de tu pedido.'}
-async function openMyOrders(){if(!customerSession?.user?.id){renderCustomerProfile();openModal('customerProfileModal');toast('Inicia sesión para consultar únicamente tus pedidos.','info');return}const m=v4Modal('myOrdersModal','Mis reservaciones');m.classList.add('modal-followup');openModal(m.id);const owner=customerSession.user.id,epoch=trackingEpoch;if(trackingOrders.length||v6Pending?.owner===owner)paintMyOrders();else m.querySelector('.modal-body').innerHTML='<p role="status">Cargando reservaciones…</p>';try{await refreshTracking();if(customerSession?.user?.id===owner&&trackingEpoch===epoch&&m.classList.contains('show'))paintMyOrders()}catch(e){if(customerSession?.user?.id!==owner||trackingEpoch!==epoch||!m.classList.contains('show'))return;m.querySelector('.modal-body').innerHTML='<p class="tracking-error">'+esc(e.message)+'</p>'+panelButton('retryMyOrders','Reintentar',UI.refresh,'secondary');document.getElementById('retryMyOrders').onclick=openMyOrders}}
+// MODIFICADO: usar también las respuestas vacías confirmadas.
+async function openMyOrders(){
+ const owner=customerSession?.user?.id;
+ if(!owner){renderCustomerProfile();openModal('customerProfileModal');toast('Inicia sesión para consultar únicamente tus pedidos.','info');return}
+ const epoch=trackingEpoch,m=v4Modal('myOrdersModal','Mis reservaciones'),host=m.querySelector('.modal-body');
+ m.classList.add('modal-followup');
+ const hasSnapshot=veHasTrackingSnapshot(owner,epoch);
+ if(hasSnapshot||v6Pending?.owner===owner)paintMyOrders();
+ else host.innerHTML='<p class="ve-orders-status" role="status">Consultando tus reservaciones…</p>';
+ openModal(m.id);
+ if(hasSnapshot&&Date.now()-veTrackingSnapshot.at<10000&&!veTrackingRequest)return;
+ try{await refreshTracking()}
+ catch(e){
+  if(customerSession?.user?.id!==owner||trackingEpoch!==epoch||!m.classList.contains('show'))return;
+  host.querySelector('.ve-orders-status')?.remove();
+  if(!veHasTrackingSnapshot(owner,epoch)&&v6Pending?.owner!==owner)host.replaceChildren();
+  const notice=document.createElement('div');
+  notice.className='ve-orders-status';notice.setAttribute('role','status');
+  notice.innerHTML='<p>'+esc(e.message)+'</p>'+panelButton('retryMyOrders','Reintentar',UI.refresh,'secondary');
+  host.prepend(notice);notice.querySelector('button').onclick=openMyOrders;
+ }
+}
 function paintMyOrders(){const host=document.getElementById('myOrdersModal')?.querySelector('.modal-body');if(!host)return;host.innerHTML=`<p class="small muted">Pedidos asociados a tu cuenta. Solo tú puedes consultarlos al iniciar sesión.</p>${v6Pending&&v6Pending.owner===customerSession?.user?.id?`<div class="followup-card"><h3>Pedido ${esc(v6Pending.order.folio)}</h3><p>Pago pendiente de finalizar.</p>${panelButton('resumeFromOrders','Continuar pago',UI.receipt,'secondary')}</div>`:''}<div class="followup-list">${trackingOrders.map(o=>`<article class="followup-card"><h3>Pedido ${esc(o.folio)} · ${money(o.total)}</h3><span class="followup-stage">${esc(stageLabels[o.fulfillment_stage]||o.status)}</span><p>Pago: ${esc(ticketPaymentLabel(o.payment_status))}</p><p class="prep-clock" data-prep-order="${esc(o.id)}">${esc(preparationText(o))}</p><p>${esc(o.delivery_type==='delivery'?o.delivery_address:'Recoger en el local')}</p><p class="small">Referencia del pedido: ${esc(o.payment_reference||'No aplica')}</p><div class="toolbar"><button class="btn secondary" data-track-pdf="${esc(o.id)}">${UI.download}<span>Ticket</span></button>${o.chat_open?`<button class="btn" data-track-chat="${esc(o.id)}">${CHAT_ICON}<span>Conversar con el local</span></button>`:''}</div></article>`).join('')||'<p>Todavía no hay pedidos disponibles para seguimiento.</p>'}</div><p class="small muted">${trackingConfig.notifications_enabled?'Recibirás avisos aquí cuando el administrador confirme pago, preparación y entrega.':'El local gestiona las confirmaciones por llamada o WhatsApp. Puedes consultar el estado del pedido aquí.'}</p>`;host.querySelectorAll('[data-track-chat]').forEach(b=>b.onclick=()=>openOrderChat(b.dataset.trackChat));host.querySelectorAll('[data-track-pdf]').forEach(b=>b.onclick=e=>panelRun(e.currentTarget,async()=>{const raw=trackingOrders.find(o=>o.id===b.dataset.trackPdf);ticketDownload(await buildPdf(cloudOrderToState(raw)),'pedido-'+raw.folio+'.pdf')}));document.getElementById('resumeFromOrders')?.addEventListener('click',()=>{closeModal('myOrdersModal');resumePending()})}
 function paintNotifications(){const host=document.getElementById('notificationsModal').querySelector('.modal-body');host.innerHTML=trackingConfig.notifications_enabled?`<div>${trackingEvents.slice().sort((a,b)=>Number(b.id)-Number(a.id)).map(e=>`<article class="notification-item"><strong>${esc(e.title)}</strong><small>Pedido ${esc(trackingOrders.find(o=>o.id===e.order_id)?.folio||'')} · ${esc(new Date(e.created_at).toLocaleString('es-MX'))}</small></article>`).join('')||'<p>Sin avisos nuevos.</p>'}${trackingOrders.filter(o=>o.chat_open&&o.last_message_sender==='admin').map(o=>`<article class="notification-item">El local respondió en el pedido ${esc(o.folio)}.</article>`).join('')}</div>`:'<p>El administrador desactivó los avisos automáticos. Las confirmaciones se realizan por llamada o WhatsApp.</p>';}
 async function openNotifications(){if(!customerSession?.user?.id){renderCustomerProfile();openModal('customerProfileModal');return}v4Modal('notificationsModal','Notificaciones');openModal('notificationsModal');try{await refreshTracking();paintNotifications();trackingSeen=Math.max(trackingSeen,...trackingEvents.map(e=>Number(e.id)));persistTracking();renderTrackingButtons()}catch(e){document.getElementById('notificationsModal').querySelector('.modal-body').textContent=e.message}}
@@ -1910,9 +1939,9 @@ cloudReady=true;setSupabaseStatus('ok','Sitio conectado.');
 const activeSession=data?.session||customerSession||null;
 vibraGuestSessionResolved=true; // MODIFICADO: la lectura de sesión ya concluyó.
 if(activeSession)window.v22AuthSync?.(activeSession);
-await customerAuthChanged(activeSession);trackingCredentials=trackingCredentials.filter(x=>!x.owner||x.owner===activeSession?.user.id);persistTracking();await refreshSiteStatus();await loadPublicCloudState();await restoreCheckout();v6Restoring=false;persistCheckout();renderAccountButton();renderResumeBanner();const oauth=sessionStorage.getItem('VibraErotica.oauthPending');if(activeSession&&oauth){sessionStorage.removeItem('VibraErotica.oauthPending');customerAuthView='login';renderCustomerProfile();openModal('customerProfileModal');toast('Sesión con Google iniciada.','ok')}else if(oauth&&!activeSession){sessionStorage.removeItem('VibraErotica.oauthPending');customerAuthView='login';renderCustomerProfile();openModal('customerProfileModal');const feedback=document.getElementById('foodAuthStatus');if(feedback)feedback.textContent='Google autorizó el acceso, pero el navegador no conservó la sesión. Comprueba que las cookies y el almacenamiento del sitio estén permitidos y vuelve a intentarlo.';}const params=new URLSearchParams(location.hash.slice(1)),oauthError=params.get('error_description')||new URLSearchParams(location.search).get('error_description');if(oauthError){sessionStorage.removeItem('VibraErotica.oauthPending');customerAuthView='login';renderCustomerProfile();openModal('customerProfileModal');document.getElementById('foodAuthStatus').textContent='No se pudo iniciar sesión: '+oauthError;history.replaceState(null,'',location.pathname)}await recoverLocalTracking().catch(()=>{});await refreshTracking().catch(()=>{});if(!v7LiveChannel){v7LiveChannel=supabaseClient.channel('catalog-v7').on('postgres_changes',{event:'*',schema:'public',table:'products'},()=>loadPublicCloudState().catch(()=>{})).on('postgres_changes',{event:'*',schema:'public',table:'catalog_settings'},()=>loadPublicCloudState().catch(()=>{})).subscribe()}}catch(e){setSupabaseStatus('error',e.message);toast('No terminó de cargar el sitio: '+e.message,'error')}finally{v6Restoring=false;renderAccountButton();renderTrackingButtons()}};
-const v7AuthChanged=customerAuthChanged;customerAuthChanged=async function(session){const previous=customerSession?.user.id;if(previous&&session?.user.id&&previous!==session.user.id)clearTrackingState();await v7AuthChanged(session);if(session?.user?.id){try{const saved=JSON.parse(localStorage.getItem(TRACKING_KEY+':account:'+session.user.id)||'{}');trackingSeen=Number(saved.seen)||0;chatSeen=saved.chatSeen||{}}catch{trackingSeen=0;chatSeen={}}}if(session&&customerProfile&&!customerProfile.full_name)customerProfile.full_name=session.user.user_metadata?.full_name||session.user.user_metadata?.name||'';renderAccountButton()};
-function clearTrackingState(){trackingEpoch++;trackingCredentials=[];trackingOrders=[];trackingEvents=[];trackingSeen=0;chatSeen={};chatDrafts.clear();closeChat();localStorage.removeItem(TRACKING_KEY);for(const id of ['myOrdersModal','notificationsModal']){closeModal(id);document.getElementById(id)?.querySelector('.modal-body')?.replaceChildren()}renderTrackingButtons()}
+await customerAuthChanged(activeSession);trackingCredentials=trackingCredentials.filter(x=>!x.owner||x.owner===activeSession?.user.id);persistTracking();await refreshSiteStatus();await loadPublicCloudState();await restoreCheckout();v6Restoring=false;persistCheckout();renderAccountButton();renderResumeBanner();const oauth=sessionStorage.getItem('VibraErotica.oauthPending');if(activeSession&&oauth){sessionStorage.removeItem('VibraErotica.oauthPending');customerAuthView='login';renderCustomerProfile();openModal('customerProfileModal');toast('Sesión con Google iniciada.','ok')}else if(oauth&&!activeSession){sessionStorage.removeItem('VibraErotica.oauthPending');customerAuthView='login';renderCustomerProfile();openModal('customerProfileModal');const feedback=document.getElementById('foodAuthStatus');if(feedback)feedback.textContent='Google autorizó el acceso, pero el navegador no conservó la sesión. Comprueba que las cookies y el almacenamiento del sitio estén permitidos y vuelve a intentarlo.';}const params=new URLSearchParams(location.hash.slice(1)),oauthError=params.get('error_description')||new URLSearchParams(location.search).get('error_description');if(oauthError){sessionStorage.removeItem('VibraErotica.oauthPending');customerAuthView='login';renderCustomerProfile();openModal('customerProfileModal');document.getElementById('foodAuthStatus').textContent='No se pudo iniciar sesión: '+oauthError;history.replaceState(null,'',location.pathname)}await recoverLocalTracking().catch(()=>{});/* MODIFICADO: la consulta se inicia al resolver la sesión. */if(!v7LiveChannel){v7LiveChannel=supabaseClient.channel('catalog-v7').on('postgres_changes',{event:'*',schema:'public',table:'products'},()=>loadPublicCloudState().catch(()=>{})).on('postgres_changes',{event:'*',schema:'public',table:'catalog_settings'},()=>loadPublicCloudState().catch(()=>{})).subscribe()}}catch(e){setSupabaseStatus('error',e.message);toast('No terminó de cargar el sitio: '+e.message,'error')}finally{v6Restoring=false;renderAccountButton();renderTrackingButtons()}};
+const v7AuthChanged=customerAuthChanged;customerAuthChanged=async function(session){const previous=customerSession?.user.id;if(previous&&session?.user.id&&previous!==session.user.id)clearTrackingState();const profile=v7AuthChanged(session);/* NUEVO: consultar al resolver la sesión, en paralelo al perfil. */if(session?.user?.id&&previous!==session.user.id)refreshTracking().catch(()=>{});await profile;if(session?.user?.id){try{const saved=JSON.parse(localStorage.getItem(TRACKING_KEY+':account:'+session.user.id)||'{}');trackingSeen=Number(saved.seen)||0;chatSeen=saved.chatSeen||{}}catch{trackingSeen=0;chatSeen={}}}if(session&&customerProfile&&!customerProfile.full_name)customerProfile.full_name=session.user.user_metadata?.full_name||session.user.user_metadata?.name||'';renderAccountButton()};
+function clearTrackingState(){trackingEpoch++;/* NUEVO */veTrackingSnapshot=null;trackingCredentials=[];trackingOrders=[];trackingEvents=[];trackingSeen=0;chatSeen={};chatDrafts.clear();closeChat();localStorage.removeItem(TRACKING_KEY);for(const id of ['myOrdersModal','notificationsModal']){closeModal(id);document.getElementById(id)?.querySelector('.modal-body')?.replaceChildren()}renderTrackingButtons()}
 const v7ClearState=clearCustomerState;clearCustomerState=function(){const shouldClear=!!customerSession||v6Logout;v7ClearState();if(shouldClear)clearTrackingState();renderTrackingButtons()};
 const v7OrderFromCloud=cloudOrderToState;cloudOrderToState=function(row){const o=v7OrderFromCloud(row);o.fulfillmentStage=row.fulfillment_stage;o.preparationMinutes=row.preparation_minutes;o.estimatedReadyAt=row.estimated_ready_at;return o};
 const v7Enrich=enrichedTicketOrder;enrichedTicketOrder=function(order){const o=v7Enrich(order);o.customer.notes=[o.customer.notes,order.preparationMinutes!=null?'Preparación estimada: '+order.preparationMinutes+' min':'',order.fulfillmentStage?'Seguimiento: '+(stageLabels[order.fulfillmentStage]||order.fulfillmentStage):''].filter(Boolean).join(' · ');return o};
@@ -3190,12 +3219,29 @@ function v12HomeNav(){
   if(host)return host;
   host=document.createElement('div');host.id='v12HomeNav';host.className='container v12-home-nav';
   host.innerHTML=[
-    ['home','Inicio',vibraReferenceIcon('home')],['categories','Categorías',vibraReferenceIcon('categories')],['timed','Por tiempo',vibraReferenceIcon('timed')] // MODIFICADO
+    ['home','Inicio',vibraReferenceIcon('home')],['categories','Categorías',vibraReferenceIcon('categories')],['timed','Por tiempo',vibraReferenceIcon('timed')],
+    ['catalog','Catálogo completo',vibraReferenceIcon('catalog')], // NUEVO
+    ['location','Ubicación del local',vibraReferenceIcon('location')] // NUEVO
   ].map(([id,label,icon])=>`<button class="chip ${id==='home'?'active':''}" data-v12-view="${id}">${icon}<span>${label}</span></button>`).join('');
   document.querySelector('.topbar')?.append(host); // MODIFICADO: navegación debajo de los controles de cabecera.
   host.querySelectorAll('[data-v12-view]').forEach(b=>b.onclick=()=>{
     const id=b.dataset.v12View;
     if(id==='categories'){v12OpenCategories();return}
+    // NUEVO: desplazamiento a las secciones reales, con destino de foco.
+    if(id==='catalog'||id==='location'){
+      if(id==='catalog'){
+        v12View='home';
+        host.querySelectorAll('[data-v12-view]').forEach(item=>item.classList.toggle('active',item===b));
+        renderCatalog();
+      }
+      const target=document.getElementById(id==='catalog'?'veCatalogHeading':'foodDeliveryPlanner');
+      if(target){
+        target.tabIndex=-1;
+        target.focus({preventScroll:true});
+        target.scrollIntoView({block:'start',behavior:matchMedia('(prefers-reduced-motion: reduce)').matches?'instant':'smooth'});
+      }
+      return;
+    }
     v12View=id;host.querySelectorAll('button').forEach(x=>x.classList.toggle('active',x.dataset.v12View===id));renderCatalog();window.scrollTo({top:document.getElementById('catalogGrid').offsetTop-120,behavior:'smooth'});
   });
   return host;
@@ -3241,7 +3287,7 @@ renderCatalog=function(){
       qty?.insertAdjacentHTML('beforebegin',v12SocialButtons(id));
       // NUEVO: favorito flotante sin cambiar su controlador.
       const favorite=body?.querySelector('[data-v12-favorite]');
-      if(favorite){favorite.classList.add('ve-card-favorite');card.querySelector('.ve-card-media')?.append(favorite)}
+      if(favorite){favorite.classList.add('ve-card-favorite');card.querySelector('.ve-media-actions')?.append(favorite)} // MODIFICADO
     }
   });
   v12BindSocial(document.getElementById('catalogGrid'));
@@ -5707,6 +5753,10 @@ window.addEventListener('focus',()=>{if(block()&&db())load().catch(console.warn)
 'use strict';
 const $=s=>document.querySelector(s);
 const escText=s=>String(s??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+// NUEVO: icono de calendario para la acción de reserva.
+function veReserveCardIcon(){
+ return '<svg aria-hidden="true" viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><rect x="4" y="6" width="16" height="14" rx="2"/><path d="M8 4v4m8-4v4M4 10h16m-10 5h4m-2-2v4"/></svg>';
+}
 let lastServices='',serviceWrap=null; // MODIFICADO: reutilizar el nodo de las fichas publicadas.
 function updateServices(){
   const grid=$('#catalogGrid'),source=$('#v9Professionals');if(!grid||!source)return;
@@ -5722,7 +5772,7 @@ function updateServices(){
     const action=c.querySelector('button[data-p]'),id=action?.dataset.p||'';
     const img=c.querySelector('img'),title=c.querySelector('h3')?.textContent||'Servicio',desc=c.querySelector('.v9staff p')?.textContent||'';
     const ps=[...c.querySelectorAll('p')].map(x=>x.textContent).filter(Boolean);
-    return `<!-- MODIFICADO: composición de la tarjeta de servicio --><article class="vibra-service-card ve-reference-card"><div class="ve-card-media">${img?`<img class="vibra-service-photo" src="${escText(img.getAttribute('src'))}" alt="${escText(title)}">`:`<div class="vibra-service-photo" style="display:grid;place-items:center;color:var(--primary)">${typeof UI!=='undefined'?UI.business:''}</div>`}</div><div class="vibra-service-content"><h3>${escText(title)}</h3><div class="ve-service-info"><p>${escText(desc)}</p>${ps.slice(1,3).map(x=>`<p>${escText(x)}</p>`).join('')}</div></div><div class="ve-service-actions"><button class="btn" data-vibra-book="${escText(id)}">Reservar</button></div></article>`;
+    return `<!-- MODIFICADO: composición de la tarjeta de servicio --><article class="vibra-service-card ve-reference-card"><div class="ve-card-media">${img?`<img class="vibra-service-photo" src="${escText(img.getAttribute('src'))}" alt="${escText(title)}">`:`<div class="vibra-service-photo" style="display:grid;place-items:center;color:var(--primary)">${typeof UI!=='undefined'?UI.business:''}</div>`}</div><div class="vibra-service-content"><h3>${escText(title)}</h3><div class="ve-service-info"><p>${escText(desc)}</p>${ps.slice(1,3).map(x=>`<p>${escText(x)}</p>`).join('')}</div></div><div class="ve-service-actions"><!-- MODIFICADO --><button class="btn" data-vibra-book="${escText(id)}">${veReserveCardIcon()}<span>Reservar</span></button></div></article>`;
   }).join(''):'';
   if(html!==lastServices||(html&&!wrap.childElementCount)){wrap.innerHTML=html;lastServices=html;}
   wrap.hidden=!html;
@@ -9795,7 +9845,7 @@ html body main #catalogGrid .ve-reference-card :is(.meta,.v12-social-row){flex-w
   frame=0;
   const cards=[...main.querySelectorAll('#catalogGrid .product-card,#vibraServiceCatalog .vibra-service-card,#viIndieResults .vi-card')];
   const visible=cards.filter(card=>card.getClientRects().length>0).length;
-  const text=visible+' '+(visible===1?'publicación visible':'publicaciones visibles');
+  const text='Mostrando '+visible+' '+(visible===1?'resultado':'resultados'); // MODIFICADO
   if(count.textContent!==text)count.textContent=text;
   heading.hidden=!!(siteStatus&&!siteStatus.active&&!siteStatus.master);
  }
@@ -9829,5 +9879,114 @@ html body :is(main,.topbar,#foodDeliveryPlanner) :is(.btn,.chip,.v12-social-btn,
  }
  html body :is(main,.topbar,#foodDeliveryPlanner) :is(.btn,.chip,.v12-social-btn,.vibra-filter-picker):active:not(:disabled){transform:scale(.97)}
 }
+</style>
+<!-- NUEVO -->
+<style id="ve-reference-composition">
+/* NUEVO: patrón, paneles y proporciones de code.html sobre el tema existente. */
+html body{
+ --ve-width:min(1216px,calc(100% - 64px));
+ --ve-pattern:url("data:image/svg+xml,%3Csvg width='120' height='120' viewBox='0 0 120 120' xmlns='http://www.w3.org/2000/svg'%3E%3Cg fill='%23ff2a85' fill-opacity='0.035' fill-rule='evenodd'%3E%3C!-- Heart --%3E%3Cpath d='M20 14c-2.8 0-5 2.2-5 5 0 4.2 7 8 7 8s7-3.8 7-8c0-2.8-2.2-5-5-5-1.5 0-2.8.7-3.5 1.8-.7-1.1-2-1.8-3.5-1.8z'/%3E%3C!-- Sparkle / Star --%3E%3Cpath d='M85 22l1.5 4 4 1.5-4 1.5-1.5 4-1.5-4-4-1.5 4-1.5z'/%3E%3C!-- Cocktail glass --%3E%3Cpath d='M30 80l4 6v4h-2v1h6v-1h-2v-4l4-6h-10zm2 2h6l-3 4.2z'/%3E%3C!-- Feather / Whip accent --%3E%3Cpath d='M90 75c3-1 6-4 7-8-3 1-5 3-7 5v3zm-4 4c5 0 8-3 10-7-4 1-8 4-10 7z'/%3E%3C!-- Candle flame --%3E%3Cpath d='M60 40c0 2-1 3.5-2 3.5s-2-1.5-2-3.5c0-1 2-3 2-3s2 2 2 3z'/%3E%3C/g%3E%3C/svg%3E");
+ --ve-glass:color-mix(in srgb,var(--art-panel) 88%,transparent);
+ --ve-rim:#aa618f;
+ --ve-bloom:0 10px 30px -10px #7c255d44,0 0 1px 1px #ae417d26;
+ --ve-panel:linear-gradient(105deg,#fff0f7,#ffdeed 52%,#f4e7ff);
+}
+html body.dark-mode{
+ --art-bg:#0b0713;--art-panel:#150f22;--art-soft:#23152c;
+ --art-muted:#f1c7df;--art-link:#ffa7d2;--art-main:#b9145d;--art-action-end:#7928ca;
+ --ve-rim:#a66798;--ve-bloom:0 10px 30px -10px #000c,0 0 1px 1px #ff2a8526;
+ --ve-panel:linear-gradient(105deg,#3e0b29,#670d3e 52%,#25082e);
+}
+html body[data-vibra-ref-background]::before{
+ background:radial-gradient(circle at 20% 15%,#ff2a8514,transparent 45%),
+ radial-gradient(circle at 85% 70%,#7928ca1a,transparent 50%),var(--art-bg);
+}
+html body.pattern-on[data-vibra-ref-background]::after{background-image:var(--ve-pattern)}
+html body .topbar,html body .topbar[data-art-scrolled]{background:var(--ve-glass)!important;backdrop-filter:blur(14px)}
+html body .topbar .header{padding-inline:0!important;min-height:80px}
+html body .topbar #v12HomeNav{padding:5px 0 10px!important;gap:8px}
+html body .topbar #v12HomeNav .chip{min-height:34px;padding-inline:14px!important}
+html body .topbar #brandName{font-size:1.5rem;font-weight:800}
+html body .topbar #brandTagline{font-size:.78rem;font-weight:700}
+html body main .hero{padding-block:20px 0!important}
+html body #foodDeliveryPlanner{margin-block:20px 28px!important}
+html body #foodDeliveryPlanner>.section-card:first-child{
+ grid-template-columns:minmax(0,1fr) minmax(0,1fr);gap:12px 16px;
+ background:var(--ve-panel)!important;border:1px solid var(--ve-rim)!important;box-shadow:var(--ve-bloom)!important;
+}
+#foodDeliveryPlanner .ve-location-heading{display:grid;gap:4px}
+html body #foodDeliveryPlanner .ve-location-heading h2{display:flex;align-items:center;gap:8px;margin:0;font:800 1.25rem/1.2 Outfit,var(--font);text-transform:uppercase}
+#foodDeliveryPlanner .ve-location-heading h2 svg{width:34px;height:34px;padding:8px;border:1px solid var(--ve-rim);border-radius:12px;color:var(--art-link)}
+#foodDeliveryPlanner .ve-location-heading p{margin:0}
+html body #foodDeliveryPlanner .address-picker-row label{font-size:.76rem;font-weight:800;text-transform:uppercase;color:var(--art-link)!important}
+html body #foodDeliveryPlanner #foodPublicMap{border-radius:16px!important;margin:0}
+html body #foodDeliveryPlanner .address-picker-row button{min-height:42px}
+html body main #viPublicWrap{margin-block:28px 0!important}
+html body main #viPublicWrap .vi-filter-panel,html body main #viPublicWrap+.controls{background:var(--ve-glass)!important;box-shadow:none!important}
+html body main #viPublicWrap .vi-filter-panel{padding:20px 20px 16px!important;margin:0!important}
+html body main #viPublicWrap+.controls{
+ display:grid;grid-template-columns:minmax(180px,2fr) minmax(0,3fr);
+ align-items:center;gap:12px;padding:8px 20px 20px!important;margin-top:0!important;
+}
+html body main .controls .search-wrap{width:100%;min-width:0;margin:0}
+html body main .controls .chips{display:flex;flex-wrap:wrap;gap:8px}
+html body main #v15Experience{
+ grid-template-columns:minmax(0,1fr) minmax(0,.85fr) minmax(0,2.15fr)!important;
+ gap:24px;margin:28px auto!important;padding:24px!important;background:var(--ve-glass)!important;
+ border-color:var(--ve-rim)!important;box-shadow:var(--ve-bloom)!important;
+}
+html body main #v15Experience .ve-reputation-copy h3{max-width:15ch}
+html body main #v15Experience .ve-reputation-rating{padding-inline-start:24px;line-height:1.3}
+html body main #v15Experience .ve-stars svg{padding:1px;border:1px solid var(--ve-rim)}
+html body main .ve-catalog-heading{margin-block:28px 16px}
+html body main .ve-catalog-heading h2{font:800 1.25rem/1.2 Outfit,var(--font)}
+html body main #catalogGrid{grid-template-columns:repeat(4,minmax(0,1fr))!important;gap:20px!important}
+html body main #catalogGrid .ve-reference-card{background:var(--ve-glass)!important;border-color:var(--ve-rim)!important;box-shadow:var(--ve-bloom)!important}
+html body main #catalogGrid .ve-card-media{height:240px;background:var(--art-bg)}
+html body main #catalogGrid .ve-media-actions{position:absolute;inset:0;pointer-events:none}
+html body main #catalogGrid .ve-media-actions button{pointer-events:auto}
+html body main #catalogGrid .ve-card-media :is(.product-zoom-label,.ve-card-favorite,.ve-service-like){border-radius:999px!important;color:var(--art-ink)!important}
+html body main #catalogGrid .ve-card-media :is(.ve-card-favorite.active,.ve-service-like[aria-pressed=true]){color:var(--art-link)!important;background:var(--art-soft)!important}
+html body main #catalogGrid .ve-reference-card :is(.product-name,.vibra-service-content h3){font:800 1rem/1.4 Outfit,var(--font)!important}
+html body main #catalogGrid .ve-reference-card :is(.price,.vsm-price){font:800 1.25rem/1.25 Outfit,var(--font)!important}
+html body main #catalogGrid .ve-reference-card :is(.desc,.meta,.ve-service-info p){font-size:.81rem!important;line-height:1.4!important;color:var(--art-ink)!important}
+html body main #catalogGrid .ve-reference-card .desc{display:block;overflow:visible}
+html body main #catalogGrid .ve-reference-card .product-body{display:flex;flex-direction:column}
+html body main #catalogGrid .ve-reference-card .qty-row{display:grid;gap:8px;justify-items:end}
+html body main #catalogGrid .ve-reference-card .qty-row>.btn{justify-self:stretch;min-height:40px!important}
+html body main #catalogPages{justify-content:flex-end;gap:6px;padding-block:16px 0}
+html body main #catalogPages p{margin:0 auto 0 0}
+html body main #catalogPages button{min-height:32px}
+html body #vibraLegalFooter{margin-top:48px;background:var(--ve-glass)!important}
+html body #vibraLegalFooter .vibra-legal-inner{padding:24px 0 26px!important;justify-content:space-between}
+html body #vibraLegalFooter .vibra-legal-rights{border-top:1px solid var(--ve-rim);padding-top:16px!important}
+#myOrdersModal .ve-orders-status{border:1px solid var(--ve-rim);border-radius:12px;padding:12px 16px;background:var(--art-soft);color:var(--art-ink)}
+@media(hover:hover) and (pointer:fine) and (prefers-reduced-motion:no-preference){
+ html body main #catalogGrid .ve-reference-card{transition:transform .3s ease,border-color .3s ease,box-shadow .3s ease}
+ html body main #catalogGrid .ve-reference-card:hover{transform:perspective(650px) translateY(-4px) rotateX(var(--art-rx,0deg)) rotateY(var(--art-ry,0deg));border-color:var(--art-focus)!important;box-shadow:0 0 20px -2px #ff2a8573,var(--ve-bloom)!important}
+ html body main #catalogGrid .ve-card-media img{transition:transform .3s ease}
+ html body main #catalogGrid .ve-card-media:hover img{transform:scale(1.035)}
+}
+@media(max-width:1100px){html body main #v15Experience{grid-template-columns:1fr 1fr!important}}
+@media(max-width:1040px){
+ html body #foodDeliveryPlanner>.section-card:first-child{grid-template-columns:1fr}
+ html body main #catalogGrid{grid-template-columns:repeat(2,minmax(0,1fr))!important}
+}
+@media(max-width:760px){
+ html body{--ve-width:calc(100% - 32px)}
+ html body .topbar .header{min-height:64px}
+ html body main #viPublicWrap+.controls{grid-template-columns:1fr}
+ html body main #catalogGrid .ve-card-media{height:200px}
+}
+@media(max-width:540px){
+ html body main #catalogGrid,html body main #v15Experience{grid-template-columns:1fr!important}
+ html body main #v15Experience{gap:14px}
+ html body main #v15Experience .ve-reputation-rating{padding-inline-start:0}
+ html body main #catalogGrid .ve-card-media{height:220px}
+ html body main #catalogPages p{flex-basis:100%}
+}
+/* NUEVO: destinos debajo de la cabecera fija. */
+#veCatalogHeading,#foodDeliveryPlanner{scroll-margin-top:150px}
+html body main #catalogGrid .ve-service-actions button{display:flex;align-items:center;justify-content:center;gap:6px}
 </style>
 </html>
