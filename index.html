@@ -4837,6 +4837,8 @@ paintExperience=function(){
   // MODIFICADO: fachada con ubicación, reseña destacada, seguimiento y apertura.
   h.innerHTML=`<button class="v17-experience-toggle" id="v17ExperienceToggle" aria-expanded="true"><div class="ve-reputation-copy"><h3>Reputación y experiencia</h3><p>Califica el negocio, conoce el perfil, consulta opiniones y síguenos.</p></div><span class="v17-experience-chevron">${experienceSvg('<path d="M5 7h14v10H5z M9 10l3 3 3-3"/>')}</span></button><div class="v17-experience-panel"><div><div class="v17-experience-inner"><div class="v17-experience-summary ve-reputation-rating">${veRatingSummary(avg,s.reviews,summary?.followers)}</div><div class="v17-experience-actions"><button class="btn v16-glow-btn" id="v17KnowBusiness">${experienceSvg('<path d="M3 20h18M5 20V9l7-5 7 5v11M9 20v-5h6v5M10 10h4M12 2v2"/>')}<span>Conocer el negocio</span></button><button class="btn" id="v17Rate">${experienceSvg('<path d="M4 5h16v12H9l-4 3v-3H4z"/><path d="m12 7 1.1 2.3 2.6.4-1.9 1.8.5 2.6-2.3-1.2-2.3 1.2.5-2.6-1.9-1.8 2.6-.4z"/>')}<span>Calificar</span></button><button class="btn secondary" id="veViewOpinions">${experienceSvg('<path d="M4 5h16v12H9l-5 3zM8 9h8m-8 4h5"/>')}<span>Ver opiniones</span></button><button class="btn secondary" id="v17Follow">${experienceSvg(summary?.following?'<path d="M8 13a4 4 0 1 0 0-8 4 4 0 0 0 0 8ZM2 21v-2c0-2 3-4 6-4s6 2 6 4v2M16 11h6"/>':'<path d="M8 13a4 4 0 1 0 0-8 4 4 0 0 0 0 8ZM2 21v-2c0-2 3-4 6-4s6 2 6 4v2M16 11h6m-3-3v6"/>')}<span>${summary?.following?'Siguiendo':'Seguir'}</span></button></div></div></div></div>`;
   const toggle=document.getElementById('v17ExperienceToggle');toggle.onclick=()=>{const open=!h.classList.contains('open');h.classList.toggle('open',open);toggle.setAttribute('aria-expanded',String(open));clearTimeout(v17ExperienceTimer);if(open)v17ExperienceTimer=setTimeout(()=>{if(h.isConnected){h.classList.remove('open');toggle.setAttribute('aria-expanded','false')}},10*60*1000)};
+  // NUEVO: el anillo refleja el seguimiento confirmado por el flujo existente.
+  document.getElementById('v17Follow').setAttribute('aria-pressed',String(!!summary?.following));
   document.getElementById('v17KnowBusiness').onclick=()=>openBusinessShowcase();document.getElementById('v17Rate').onclick=()=>openRateBusinessModal();document.getElementById('veViewOpinions').onclick=()=>openRateBusinessModal(true); /* NUEVO: acceso directo a opiniones. */document.getElementById('v17Follow').onclick=async e=>{if(!customerSession){renderCustomerProfile();openModal('customerProfileModal');return toast('Inicia sesión para seguir al negocio.','info')}try{const r=await v16Community('toggle_follow',{});summary.following=r.following;summary.followers=r.followers;paintExperience()}catch(err){toast(err.message,'error')}};
 };
 
@@ -9870,15 +9872,7 @@ html body main #catalogGrid .ve-service-like[aria-pressed=true]{color:var(--art-
 html body :is(main,.topbar,#foodDeliveryPlanner) :is(.btn,.chip,.v12-social-btn,.vibra-filter-picker):focus-visible{
  outline:2px solid var(--art-focus);outline-offset:2px;
 }
-@media(hover:hover) and (prefers-reduced-motion:no-preference){
- html body :is(main,.topbar,#foodDeliveryPlanner) :is(.btn,.chip,.v12-social-btn,.vibra-filter-picker){
-  transition:transform .2s ease,border-color .2s ease,box-shadow .2s ease;
- }
- html body :is(main,.topbar,#foodDeliveryPlanner) :is(.btn,.chip,.v12-social-btn,.vibra-filter-picker):hover:not(:disabled){
-  transform:translateY(-2px);border-color:var(--art-focus)!important;box-shadow:0 5px 16px color-mix(in srgb,var(--art-main) 29%,transparent);
- }
- html body :is(main,.topbar,#foodDeliveryPlanner) :is(.btn,.chip,.v12-social-btn,.vibra-filter-picker):active:not(:disabled){transform:scale(.97)}
-}
+/* MODIFICADO: los estados se definen juntos en el bloque de interaccion de referencia. */
 </style>
 <!-- NUEVO -->
 <style id="ve-reference-composition">
@@ -9901,7 +9895,8 @@ html body[data-vibra-ref-background]::before{
  background:radial-gradient(circle at 20% 15%,#ff2a8514,transparent 45%),
  radial-gradient(circle at 85% 70%,#7928ca1a,transparent 50%),var(--art-bg);
 }
-html body.pattern-on[data-vibra-ref-background]::after{background-image:var(--ve-pattern)}
+/* MODIFICADO: el patrón SVG conserva su intensidad original sin la opacidad del logo heredado. */
+html body.pattern-on[data-vibra-ref-background]::after{background-image:var(--ve-pattern)!important;opacity:1}
 html body .topbar,html body .topbar[data-art-scrolled]{background:var(--ve-glass)!important;backdrop-filter:blur(14px)}
 html body .topbar .header{padding-inline:0!important;min-height:80px}
 html body .topbar #v12HomeNav{padding:5px 0 10px!important;gap:8px}
@@ -9964,8 +9959,7 @@ html body #vibraLegalFooter .vibra-legal-rights{border-top:1px solid var(--ve-ri
 @media(hover:hover) and (pointer:fine) and (prefers-reduced-motion:no-preference){
  html body main #catalogGrid .ve-reference-card{transition:transform .3s ease,border-color .3s ease,box-shadow .3s ease}
  html body main #catalogGrid .ve-reference-card:hover{transform:perspective(650px) translateY(-4px) rotateX(var(--art-rx,0deg)) rotateY(var(--art-ry,0deg));border-color:var(--art-focus)!important;box-shadow:0 0 20px -2px #ff2a8573,var(--ve-bloom)!important}
- html body main #catalogGrid .ve-card-media img{transition:transform .3s ease}
- html body main #catalogGrid .ve-card-media:hover img{transform:scale(1.035)}
+ /* MODIFICADO: la transición y el zoom se resuelven desde la tarjeta completa. */
 }
 @media(max-width:1100px){html body main #v15Experience{grid-template-columns:1fr 1fr!important}}
 @media(max-width:1040px){
@@ -9988,5 +9982,124 @@ html body #vibraLegalFooter .vibra-legal-rights{border-top:1px solid var(--ve-ri
 /* NUEVO: destinos debajo de la cabecera fija. */
 #veCatalogHeading,#foodDeliveryPlanner{scroll-margin-top:150px}
 html body main #catalogGrid .ve-service-actions button{display:flex;align-items:center;justify-content:center;gap:6px}
+</style>
+<!-- NUEVO -->
+<style>
+/* NUEVO: equivalentes locales de las utilidades interactivas de code.html. */
+html body{
+ --ve-fx-timing:cubic-bezier(.4,0,.2,1);
+ --ve-fx-accent:#a51558;
+ --ve-fx-bright:#a31857;
+ --ve-fx-wash:#f9dcec;
+ --ve-fx-glow:0 0 20px -2px #a5155860;
+}
+html body.dark-mode{
+ --ve-fx-accent:#ff6caf;
+ --ve-fx-bright:#c21861;
+ --ve-fx-wash:#3c1b3b;
+ --ve-fx-glow:0 0 20px -2px #ff2a8573;
+}
+html body :is(.topbar,#foodDeliveryPlanner,#v15Experience,#catalogGrid,#viPublicWrap,.controls,#catalogPages,#v12CategoriesModal) :is(button,a[href],input,select):focus-visible{
+ outline:2px solid var(--art-focus)!important;
+ outline-offset:2px;
+}
+html body :is(#foodDeliveryPlanner,#viPublicWrap,.controls) :is(input,select,.vibra-filter-picker):focus-visible{
+ outline-offset:0;
+ border-color:var(--ve-fx-accent)!important;
+ box-shadow:0 0 0 2px color-mix(in srgb,var(--ve-fx-accent) 25%,transparent)!important;
+}
+html body :is(.topbar,#v15Experience,#catalogGrid,#viPublicWrap,.controls,#catalogPages,#foodDeliveryPlanner,#v12CategoriesModal) :is(.btn,.chip,.icon-btn,.v12-social-btn,.vibra-filter-picker,.v12-menu-item):not(:disabled){
+ transition:color 150ms var(--ve-fx-timing),background-color 150ms var(--ve-fx-timing),border-color 150ms var(--ve-fx-timing),box-shadow 150ms var(--ve-fx-timing),filter 150ms var(--ve-fx-timing),scale 150ms var(--ve-fx-timing);
+}
+html body :is(.topbar,#catalogGrid,.controls) :is(.chip.active,#cartBtn,.qty-row>.btn,[data-vibra-book]):not(:disabled){
+ box-shadow:var(--ve-fx-glow);
+}
+html body main #v15Experience #v17Follow[aria-pressed="true"]{
+ box-shadow:0 0 0 2px var(--art-focus)!important;
+}
+html body main #catalogGrid .ve-card-media :is(.ve-card-favorite,.ve-service-like){backdrop-filter:blur(12px)}
+html body main #catalogGrid .ve-card-media .product-zoom-label{backdrop-filter:blur(4px)}
+html body main #catalogGrid .ve-card-media :is(.ve-card-favorite.active,.ve-service-like[aria-pressed="true"]) svg{fill:currentColor}
+html body main #v15Experience .ve-stars svg{
+ color:var(--ve-fx-accent);flex:none;
+ transition:transform 150ms var(--ve-fx-timing),color 150ms var(--ve-fx-timing);
+}
+html body #foodPublicMap .v15-business-pin .bubble{position:relative;isolation:isolate;overflow:visible}
+html body #foodPublicMap .v15-business-pin .bubble::before{
+ content:"";position:absolute;inset:-4px;z-index:-1;border-radius:50%;
+ background:var(--ve-fx-accent);opacity:0;pointer-events:none;
+}
+@keyframes veReferencePing{
+ 75%,100%{transform:scale(2);opacity:0}
+}
+@media(prefers-reduced-motion:no-preference){
+ html body #foodPublicMap .v15-business-pin .bubble::before{animation:veReferencePing 1s cubic-bezier(0,0,.2,1) infinite;opacity:.75}
+ html body .topbar .brand-logo{transition:transform 300ms var(--ve-fx-timing)}
+}
+@media(hover:hover) and (pointer:fine){
+ html body :is(.topbar,#catalogGrid,#v15Experience,#viPublicWrap,.controls,#catalogPages,#foodDeliveryPlanner,#v12CategoriesModal) :is(.btn,.chip,.icon-btn,.v12-social-btn,.vibra-filter-picker,.v12-menu-item):hover:not(:disabled){
+  border-color:var(--ve-fx-accent)!important;
+ }
+ html body .topbar .header>.icon-btn:not(#cartBtn):not(.account-labelled):hover,
+ html body .topbar #v12HomeNav .chip:not(.active):hover,
+ html body main .controls .chip:not(.active):hover,
+ html body main #v15Experience :is(#v17KnowBusiness,#v16OpenBusiness,#veViewOpinions,#v15ViewOpinions):hover,
+ html body main #catalogGrid :is(.ve-card-media,.ve-service-actions,.ve-service-times) :is(.ve-card-favorite,.ve-service-like,.vsm-media-button,.secondary):hover:not(:disabled){
+  background:var(--ve-fx-wash)!important;color:var(--art-ink)!important;
+ }
+ html body :is(.topbar,main) :is(#customerAccountBtn,#v17Follow,#v15Follow,[data-vibra-book]):hover:not(:disabled),
+ html body #foodDeliveryPlanner #foodGpsDestination:hover:not(:disabled){filter:brightness(1.1)}
+ html body .topbar #cartBtn:hover:not(:disabled),
+ html body main #v15Experience :is(#v17Rate,#v15Rate):hover:not(:disabled),
+ html body main #catalogGrid .qty-row>.btn:hover:not(:disabled),
+ html body #foodDeliveryPlanner :is(#foodSearchDestination,#foodNewAddress):hover:not(:disabled){
+  background:var(--ve-fx-bright)!important;color:#fff!important;box-shadow:var(--ve-fx-glow)!important;
+ }
+ html body main #catalogGrid .ve-reference-card:is(:hover,:focus-within){
+  border-color:var(--ve-fx-accent)!important;box-shadow:var(--ve-fx-glow),var(--ve-bloom)!important;
+ }
+ html body main #catalogGrid .ve-reference-card:is(:hover,:focus-within) :is(.product-name,.vibra-service-content h3){
+  color:var(--ve-fx-accent)!important;
+ }
+ html body main #v15Experience .ve-stars svg:hover{color:var(--art-ink)}
+}
+@media(hover:hover) and (pointer:fine) and (prefers-reduced-motion:no-preference){
+ html body .topbar .brand:hover .brand-logo{transform:scale(1.05)}
+ html body main #v15Experience .ve-stars svg:hover{transform:scale(1.25)}
+ html body main #catalogGrid .ve-reference-card{
+  transition:transform 300ms var(--ve-fx-timing),border-color 300ms var(--ve-fx-timing),box-shadow 300ms var(--ve-fx-timing);
+ }
+ html body main #catalogGrid .ve-reference-card:hover{
+  transform:perspective(650px) translateY(-4px) rotateX(var(--art-rx,0deg)) rotateY(var(--art-ry,0deg));
+ }
+ html body main #catalogGrid .ve-reference-card .ve-card-media img{transition:transform 500ms var(--ve-fx-timing)}
+ html body main #catalogGrid .ve-reference-card :is(.product-name,.vibra-service-content h3){transition:color 150ms var(--ve-fx-timing)}
+ html body main #catalogGrid .product-card.ve-reference-card:hover .ve-card-media img{transform:scale(1.1)}
+ html body main #catalogGrid .vibra-service-card.ve-reference-card:hover .ve-card-media img{transform:scale(1.05)}
+}
+html body :is(.topbar,#catalogGrid,#v15Experience,#viPublicWrap,.controls,#foodDeliveryPlanner) :is(.btn,.chip,.icon-btn,.v12-social-btn,.vibra-filter-picker):active:not(:disabled){
+ box-shadow:inset 0 0 0 2px var(--art-focus)!important;
+}
+@media(prefers-reduced-motion:no-preference){
+ html body :is(.topbar,#catalogGrid,#v15Experience,#viPublicWrap,.controls,#foodDeliveryPlanner) :is(.btn,.chip,.icon-btn,.v12-social-btn,.vibra-filter-picker):active:not(:disabled){scale:.95;transform:none}
+ html body :is(.topbar,#catalogGrid) :is(#cartBtn,.ve-card-favorite,.ve-service-like):active:not(:disabled){scale:.9}
+}
+@media(prefers-reduced-motion:reduce){
+ html body :is(.topbar,#catalogGrid,#v15Experience,#viPublicWrap,.controls,#catalogPages,#foodDeliveryPlanner,#v12CategoriesModal) :is(.btn,.chip,.icon-btn,.v12-social-btn,.vibra-filter-picker,.v12-menu-item,.ve-reference-card,.ve-stars svg,.brand-logo){
+  transition:none!important;animation:none!important;transform:none!important;scale:none!important;
+ }
+}
+html body :is(#productViewerModal,#vsmGallery,#v12CategoriesModal,.v12-menu-list) :is(button,a[href]):focus-visible{
+ outline:2px solid var(--art-focus)!important;outline-offset:2px;
+}
+@media(hover:hover) and (pointer:fine){
+ html body #vibraLegalFooter .vibra-legal-links button:is(:hover,:focus-visible){color:var(--ve-fx-accent)!important}
+ html body :is(#productViewerModal,#vsmGallery,.v12-menu-list) :is(button.secondary,.v12-menu-item):hover:not(:disabled){
+  background:var(--ve-fx-wash)!important;color:var(--art-ink)!important;border-color:var(--ve-fx-accent)!important;
+ }
+ html body #foodPublicMap .leaflet-control-zoom a:hover{
+  background:var(--ve-fx-bright)!important;color:#fff!important;
+ }
+}
 </style>
 </html>
