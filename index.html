@@ -754,6 +754,23 @@ function applyPublicTheme(){
   }else document.documentElement.style.removeProperty('--vibra-on-primary');
   document.documentElement.dataset.vibraMode=publicThemeMode==='dark'?'dark':'default';document.body.classList.toggle('dark-mode',publicThemeMode==='dark');document.documentElement.classList.toggle('vibra-dark-first',publicThemeMode==='dark');
   /* MODIFICADO: sincronizar el fondo al alternar ambos modos */ if(publicThemeMode==='dark') document.body.style.background='#0d1015'; else if(state?.config?.design){const d=state.config.design;document.body.style.background=d.bgType==='gradient'?`linear-gradient(${d.gradAngle}deg,${d.grad1},${d.grad2}) fixed`:d.bgType==='image'&&d.bgImage?`linear-gradient(rgba(255,255,255,${1-d.bgOpacity}),rgba(255,255,255,${1-d.bgOpacity})),url('${d.bgImage}') center/cover fixed`:(d.siteBg||'#f7f7f9');}
+  // NUEVO: aplicar la referencia base y respetar los colores y fondos personalizados.
+  const design=state?.config?.design;
+  document.body.toggleAttribute('data-vibra-ref-background',publicThemeMode==='dark'||!design||(design.bgType==='solid'&&(!design.siteBg||String(design.siteBg).trim().toLowerCase()==='#f7f7f9')));
+  const localTheme=document.body.style;
+  const colors=[
+    ['primary','--ref-custom-primary','#e50091'],
+    ['card','--ref-custom-card','#ffffff'],
+    ['text','--ref-custom-text','#232323']
+  ];
+  for(const [key,property,base] of colors){
+    const value=String(design?.[key]||'').trim();
+    if(value&&value.toLowerCase()!==base)localTheme.setProperty(property,value);
+    else localTheme.removeProperty(property);
+  }
+  if(hex&&primary.toLowerCase()!=='#e50091'){
+    localTheme.setProperty('--ref-custom-on-primary',document.documentElement.style.getPropertyValue('--vibra-on-primary'));
+  }else localTheme.removeProperty('--ref-custom-on-primary');
   const b=document.getElementById('themeBtn');
   if(b){
     b.innerHTML=(publicThemeMode==='dark'?UI.moon:UI.sun)+`<span class="theme-switch-label">${publicThemeMode==='dark'?'Oscuro':'Predeterminado'}</span>`;
@@ -776,7 +793,7 @@ function productVisual(p){if(p.image)return `<img src="${esc(p.image)}" alt="${e
 function renderHeader(){applyPublicTheme();try{const name=String(state.config.businessName||'VibraErótica');document.title=name;const icon=document.getElementById('vibraDynamicFavicon');const src='./Img/Logo';if(icon&&icon.getAttribute('href')!==src)icon.setAttribute('href',src);}catch(e){console.warn('Identidad de pestaña',e)}document.getElementById('brandName').textContent=state.config.businessName;document.getElementById('brandTagline').textContent=state.config.tagline;document.getElementById('heroTitle').textContent=`${state.config.businessName}`;const l=document.getElementById('brandLogo');l.innerHTML=`<img src="${esc(state.config.logo||window.VIBRA_DEFAULT_LOGO||'')}" alt="Logo VibraErótica">`;document.getElementById('adminBtn').innerHTML=UI.settings;document.getElementById('cartBtn').innerHTML=UI.cart+`<span class="badge-count" id="cartCount">0</span>`;document.querySelector('[data-close-drawer]').innerHTML=UI.close;document.querySelectorAll('[data-close-modal]').forEach(b=>b.innerHTML=UI.close);document.getElementById('whatsappFab').innerHTML=UI.whatsapp;const sw=document.getElementById('searchWrap');if(!sw.querySelector('svg'))sw.insertAdjacentHTML('afterbegin',UI.search);document.getElementById('pinSubmit').innerHTML=UI.lock+' Entrar';updateCartCount()}
 /* MODIFICADO: categoría virtual permanente para servicios independientes, incluso tras volver a entrar. */
 function categories(){const configured=Array.isArray(state.config?.catalogCategories)?state.config.catalogCategories:[];return ['Todos',...new Set([...configured,'Masajes independientes',...state.products.filter(p=>p.active).map(p=>p.category)].filter(x=>typeof x==='string'&&x.trim()))]}
-function renderCategories(){document.getElementById('categoryChips').innerHTML=categories().map(c=>`<button class="chip ${c===currentCategory?'active':''}" data-cat="${esc(c)}">${esc(c)}</button>`).join('')}
+function renderCategories(){document.getElementById('categoryChips').innerHTML=categories().map(c=>`<button class="chip ${c===currentCategory?'active':''}" data-cat="${esc(c)}">${/* NUEVO: iconos SVG para las categorías existentes. */ c==='Todos'?UI.dashboard:/masaj/i.test(c)?UI.pin:UI.products}<span>${esc(c)}</span></button>`).join('')}
 function renderCatalog(){const arr=state.products.filter(p=>p.active&&(currentCategory==='Todos'||p.category===currentCategory)&&(`${p.name} ${p.description}`.toLowerCase().includes(searchTerm.toLowerCase())));document.getElementById('catalogGrid').innerHTML=arr.length?arr.map(p=>{const q=state.cart[p.id]||0;return `<article class="product-card"><div class="product-visual">${productVisual(p)}</div><div class="product-body"><div class="product-head"><h3 class="product-name">${esc(p.name)}</h3><div class="price">${money(p.price)}</div></div><p class="desc">${esc(p.description)}</p><div class="meta"><span>${esc(p.category)}</span><span>Stock: ${p.stock}</span></div><div class="qty-row">${p.stock<=0?'<span class="stock-out">Agotado</span>':`<div class="qty-control"><button class="icon-btn" data-dec="${p.id}" aria-label="Quitar cantidad" ${q<=0?'disabled':''}>${UI.minus}</button><span class="qty-value">${q}</span><button class="icon-btn" data-inc="${p.id}" aria-label="Agregar cantidad" ${q>=p.stock?'disabled':''}>${UI.plus}</button></div>`}<button class="btn secondary" data-inc="${p.id}" ${p.stock<=0||q>=p.stock?'disabled':''}>${UI.cart}<span>Agregar</span></button></div></div></article>`}).join(''):'<div class="section-card"><strong>No hay productos para mostrar.</strong></div>';updateCartCount()}
 function changeQty(id,delta){const p=state.products.find(x=>x.id===id);if(!p)return;const next=Math.max(0,Math.min(p.stock,(state.cart[id]||0)+delta));if(next)state.cart[id]=next;else delete state.cart[id];save();renderCatalog();if(document.getElementById('cartDrawer').classList.contains('show'))renderCart()}
 function updateCartCount(){const el=document.getElementById('cartCount');if(el)el.textContent=Object.values(state.cart).reduce((a,b)=>a+b,0)}
@@ -3011,7 +3028,7 @@ function v12HomeNav(){
   host.innerHTML=[
     ['home','Inicio',V12I.home],['categories','Categorías',V12I.grid],['timed','Por tiempo',UI.pending]
   ].map(([id,label,icon])=>`<button class="chip ${id==='home'?'active':''}" data-v12-view="${id}">${icon}<span>${label}</span></button>`).join('');
-  const controls=document.querySelector('.container.controls');controls?.before(host);
+  document.querySelector('.topbar')?.append(host); // MODIFICADO: navegación debajo de los controles de cabecera.
   host.querySelectorAll('[data-v12-view]').forEach(b=>b.onclick=()=>{
     const id=b.dataset.v12View;
     if(id==='categories'){v12OpenCategories();return}
@@ -4009,7 +4026,7 @@ async function refreshExperience(){
 }
 function paintExperience(){
  let h=document.getElementById('v15Experience');
- if(!h){h=document.createElement('section');h.id='v15Experience';h.className='container v15-experience-card';document.querySelector('.container.controls')?.before(h)}
+ if(!h){h=document.createElement('section');h.id='v15Experience';h.className='container v15-experience-card';document.querySelector('.container.controls')?.after(h) /* MODIFICADO: reputación debajo del panel de filtros. */}
  const s=summary.scores||{},avg=Number(s.overall||0);
  h.innerHTML=`<div><h3>Tu experiencia importa</h3><p>Califica el negocio, servicio y experiencia. También puedes consultar lo que opinan otros clientes.</p><div class="v15-rating-summary"><span class="v15-stars-text">${avg?('★'.repeat(Math.round(avg))):'☆☆☆☆☆'}</span><span>${avg?avg.toFixed(1):'Sin calificaciones'} · ${Number(s.reviews||0)} opiniones · ${Number(summary.followers||0)} seguidores</span></div></div>
  <!-- MODIFICADO: SVG de la barra V15 en cada renderizado -->
@@ -4581,7 +4598,7 @@ const v17RenderAdminBase=renderAdmin;renderAdmin=function(){v17EnsureCouponTab()
 /* ---------- Tu experiencia: plegable y autocierre a 10 min ---------- */
 let paintExperience=window.vibraPaintExperience||function(){};
 paintExperience=function(){
-  let h=document.getElementById('v15Experience');if(!h){h=document.createElement('section');h.id='v15Experience';document.querySelector('.container.controls')?.before(h)}
+  let h=document.getElementById('v15Experience');if(!h){h=document.createElement('section');h.id='v15Experience';document.querySelector('.container.controls')?.after(h) /* MODIFICADO: reputación debajo del panel de filtros. */}
   h.className='container v17-experience';const s=summary?.scores||{},avg=Number(s.overall||0);
   // MODIFICADO: iconos propios para las acciones y la puntuación de la barra.
   const experienceSvg=path=>`<svg aria-hidden="true" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round">${path}</svg>`;
@@ -8132,4 +8149,153 @@ function vibraFilterPicker(select){
   paintIcons();
 })();
 </script>
+<!-- NUEVO: diseno visual claro y oscuro de las referencias -->
+<style id="vibra-reference-themes">
+/* NUEVO: paletas y composición de las maquetas sobre los componentes existentes. */
+body{
+  --ref-bg:#f4f6f9;--ref-header:#2d2739;--ref-header-text:#fff5fb;--ref-header-muted:#e9bcd4;
+  --ref-card:#fff;--ref-soft:#f1f5f9;--ref-line:#cbd5e1;--ref-text:#0f172a;--ref-muted:#475569;
+  --ref-action:#9d174d;--ref-on-action:#fff;--ref-hover:#831843;--ref-link:#9d174d;--ref-stage:#f1f5f9;
+  --ref-hero:linear-gradient(105deg,#881337,#9f1239 43%,#4c0519);
+  --ref-shadow:0 10px 25px -16px #33415570,0 2px 5px #3341550e;
+  --ref-focus:#9d174d;--ref-map:#8c9db5;--ref-radius:16px;
+}
+body.dark-mode{
+  --ref-bg:#0c0814;--ref-header:#160f24;--ref-header-muted:#f3c1de;
+  --ref-card:#1b132c;--ref-soft:#150f22;--ref-line:#57355f;--ref-text:#f5f3ff;--ref-muted:#d1bfdc;
+  --ref-action:#c91865;--ref-on-action:#fff;--ref-hover:#a81353;--ref-link:#ff91c1;--ref-stage:#0e0a18;
+  --ref-hero:linear-gradient(105deg,#3e0b29,#670d3e 47%,#25082e);
+  --ref-shadow:0 12px 30px -16px #000b,0 0 0 1px #ff2a8510;
+  --ref-focus:#ff91c1;--ref-map:#111d35;
+}
+/* NUEVO: fondos de referencia cuando Personalización conserva el fondo base. */
+html body[data-vibra-ref-background]{background:var(--ref-bg)!important}
+html body.dark-mode[data-vibra-ref-background]{background:radial-gradient(ellipse at 18% 14%,#ff2a8514,transparent 45%),radial-gradient(ellipse at 88% 72%,#7928ca20,transparent 50%),var(--ref-bg)!important}
+html body[data-vibra-ref-background]::before{background:var(--ref-bg)}
+/* NUEVO: variables de la interfaz pública y sus ventanas. */
+html body :is(main,.topbar,#foodDeliveryPlanner,#vibraLegalFooter,.modal:not(#adminModal),#cartDrawer,#vsmGallery,#vibraReserveOverlay,#vibraLegalDialog){
+  --primary:var(--ref-custom-primary,var(--ref-action));--vibra-on-primary:var(--ref-custom-on-primary,var(--ref-on-action));
+  --card:var(--ref-custom-card,var(--ref-card));--text:var(--ref-custom-text,var(--ref-text));
+  --secondary:var(--ref-soft);--surface:var(--ref-soft);--muted:var(--ref-muted);--line:var(--ref-line);
+  --vibra-ui-surface:var(--card);--vibra-ui-neutral:var(--ref-soft);--vibra-ui-text:var(--text);
+  --vibra-ui-muted:var(--ref-muted);--vibra-ui-border:var(--ref-line);--vibra-ui-stage:var(--ref-stage);
+  --vibra-pink:var(--primary);--vibra-pink-hover:var(--ref-hover);
+  color:var(--text);
+}
+html body.dark-mode :is(main,.topbar,#foodDeliveryPlanner,#vibraLegalFooter,.modal:not(#adminModal),#cartDrawer,#vsmGallery,#vibraReserveOverlay,#vibraLegalDialog){
+  --card:var(--ref-card);--text:var(--ref-text);
+}
+html body .topbar{background:var(--ref-header)!important;color:var(--ref-header-text)!important;border-color:var(--ref-line)!important;box-shadow:0 3px 13px #0c081423}
+html body .topbar .header,
+html body .topbar #v12HomeNav,
+html body main .container,
+html body #foodDeliveryPlanner,
+html body #vibraLegalFooter .vibra-legal-inner{width:min(1280px,calc(100% - 40px));max-width:1280px}
+html body .topbar .header{gap:8px;padding:8px 0!important}
+html body .topbar .brand-logo{width:42px;height:42px;border-radius:10px}
+html body .topbar #brandName{color:var(--ref-header-text)!important;font-family:var(--font);font-weight:800;letter-spacing:.04em}
+html body .topbar #brandTagline{color:var(--ref-header-muted)!important}
+html body .topbar .header>button:not([hidden]){border-radius:999px!important}
+html body .topbar .header>.icon-btn:not(#cartBtn):not(.account-labelled){background:var(--ref-soft)!important;color:var(--ref-text)!important;border:1px solid var(--ref-line)!important}
+html body .topbar .header>:is(#cartBtn,.account-labelled){background:var(--primary)!important;color:var(--vibra-on-primary)!important}
+html body .topbar #v12HomeNav{display:flex;gap:6px;overflow-x:auto;padding:5px 1px 8px!important;border-top:1px solid #ffffff26}
+html body .topbar #v12HomeNav .chip{min-height:32px;padding:5px 11px!important;border-radius:999px!important;font-size:.8rem}
+html body .topbar #v12HomeNav .chip:not(.active){background:var(--ref-card)!important;color:var(--ref-text)!important;border:1px solid var(--ref-line)!important}
+html body .topbar #v12HomeNav .chip.active{background:var(--primary)!important;color:var(--vibra-on-primary)!important;border-color:var(--primary)!important}
+html body main .hero{padding:20px 0 12px!important}
+html body main .hero-card{
+  min-height:0!important;padding:clamp(23px,4vw,42px)!important;border-radius:22px!important;
+  background:var(--ref-hero)!important;color:#fff!important;border:1px solid #c7367a65;box-shadow:var(--ref-shadow)!important;
+}
+html body main .hero-card h2{font-family:var(--font);font-size:clamp(1.95rem,4vw,3.15rem)!important;font-weight:800;letter-spacing:-.045em;line-height:1.05;color:#fff!important}
+html body main .hero-card p{max-width:70ch;color:#fff1f7!important;opacity:1;line-height:1.55}
+html body main :is(#viPublicWrap .vi-filter-panel,.controls,#v15Experience),
+html body #foodDeliveryPlanner>.section-card{
+  background:var(--card)!important;color:var(--text)!important;border:1px solid var(--ref-line)!important;border-radius:var(--ref-radius)!important;box-shadow:var(--ref-shadow);
+}
+html body main #viPublicWrap{margin:0 auto!important;position:relative;z-index:3}
+html body main #viPublicWrap .vi-filter-panel{margin:0!important;padding:14px 16px 9px!important;border-bottom:0!important;border-radius:var(--ref-radius) var(--ref-radius) 0 0!important;box-shadow:none}
+html body main #viPublicWrap .vi-filter-header{margin:0 0 8px}
+html body main #viPublicWrap .vi-filter-header h3{font-size:.95rem;color:var(--text)!important}
+html body main #viPublicWrap .vi-note{color:var(--ref-muted)!important}
+html body main #viPublicWrap .vi-field label{color:var(--ref-link)!important;font-size:.72rem;font-weight:800;letter-spacing:.045em;text-transform:uppercase}
+html body main .controls{grid-template-columns:minmax(190px,1fr) minmax(0,1.6fr);align-items:center;padding:9px 16px 13px!important;margin:0 auto 14px!important;gap:8px}
+html body main #viPublicWrap + .controls{border-top:0!important;border-radius:0 0 var(--ref-radius) var(--ref-radius)!important}
+html body main :is(.search-wrap input,.vibra-filter-picker,#viPublicWrap select:not([hidden])){min-height:40px;height:40px;border-radius:9px!important;background:var(--ref-soft)!important;color:var(--text)!important;border-color:var(--ref-line)!important}
+html body main .search-wrap input::placeholder{color:var(--ref-muted);opacity:1}
+html body main .controls .chips{padding:0;align-items:center;min-width:0}
+html body main .controls .chip{border-radius:999px!important;min-height:34px;font-size:.78rem}
+html body main .controls .chip:not(.active){background:var(--ref-soft)!important;color:var(--text)!important;border:1px solid var(--ref-line)!important}
+html body main .controls .chip.active{background:var(--primary)!important;color:var(--vibra-on-primary)!important}
+html body main #v15Experience{margin:14px auto!important;padding:12px 16px!important}
+html body main #v15Experience :is(h3,.v17-experience-toggle){color:var(--text)!important}
+html body main #v15Experience :is(p,.v17-experience-summary){color:var(--ref-muted)!important}
+html body main #v15Experience .v17-experience-toggle{background:transparent!important}
+html body main #v15Experience .v17-experience-inner{gap:12px}
+html body main #catalogGrid{grid-template-columns:repeat(4,minmax(0,1fr))!important;gap:14px!important;align-items:stretch!important;margin-top:15px!important}
+html body main #catalogGrid :is(.product-card,.vibra-service-card),html body main #viIndieHost .vi-card{
+  background:var(--card)!important;color:var(--text)!important;border:1px solid var(--ref-line)!important;
+  border-radius:var(--ref-radius)!important;box-shadow:var(--ref-shadow)!important;overflow:hidden;align-self:stretch!important;
+}
+html body main #catalogGrid :is(.product-card,.vibra-service-card):hover{border-color:var(--ref-focus)!important}
+html body main #catalogGrid :is(.product-name,.product-card h3,.vibra-service-content h3){font-weight:800;color:var(--text)!important;line-height:1.25}
+html body main #catalogGrid :is(.desc,.meta,.vibra-service-content p:not(.vsm-price)){color:var(--ref-muted)!important}
+html body main #catalogGrid :is(.price,.vsm-price){color:var(--ref-link)!important;font-weight:800}
+html body main #catalogGrid :is(.product-visual,.product-zoom-trigger,.vibra-service-photo){background-color:var(--ref-stage)!important}
+html body main #catalogGrid :is(.product-visual,.product-zoom-trigger,.vibra-service-photo,.product-zoom-trigger img){height:clamp(145px,19vw,235px)!important;min-height:0!important;max-height:none!important}
+html body main #catalogGrid :is(.product-zoom-trigger img,.vibra-service-photo){object-fit:contain!important}
+html body main #catalogGrid .product-body{flex:1 1 auto!important}
+html body main #catalogGrid .qty-row{margin-top:auto!important;padding-top:6px}
+html body main #catalogPages{padding-block:7px 3px;color:var(--ref-muted)!important}
+html body #foodDeliveryPlanner{margin:20px auto!important}
+html body #foodDeliveryPlanner>.section-card{padding:clamp(13px,2.4vw,24px)!important}
+html body #foodDeliveryPlanner .eyebrow{color:var(--ref-text)!important;font-size:1rem;font-weight:800;letter-spacing:.015em}
+html body #foodDeliveryPlanner :is(#foodOriginLabel,.small.muted){color:var(--ref-muted)!important}
+html body #foodDeliveryPlanner .field{color:var(--ref-text)!important}
+html body #foodDeliveryPlanner :is(input,select){color:var(--text)!important;background:var(--ref-soft)!important;border-color:var(--ref-line)!important}
+html body #foodPublicMap{background-color:var(--ref-map);border:1px solid var(--ref-line);border-radius:12px}
+html body #vibraLegalFooter{margin-top:26px;background:var(--ref-card)!important;color:var(--ref-text)!important;border-color:var(--ref-line)!important}
+html body #vibraLegalFooter :is(.vibra-legal-links button,.vibra-legal-warning summary){color:var(--ref-link)!important}
+html body #vibraLegalFooter :is(.vibra-legal-adult strong,.vibra-legal-rights){color:var(--ref-text)!important}
+html body #vibraLegalFooter .vibra-legal-warning>div{background:var(--ref-soft);color:var(--ref-text);border-color:var(--ref-line)}
+html body :is(.modal:not(#adminModal),#cartDrawer,#vibraReserveShell,#vsmGallery .vsm-dialog,#vibraLegalDialog){background:var(--ref-card)!important;color:var(--ref-text)!important;border-color:var(--ref-line)!important}
+html body :is(.modal:not(#adminModal) .modal-head,#cartDrawer .drawer-head,#vibraReserveTop,#vsmGallery .vsm-viewer-header){background:var(--ref-soft)!important;color:var(--ref-text)!important;border-color:var(--ref-line)!important}
+html body :is(.modal:not(#adminModal),#cartDrawer,#vibraReserveShell,#vsmGallery,#foodDeliveryPlanner) :is(input:not([type=checkbox]):not([type=radio]):not([type=range]):not([type=file]),textarea,select){
+  background-color:var(--ref-soft)!important;color:var(--ref-text)!important;border-color:var(--ref-line)!important;
+}
+html body :is(main,.topbar,#foodDeliveryPlanner,#cartDrawer,.modal:not(#adminModal),#vsmGallery,#vibraReserveOverlay) :is(.btn:not(.secondary):not(.ghost):not(.danger):not(.success),.v23-cart-add,.v9action,.vibra-book-service){
+  background:var(--primary)!important;color:var(--vibra-on-primary)!important;border-color:var(--primary)!important;box-shadow:none;
+}
+html body :is(main,#foodDeliveryPlanner,#cartDrawer,.modal:not(#adminModal),#vsmGallery) :is(.btn.secondary,.btn.ghost){
+  background:var(--ref-soft)!important;color:var(--ref-text)!important;border:1px solid var(--ref-line)!important;box-shadow:none;
+}
+html body :is(main,#foodDeliveryPlanner,#cartDrawer,.modal:not(#adminModal),#vsmGallery) :is(.btn.secondary,.btn.ghost):hover{border-color:var(--ref-focus)!important}
+html body :is(main,.topbar,#foodDeliveryPlanner,#cartDrawer,.modal:not(#adminModal),#vsmGallery,#vibraReserveOverlay) :is(button,a,input,select,textarea):focus-visible{outline:2px solid var(--ref-focus);outline-offset:2px}
+@media(max-width:1050px){html body main #catalogGrid{grid-template-columns:repeat(3,minmax(0,1fr))!important}}
+@media(max-width:760px){
+  html body .topbar .header,html body .topbar #v12HomeNav,html body main .container,html body #foodDeliveryPlanner,html body #vibraLegalFooter .vibra-legal-inner{width:calc(100% - 24px)}
+  html body main .controls{grid-template-columns:minmax(0,1fr)}
+  html body main #catalogGrid{grid-template-columns:repeat(2,minmax(0,1fr))!important;gap:9px!important}
+  html body main #catalogGrid :is(.product-visual,.product-zoom-trigger,.vibra-service-photo,.product-zoom-trigger img){height:clamp(112px,32vw,180px)!important}
+  html body main .hero-card{border-radius:17px!important}
+}
+@media(max-width:360px){html body main #catalogGrid{grid-template-columns:minmax(0,1fr)!important}}
+/* NUEVO: superficies administrativas y contraste sin alterar la navegación. */
+html body #adminModal{
+  --vibra-ui-surface:var(--ref-card);--vibra-ui-neutral:var(--ref-soft);--vibra-ui-text:var(--ref-text);
+  --vibra-ui-muted:var(--ref-muted);--vibra-ui-border:var(--ref-line);
+  background:var(--ref-card)!important;color:var(--ref-text)!important;border-color:var(--ref-line)!important;
+}
+html body #adminModal :is(.modal-head,.admin-tabs,.admin-content,.admin-pane,.section-card){
+  background-color:var(--ref-card)!important;color:var(--ref-text)!important;border-color:var(--ref-line)!important;
+}
+html body #adminModal :is(input,select,textarea):not([type=radio]):not([type=checkbox]):not([type=file]):not([type=color]){
+  background:var(--ref-soft)!important;color:var(--ref-text)!important;border-color:var(--ref-line)!important;
+}
+html body #adminModal :is(.muted,.review-meta,.small.muted){color:var(--ref-muted)!important}
+html body #adminModal .tab-btn.active{border-color:var(--ref-focus)!important;color:var(--ref-link)!important}
+html body #adminModal .tab-btn.active svg{color:inherit!important}
+html body :is(.vibra-cart-feedback,.vibra-magnifier){--vibra-ui-surface:var(--ref-card);--vibra-ui-text:var(--ref-text);--vibra-ui-border:var(--ref-line);--vibra-ui-stage:var(--ref-stage)}
+html body .vibra-cart-token{background:var(--ref-action);color:var(--ref-on-action)}
+</style>
 </html>
