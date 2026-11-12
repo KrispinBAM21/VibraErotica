@@ -3220,6 +3220,12 @@ async function v12DecorateProductViewer(id){
       <button class="btn secondary" id="v12SendProductReview">${V12I.comment}<span>Publicar opinión</span></button>
     </div>`;
   body.append(sec);v12BindSocial(sec);
+  // NUEVO: trasladar los controles ya enlazados al pie de la foto.
+  const reactions=body.querySelector('.vibra-product-gallery [data-vibra-zoom="product"]');
+  if(reactions){
+    reactions.setAttribute('aria-label','Reacciones del producto');
+    reactions.append(...sec.querySelectorAll('[data-v12-like],[data-v12-favorite]'));
+  }
   // NUEVO: dejar la compra y la imagen en la vista inicial.
   const tabs=vibraCompactControls(['Producto','Opiniones'],index=>{
     body.dataset.vibraProductPane=index===0?'product':'reviews';
@@ -5724,12 +5730,7 @@ function attach(){const pane=q('#adminContent');if(!pane||typeof activeAdmin==='
 function viewer(){let e=q('#vsmGallery');if(e)return e;e=document.createElement('div');e.id='vsmGallery';e.className='vsm-gallery';e.setAttribute('role','dialog');e.setAttribute('aria-modal','true');e.setAttribute('aria-label','Galería de fotos y videos');e.innerHTML=/* MODIFICADO: galeria y controles en una sola columna. */'<div class="vsm-dialog"><header class="vsm-viewer-header"><div><h2 id="vsmViewerName">Servicio</h2><p id="vsmViewerDetails"></p></div><button class="vsm-close" type="button" aria-label="Cerrar visor">×</button></header><div class="vsm-viewer-body"><div class="vsm-viewer-gallery"><div class="vsm-viewer-stage" id="vsmGalleryMedia"></div><nav class="vsm-actions"><button id="vsmPrev" aria-label="Anterior">← Anterior</button><span class="vsm-count" id="vsmCount"></span><button id="vsmNext" aria-label="Siguiente">Siguiente →</button></nav></div><aside class="vsm-viewer-sidebar"><h3>Información del servicio</h3><div id="vsmProfileInfo"></div><div class="vsm-viewer-social" id="vsmProfileSocial"></div><div class="vsm-viewer-interact"><button type="button" id="vsmLike">♡ Me gusta <span id="vsmLikes"></span></button><button type="button" id="vsmFavorite">☆ Favorito</button><button type="button" id="vsmShowComments">Comentarios</button></div><div id="vsmComments" hidden><div id="vsmCommentList"></div><textarea id="vsmCommentText" placeholder="Tu opinión sobre el servicio" rows="3"></textarea><button type="button" id="vsmSendComment">Publicar opinión</button><p id="vsmCommentStatus"></p></div></aside></div></div>';document.body.append(e);q('.vsm-close',e).onclick=closeViewer;q('#vsmPrev').onclick=()=>drawGallery(-1);q('#vsmNext').onclick=()=>drawGallery(1);e.onclick=event=>{if(event.target===e)closeViewer()};return e;}
 function closeViewer(){const e=q('#vsmGallery');if(!e)return;const v=q('video',e);if(v)v.pause();e.classList.remove('open');q('#vsmGalleryMedia').replaceChildren();}
 function drawGallery(delta=0){if(!galleryItems.length)return;galleryIndex=(galleryIndex+delta+galleryItems.length)%galleryItems.length;const m=galleryItems[galleryIndex],box=q('#vsmGalleryMedia');q('video',box)?.pause();box.replaceChildren();box.classList.add('vsm-media-changing');const v=document.createElement(m.type==='video'?'video':'img');v.addEventListener('loadeddata',()=>box.classList.remove('vsm-media-changing'),{once:true});v.addEventListener('load',()=>box.classList.remove('vsm-media-changing'),{once:true});v.addEventListener('error',()=>box.classList.remove('vsm-media-changing'),{once:true});/* MODIFICADO: el visor usa el fondo del repositorio para fotos y videos. */v.src=m.url;if(m.type==='video'){v.controls=true;v.playsInline=true;v.loop=true;v.autoplay=true;v.muted=true;v.setAttribute('aria-label','Video del servicio: reproducción automática en bucle');}v.alt=m.alt||'Archivo multimedia';box.append(v); /* MODIFICADO: reiniciar el zoom al cambiar de imagen o video. */
-const actions=q('#vsmGallery .vsm-actions');
-if(actions){
-  let controls=actions.querySelector('[data-vibra-zoom]');
-  if(!controls){controls=document.createElement('div');controls.className='vibra-step-zoom';controls.dataset.vibraZoom='service';actions.append(controls)}
-  vibraStepZoom(controls,v);
-}
+vibraStepZoom(null,v); // MODIFICADO: conservar gestos sin barra de zoom en servicios.
 if(m.type==='video')v.play().catch(()=>{});q('#vsmCount').textContent=(galleryIndex+1)+' de '+galleryItems.length;}
 // NUEVO: solicitar y decodificar una sola vez el fondo local antes de mostrarlo.
 const vsmBackdrop=new Image();
@@ -7861,16 +7862,14 @@ body.dark-mode #adminModal :is(.vscope-admin-box,.vscope-admin-entry,.vscope-cou
 <script>
 // NUEVO: zoom común por pasos, con tope y reinicio por recurso.
 function vibraStepZoom(controls,target,rangeId){
-  if(!controls||!target)return;
-  controls.setAttribute('role','group');
-  controls.setAttribute('aria-label','Zoom de la imagen o video');
-  const minus=document.createElement('button'),plus=document.createElement('button'),value=document.createElement('output');
-  const range=rangeId?document.createElement('input'):null;
-  minus.type=plus.type='button';minus.textContent='−';plus.textContent='+';
-  minus.setAttribute('aria-label','Alejar');plus.setAttribute('aria-label','Acercar');
-  if(range){range.type='hidden';range.id=rangeId}
-  controls.replaceChildren(minus,value,plus);
-  if(range)controls.append(range);
+  if(!target)return;
+  // MODIFICADO: mantener el valor interno del zoom sin crear botones ni porcentaje visible.
+  const range=controls&&rangeId?document.createElement('input'):null;
+  if(controls){
+    controls.setAttribute('role','group');
+    controls.setAttribute('aria-label','Reacciones del producto');
+  }
+  if(range){range.type='hidden';range.id=rangeId;controls.append(range)}
   let percent=100,panX=0,panY=0,panFrame=0;
   const paint=()=>{
     // MODIFICADO: los gestos y botones comparten posición y escala.
@@ -7879,17 +7878,12 @@ function vibraStepZoom(controls,target,rangeId){
     const limitY=(stage?.clientHeight||0)*(percent/100-1)/2;
     panX=Math.max(-limitX,Math.min(limitX,panX));panY=Math.max(-limitY,Math.min(limitY,panY));
     target.style.transform='translate('+panX+'px,'+panY+'px) scale('+percent/100+')';
-    value.textContent=percent+' %';
-    if(range)range.value=String(percent);
-    minus.disabled=percent===100;
-    plus.disabled=percent===250;
+    if(range)range.value=String(percent); // MODIFICADO: sincronizar los gestos con el valor interno.
   };
-  minus.onclick=()=>{percent=Math.max(100,percent-25);paint()};
-  plus.onclick=()=>{percent=Math.min(250,percent+25);paint()};
   paint();
   vibraPointerZoom(target); // NUEVO
   // NUEVO: rueda, pellizco, arrastre y pantalla completa.
-  vibraArtZoom(controls,target,next=>{percent=Math.max(100,Math.min(250,Math.round(next)));paint()},()=>percent,(dx,dy)=>{
+  vibraArtZoom(target,next=>{percent=Math.max(100,Math.min(250,Math.round(next)));paint()},()=>percent,(dx,dy)=>{
     panX+=dx;panY+=dy;
     if(!panFrame)panFrame=requestAnimationFrame(()=>{panFrame=0;paint()});
   },()=>{panX=0;panY=0});
@@ -9006,7 +9000,7 @@ html body :is(#productViewerModal,#vsmGallery) .vibra-step-zoom button{min-width
 
 // NUEVO: gestos y pantalla completa comparten la escala de los botones existentes.
 const vibraArtZoomSessions=new WeakMap();
-function vibraArtZoom(controls,target,setScale,getScale,pan,resetPan){
+function vibraArtZoom(target,setScale,getScale,pan,resetPan){ // MODIFICADO: pantalla completa sobre el medio.
  const stage=target.closest('.product-large-view,#vsmGalleryMedia');
  const photo=target.matches('img')?target:target.querySelector('img');
  if(!stage)return;
@@ -9019,13 +9013,25 @@ function vibraArtZoom(controls,target,setScale,getScale,pan,resetPan){
   if(!viewer?.matches('.show,.open'))session.abort();
  });
  if(viewer)watch.observe(viewer,{attributes:true,attributeFilter:['class']});
- const full=document.createElement('button');
- full.type='button';full.className='art-fullscreen';full.textContent='Pantalla completa';
- full.onclick=()=>{
-  if(document.fullscreenElement===stage)document.exitFullscreen?.().catch(()=>{});
-  else stage.requestFullscreen?.().catch(()=>{});
- };
- if(stage.requestFullscreen)controls.append(full);
+ // MODIFICADO: un SVG de entrada y salida, sobre la esquina de la foto o el video.
+ if(stage.requestFullscreen){
+  const full=document.createElement('button');
+  full.type='button';full.className='art-fullscreen';
+  const updateFullscreen=()=>{
+   const active=document.fullscreenElement===stage;
+   full.setAttribute('aria-label',active?'Salir de pantalla completa':'Pantalla completa');
+   full.title=full.getAttribute('aria-label');
+   full.innerHTML='<svg viewBox="0 0 24 24" width="21" height="21" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="'+(active?'M4 9h5V4m6 0v5h5M4 15h5v5m11-5h-5v5':'M9 4H4v5m11-5h5v5M4 15v5h5m11-5v5h-5')+'"/></svg>';
+  };
+  full.onclick=()=>{
+   if(document.fullscreenElement===stage)document.exitFullscreen?.().catch(()=>{});
+   else stage.requestFullscreen().catch(()=>{});
+  };
+  updateFullscreen();
+  document.addEventListener('fullscreenchange',updateFullscreen,{signal});
+  signal.addEventListener('abort',()=>full.remove(),{once:true});
+  stage.append(full);
+ }
  const points=new Map();
  let frame=0;
  signal.addEventListener('abort',()=>{watch.disconnect();cancelAnimationFrame(frame)},{once:true});
@@ -9046,7 +9052,7 @@ function vibraArtZoom(controls,target,setScale,getScale,pan,resetPan){
  },{passive:false,signal});
  stage.addEventListener('dblclick',()=>getScale()>100?(resetPan(),setScale(100)):setScale(150),{signal});
  stage.addEventListener('pointerdown',e=>{
-  if(e.button!==0)return;
+  if(e.button!==0||e.target.closest('.art-fullscreen'))return; // MODIFICADO: no capturar la pulsación del botón SVG.
   points.set(e.pointerId,{x:e.clientX,y:e.clientY});
   if(points.size===2){startGap=gap();startScale=getScale()}
   if(e.pointerType!=='touch')stage.setPointerCapture(e.pointerId);
@@ -9165,5 +9171,46 @@ html body #foodDeliveryPlanner .eyebrow .vibra-ref-icon{margin-inline-end:6px}
 html body.pattern-on[data-vibra-ref-background]::after{background-image:url("data:image/svg+xml,%3Csvg width='120' height='120' viewBox='0 0 120 120' xmlns='http://www.w3.org/2000/svg'%3E%3Cg fill='%23ff2a85' fill-opacity='0.035' fill-rule='evenodd'%3E%3C!-- Heart --%3E%3Cpath d='M20 14c-2.8 0-5 2.2-5 5 0 4.2 7 8 7 8s7-3.8 7-8c0-2.8-2.2-5-5-5-1.5 0-2.8.7-3.5 1.8-.7-1.1-2-1.8-3.5-1.8z'/%3E%3C!-- Sparkle / Star --%3E%3Cpath d='M85 22l1.5 4 4 1.5-4 1.5-1.5 4-1.5-4-4-1.5 4-1.5z'/%3E%3C!-- Cocktail glass --%3E%3Cpath d='M30 80l4 6v4h-2v1h6v-1h-2v-4l4-6h-10zm2 2h6l-3 4.2z'/%3E%3C!-- Feather / Whip accent --%3E%3Cpath d='M90 75c3-1 6-4 7-8-3 1-5 3-7 5v3zm-4 4c5 0 8-3 10-7-4 1-8 4-10 7z'/%3E%3C!-- Candle flame --%3E%3Cpath d='M60 40c0 2-1 3.5-2 3.5s-2-1.5-2-3.5c0-1 2-3 2-3s2 2 2 3z'/%3E%3C/g%3E%3C/svg%3E")!important;background-size:120px 120px!important;background-repeat:repeat!important;background-position:0 0!important}
 html body #v12CategoriesModal :is(.modal-head,.modal-body){background:var(--art-panel)!important;color:var(--art-ink)!important;border-color:var(--art-line)!important}
 html body main #viPublicWrap .vibra-filter-picker>.vibra-ref-icon{order:-1}
+</style>
+<!-- NUEVO: controles y distribucion de los visores -->
+<style>
+/* NUEVO: maximizar el medio del servicio y mantener la navegación al pie. */
+html body #vsmGallery .vsm-dialog{height:min(94dvh,940px);max-height:94dvh!important}
+html body #vsmGallery .vsm-viewer-gallery{padding:clamp(6px,1.3vw,14px);gap:6px}
+html body #vsmGallery #vsmGalleryMedia{width:100%;height:100%;min-height:0}
+html body #vsmGallery .vsm-actions{width:100%}
+html body #vsmGallery .vsm-viewer-sidebar{padding:clamp(8px,1.3vw,14px)!important}
+html body #vsmGallery #vsmProfileInfo>p{padding-block:4px}
+html body #vsmGallery .vibra-book-service{margin-top:6px}
+html body #vsmGallery .vsm-viewer-interact{padding-block:5px}
+@media(max-width:760px){
+ html body #vsmGallery .vsm-dialog{height:100dvh;max-height:none!important}
+ html body #vsmGallery .vsm-viewer-body{overflow:hidden}
+}
+html body #productViewerModal.product-viewer .product-large-view,
+html body #vsmGallery #vsmGalleryMedia{position:relative}
+html body :is(#productViewerModal,#vsmGallery) .art-fullscreen{
+ position:absolute;z-index:4;top:8px;right:8px;display:grid;place-items:center;
+ min-width:44px;min-height:44px;padding:0;
+ color:var(--art-ink)!important;background:var(--art-panel)!important;border:1px solid var(--art-line)!important;
+ border-radius:10px;cursor:pointer;
+}
+html body :is(#productViewerModal,#vsmGallery) .art-fullscreen:is(:hover,:focus-visible){
+ color:var(--art-link)!important;border-color:var(--art-focus)!important;
+}
+/* NUEVO: reacciones en el espacio que ocupaba el zoom. */
+html body #productViewerModal.product-viewer .vibra-product-gallery [data-vibra-zoom="product"]{
+ background:transparent!important;border:0;padding:0;gap:8px;justify-content:center;
+}
+html body #productViewerModal.product-viewer .vibra-product-gallery [data-vibra-zoom="product"]:not(:has(button)){display:none}
+html body #productViewerModal.product-viewer .vibra-product-gallery .v12-social-btn{
+ min-height:44px;padding:5px 12px;border-radius:999px;
+ color:var(--art-ink)!important;background:var(--art-soft)!important;border:1px solid var(--art-line)!important;
+}
+html body #productViewerModal.product-viewer .vibra-product-gallery .v12-social-btn.active{
+ color:#fff!important;background:var(--art-main)!important;border-color:var(--art-main)!important;
+}
+html body #productViewerModal.product-viewer .vibra-product-gallery .v12-social-btn :is(svg,span){color:inherit!important}
+html body #productViewerModal.product-viewer .vibra-product-gallery .v12-social-btn{width:auto;min-width:44px;font:700 .83rem var(--font);white-space:nowrap}
 </style>
 </html>
