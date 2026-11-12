@@ -2711,8 +2711,13 @@ openProductViewer=function(id,focus){
   m.classList.add('product-viewer');m.setAttribute('role','dialog');m.setAttribute('aria-modal','true');
   m.querySelector('.modal-head strong').textContent=p.name;
   body.innerHTML=`
+    <!-- NUEVO: galería y ficha con altura independiente -->
+    <div class="vibra-product-layout">
+    <div class="vibra-product-gallery">
     <div class="product-large-view"><div id="productZoomImage">${productVisual(p)}</div></div>
     <!-- MODIFICADO: zoom por pasos --><div class="field vibra-step-zoom" data-vibra-zoom="product"></div>
+    </div>
+    <div class="vibra-product-details"><div class="vibra-product-description" tabindex="0">
     <h3>${esc(p.name)} · ${money(productPrice(p))}</h3>
     ${v11SaleLabel(p)?`<div class="v11-unit-badge">${UI.orders||UI.receipt}<span>${esc(v11SaleLabel(p))}</span></div>`:''}
     <p>${esc(p.description||'')}</p><p class="small">${p.stock} disponibles</p>
@@ -2720,7 +2725,9 @@ openProductViewer=function(id,focus){
       ${removable.length?`<section class="v11-choice-section"><h4>¿Qué no quieres que le pongamos?</h4><div class="v11-choice-list">${removable.map(x=>`<label class="v11-choice"><input type="checkbox" data-v11-remove-choice value="${esc(x.id)}" ${current.removed?.includes(x.id)?'checked':''}><span>Sin ${esc(x.label)}</span></label>`).join('')}</div></section>`:''}
       ${addable.length?`<section class="v11-choice-section"><h4>¿Quieres agregar algo?</h4><div class="v11-choice-list">${addable.map(x=>`<label class="v11-choice"><input type="checkbox" data-v11-add-choice value="${esc(x.id)}" ${current.added?.includes(x.id)?'checked':''}><span>${esc(x.label)}${x.extraPrice>0?' · +'+money(x.extraPrice):' · sin costo'}</span></label>`).join('')}</div></section>`:''}
     </div>`:'<div class="notice">Este producto no tiene opciones especiales configuradas por el negocio.</div>'}
+    </div><!-- NUEVO: la acción de compra queda fuera del contenido desplazable -->
     ${panelButton('productViewerAdd',mods.length?'Guardar opciones y agregar':'Agregar al carrito',UI.cart,'full')}
+    </div></div>
   `;
   vibraStepZoom(body.querySelector('[data-vibra-zoom]'),body.querySelector('#productZoomImage'),'productZoomRange'); /* MODIFICADO: ampliar únicamente por acción del usuario. */
   const add=body.querySelector('#productViewerAdd');
@@ -3117,6 +3124,9 @@ async function v12DecorateProductViewer(id){
     body.dataset.vibraProductPane=index===0?'product':'reviews';
     body.scrollTop=0;
   });
+  // NUEVO: iconografía SVG de las pestañas del visor de productos.
+  tabs.children[0].insertAdjacentHTML('afterbegin',`<svg viewBox="0 0 24 24" aria-hidden="true"><path d="m12 3 8 4.5v9L12 21l-8-4.5v-9zm0 18v-9m-8-4.5 8 4.5 8-4.5"/></svg>`);
+  tabs.children[1].insertAdjacentHTML('afterbegin',`<svg viewBox="0 0 24 24" aria-hidden="true"><path d="m12 3 2.7 5.6 6.2.9-4.4 4.3 1 6.2-5.5-3-5.5 3 1-6.2-4.4-4.3 6.2-.9z"/></svg>`);
   body.dataset.vibraProductPane='product';
   body.prepend(tabs);
   v12Rating=5;
@@ -8436,6 +8446,133 @@ html body #vsmGallery .vibra-compact-service-tabs{gap:6px;padding:7px 10px;backg
 @media(prefers-reduced-motion:reduce){
   html body #vsmGallery.open .vsm-dialog{animation:none}
   html body #vsmGallery :is(button,a){transition:none}
+}
+</style>
+<!-- NUEVO: rediseno de producto y altura de los dos visores -->
+<style>
+/* NUEVO: visor de productos, paleta y marco de la maqueta. */
+html body #productViewerModal.product-viewer{
+  --pv-paper:#fffaf2;--pv-panel:#fff5eb;--pv-soft:#f8e6e8;--pv-ink:#381423;
+  --pv-muted:#744355;--pv-border:#b77d8a;--pv-gold:#755016;--pv-action:#99163e;--pv-hover:#78102e;
+  --pv-frame:linear-gradient(135deg,#a52858,#b28857,#70375c);
+  --pv-stage:radial-gradient(ellipse at 45% 15%,#fff5dc,#f4dbe4 75%);
+  width:min(1120px,calc(100vw - 24px));height:min(90dvh,760px)!important;max-height:94dvh!important;
+  top:50%;transform:translate(-50%,-50%);overflow:hidden;
+  background:linear-gradient(var(--pv-paper),var(--pv-panel)) padding-box,var(--pv-frame) border-box!important;
+  color:var(--pv-ink)!important;border:1px solid transparent!important;border-radius:22px;
+  box-shadow:0 20px 70px #380d3157;
+}
+html body.dark-mode #productViewerModal.product-viewer{
+  --pv-paper:#1e0d1e;--pv-panel:#250e1b;--pv-soft:#401a30;--pv-ink:#fff2e9;
+  --pv-muted:#e7bccc;--pv-border:#855267;--pv-gold:#f3d192;--pv-action:#b71d52;--pv-hover:#8f153d;
+  --pv-frame:linear-gradient(135deg,#e92983,#7847b4 55%,#875569);
+  --pv-stage:radial-gradient(ellipse at 45% 15%,#442038,#210c20 75%);
+  box-shadow:0 20px 75px #100418b0,0 0 38px #a5225d24;
+}
+html body #productViewerModal.product-viewer.show{display:flex;flex-direction:column;animation:vibra-product-enter .2s ease-out both}
+@keyframes vibra-product-enter{from{opacity:0;translate:0 8px}to{opacity:1;translate:0 0}}
+html body #productViewerModal.product-viewer .modal-head{
+  flex:none;padding:10px 16px;background:var(--pv-paper)!important;color:var(--pv-ink)!important;border-color:var(--pv-border)!important;
+}
+html body #productViewerModal.product-viewer .modal-head strong{
+  color:var(--pv-ink)!important;font:700 clamp(1.12rem,2.3vw,1.55rem)/1.2 Georgia,serif;overflow-wrap:anywhere;
+}
+html body #productViewerModal.product-viewer .modal-body{
+  flex:1;min-height:0;max-height:none!important;display:grid!important;grid-template-columns:minmax(0,1fr);
+  grid-template-rows:auto minmax(0,1fr);align-content:stretch;gap:0;padding:0;overflow:hidden!important;
+  color:var(--pv-ink)!important;background:transparent!important;
+}
+html body #productViewerModal.product-viewer .modal-body>.vibra-compact-controls{
+  grid-area:1/1;padding:0 15px;gap:12px;min-height:40px;margin:0;border-bottom:1px solid var(--pv-border);
+}
+html body #productViewerModal.product-viewer .vibra-compact-controls button{
+  display:inline-flex;align-items:center;gap:6px;padding:7px 4px;min-height:38px;border:0!important;border-bottom:2px solid transparent!important;
+  border-radius:0;background:transparent!important;color:var(--pv-muted)!important;font-weight:800;font-size:.79rem;
+}
+html body #productViewerModal.product-viewer .vibra-compact-controls button[aria-pressed=true]{
+  color:var(--pv-ink)!important;border-bottom-color:var(--pv-gold)!important;
+}
+html body #productViewerModal.product-viewer .vibra-compact-controls svg{width:16px;height:16px;stroke:currentColor;fill:none;stroke-width:1.7}
+html body #productViewerModal.product-viewer .vibra-product-layout{
+  grid-area:2/1;display:grid;grid-template-columns:minmax(0,1.05fr) minmax(0,1fr);min-height:0;min-width:0;
+}
+html body #productViewerModal.product-viewer .vibra-product-gallery{
+  min-height:0;min-width:0;display:grid;grid-template-rows:minmax(0,1fr) auto;gap:8px;
+  padding:clamp(10px,2vw,20px);border-inline-end:1px solid var(--pv-border);
+}
+html body #productViewerModal.product-viewer .product-large-view{
+  grid-area:auto;align-self:stretch;height:100%!important;min-height:0!important;max-height:none!important;
+  overflow:hidden!important;border-radius:13px;background:var(--pv-stage)!important;border:1px solid var(--pv-border);
+}
+html body #productViewerModal.product-viewer .product-large-view #productZoomImage{width:100%!important;height:100%!important}
+html body #productViewerModal.product-viewer .product-large-view :is(img,svg){max-height:100%!important;max-width:100%!important;object-fit:contain}
+html body #productViewerModal.product-viewer .vibra-step-zoom{
+  justify-content:center;margin:0;padding:3px 7px;border:1px solid var(--pv-border);border-radius:999px;
+  background:var(--pv-soft)!important;color:var(--pv-ink)!important;
+}
+html body #productViewerModal.product-viewer .vibra-product-details{
+  min-height:0;min-width:0;display:grid;grid-template-rows:minmax(0,1fr) auto;gap:8px;padding:clamp(10px,2vw,20px);
+}
+html body #productViewerModal.product-viewer .vibra-product-description,
+html body #productViewerModal.product-viewer .modal-body>#v12ProductSocial{
+  min-height:0;min-width:0;max-height:none!important;overflow:auto;overscroll-behavior:contain;
+  scrollbar-color:var(--pv-action) var(--pv-soft);
+}
+html body #productViewerModal.product-viewer .modal-body>#v12ProductSocial{grid-area:2/1;margin:0;border:0;padding:12px 16px;border-radius:0}
+html body #productViewerModal.product-viewer #v12ProductReviews{max-height:none;overflow:visible}
+html body #productViewerModal.product-viewer .vibra-product-description>h3{
+  margin:0 0 8px;color:var(--pv-gold)!important;font:700 clamp(1.23rem,2.5vw,1.8rem)/1.17 Georgia,serif;
+}
+html body #productViewerModal.product-viewer .vibra-product-description>p{margin:6px 0;color:var(--pv-ink)!important;overflow-wrap:anywhere}
+html body #productViewerModal.product-viewer :is(.notice,.v11-choice,.v11-choice-section,.v11-unit-badge,#v12ProductSocial .section-card,#v12ProductComment){
+  color:var(--pv-ink)!important;background:var(--pv-soft)!important;border-color:var(--pv-border)!important;
+}
+html body #productViewerModal.product-viewer :is(.notice,.v11-choice,.v11-choice-section,.v11-unit-badge,#v12ProductSocial) :is(h3,h4,p,span,strong,small,label){color:var(--pv-ink)!important}
+html body #productViewerModal.product-viewer :is(.v11-customizer-grid,.v11-choice-list){max-height:none;overflow:visible}
+html body #productViewerModal.product-viewer :is(.modal-head button,.vibra-step-zoom button,.v12-social-btn,.v12-rating-picker button){
+  color:var(--pv-ink)!important;background:var(--pv-soft)!important;border-color:var(--pv-border)!important;
+}
+html body #productViewerModal.product-viewer .v12-rating-picker button.selected{color:var(--pv-gold)!important}
+html body #productViewerModal.product-viewer :is(#productViewerAdd,#v12SendProductReview){
+  margin:0;min-height:42px;background:linear-gradient(105deg,var(--pv-hover),var(--pv-action))!important;
+  color:#fff!important;border-color:var(--pv-action)!important;box-shadow:0 5px 14px #99163e30;
+  transition:filter .18s ease,box-shadow .18s ease;
+}
+html body #productViewerModal.product-viewer :is(#productViewerAdd,#v12SendProductReview) :is(span,svg){color:#fff!important}
+html body #productViewerModal.product-viewer :is(#productViewerAdd,#v12SendProductReview):hover:not(:disabled){filter:brightness(1.1)}
+html body #productViewerModal.product-viewer :is(button,input,textarea):focus-visible{outline:2px solid var(--pv-gold)!important;outline-offset:-2px}
+html body #productViewerModal.product-viewer textarea::placeholder{color:var(--pv-muted)!important;opacity:1}
+html body #productViewerModal.product-viewer button:disabled{opacity:1;border:1px dashed var(--pv-border)!important}
+
+/* NUEVO: ajuste de altura en ambos visores y desplazamiento solo en contenido excedente. */
+html body #vsmGallery .vsm-dialog{height:min(91dvh,850px);max-height:94dvh!important}
+html body #vsmGallery .vsm-viewer-header{padding-block:8px}
+html body #vsmGallery .vsm-viewer-gallery{padding:clamp(9px,1.8vw,20px);gap:8px}
+html body #vsmGallery .vsm-viewer-sidebar{
+  min-height:0;overflow:auto;overscroll-behavior:contain;padding:clamp(9px,1.8vw,18px)!important;
+  scrollbar-color:var(--vsm-action) var(--vsm-soft);
+}
+html body #vsmGallery .vsm-viewer-sidebar h3{margin-bottom:6px;padding-bottom:6px}
+html body #vsmGallery #vsmProfileInfo>p{padding-block:5px}
+html body #vsmGallery #vsmProfileInfo>p>strong{margin-bottom:1px}
+html body #vsmGallery .vsm-viewer-interact{padding-block:6px}
+@media(max-width:760px){
+  html body #productViewerModal.product-viewer .vibra-product-layout{
+    grid-template-columns:minmax(0,1fr);grid-template-rows:minmax(0,44%) minmax(0,1fr);
+  }
+  html body #productViewerModal.product-viewer .vibra-product-gallery{border:0;border-bottom:1px solid var(--pv-border);padding:7px 11px}
+  html body #productViewerModal.product-viewer .vibra-product-details{padding:7px 11px}
+  html body #vsmGallery .vsm-viewer-body{display:grid;grid-template-columns:minmax(0,1fr);grid-template-rows:minmax(0,1fr);overflow:hidden}
+  html body #vsmGallery #vsmGalleryMedia{height:100%;min-height:0}
+}
+@media(max-width:760px) and (max-height:450px){
+  html body #productViewerModal.product-viewer .vibra-product-layout{
+    grid-template-columns:minmax(0,1fr) minmax(0,1fr);grid-template-rows:minmax(0,1fr);
+  }
+}
+@media(prefers-reduced-motion:reduce){
+  html body #productViewerModal.product-viewer.show{animation:none}
+  html body #productViewerModal.product-viewer button{transition:none}
 }
 </style>
 </html>
