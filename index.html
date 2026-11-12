@@ -1702,18 +1702,63 @@ const v5Whatsapp=whatsappText;whatsappText=function(order){return v5Whatsapp(ord
 const v5TicketSvg=ticketSvg;ticketSvg=function(order,value,qr){const clone={...order,customer:{...order.customer,notes:[order.customer?.notes,order.paymentReference?'Referencia: '+order.paymentReference:'',order.discountTotal?'Descuento: '+money(order.discountTotal)+(order.couponCode?' / '+order.couponCode:''):''].filter(Boolean).join(' · ')}};return v5TicketSvg(clone,{...value,showNotes:!!(order.paymentReference||order.discountTotal)||value?.showNotes},qr)};
 // Autocompletar con un proveedor compatible; nunca conserva un pin de otra dirección.
 async function addressCandidates(query){
- let backendError=null;
- if(supabaseClient){try{const {data,error}=await supabaseClient.functions.invoke('catalog-address',{body:{query}});if(!error&&!data?.error&&Array.isArray(data?.results)&&data.results.length)return data.results;backendError=error||data?.error;}catch(err){backendError=err;}}
- try{const url='https://nominatim.openstreetmap.org/search?format=jsonv2&addressdetails=1&limit=5&countrycodes=mx&q='+encodeURIComponent(query);const response=await fetch(url,{headers:{Accept:'application/json'},signal:AbortSignal.timeout(12000)});if(!response.ok)throw Error('El buscador público no respondió ('+response.status+').');const rows=await response.json();if(!rows.length)throw Error('Sin coincidencias en el primer proveedor');return rows.map(r=>({lat:Number(r.lat),lng:Number(r.lon),address:r.display_name,label:r.display_name,display_name:r.display_name}));}
- catch(e){/* MODIFICADO: fuente geográfica adicional para predicciones en México */
-  try{const q=new URLSearchParams({q:query,limit:'8',lang:'es',lat:'19.05',lon:'-104.3'});const r=await fetch('https://photon.komoot.io/api/?'+q,{signal:AbortSignal.timeout(11000)});if(!r.ok)throw Error('Buscador alternativo no disponible');const j=await r.json();return (j.features||[]).filter(f=>String(f.properties?.countrycode||'').toLowerCase()==='mx'||/mexic|méxic/i.test(String(f.properties?.country||''))).map(f=>({lat:Number(f.geometry.coordinates[1]),lng:Number(f.geometry.coordinates[0]),address:[f.properties.name,f.properties.street,f.properties.housenumber,f.properties.district,f.properties.city,f.properties.state,'México'].filter(Boolean).join(', '),precision:'street'})).filter(x=>Number.isFinite(x.lat)&&Number.isFinite(x.lng));}catch(e2){throw Error('No fue posible consultar los proveedores de direcciones. Comprueba tu conexión o mueve el pin.');}
+ // MODIFICADO: priorizar el contexto local y ofrecer coincidencias aproximadas sin elegir un pin.
+ const text=query.trim().replace(/\s+/g,' ');
+ const local=!/[,]|\b(?:Manzanillo|Colima|México)\b/i.test(text);
+ const place='Manzanillo, Colima, México';
+ const street=text.replace(/\s+(?:(?:n[úu]m(?:ero)?\.?|no\.|#)\s*)?\d+[a-z]?(?=\s*,|$)/i,'').trim();
+ const variants=[{query:local?text+', '+place:text,approx:false}];
+ if(street.length>=4&&street!==text)variants.push({query:local?street+', '+place:street,approx:true});
+ let responded=false;
+ const normalize=(rows,approx)=>rows.flatMap(row=>{
+  const {lat,lng,address}=row;
+  if(lat==null||lng==null||lat===''||lng===''||!address||!Number.isFinite(+lat)||!Number.isFinite(+lng)||Math.abs(+lat)>90||Math.abs(+lng)>180)return [];
+  return [{...row,lat:+lat,lng:+lng,precision:approx?'street':row.precision}];
+ });
+ const publicSearch=async(candidate)=>{
+  const params=new URLSearchParams({format:'jsonv2',addressdetails:'1',limit:'6',countrycodes:'mx',q:candidate.query});
+  const response=await fetch('https://nominatim.openstreetmap.org/search?'+params,{headers:{Accept:'application/json','Accept-Language':'es-MX'},signal:AbortSignal.timeout(6000)});
+  if(!response.ok)throw Error('Buscador no disponible');
+  const rows=await response.json();
+  if(!Array.isArray(rows))throw Error('Respuesta de direcciones inválida');
+  responded=true;
+  return normalize(rows.map(r=>({lat:r.lat,lng:r.lon,address:r.display_name,precision:r.address?.house_number?'building':'street'})),candidate.approx);
+ };
+ const photonSearch=async(candidate)=>{
+  const params=new URLSearchParams({q:candidate.query,limit:'8',lat:'19.05',lon:'-104.3'});
+  const response=await fetch('https://photon.komoot.io/api/?'+params,{signal:AbortSignal.timeout(6000)});
+  if(!response.ok)throw Error('Buscador alternativo no disponible');
+  const data=await response.json();
+  if(!Array.isArray(data.features))throw Error('Respuesta de direcciones inválida');
+  responded=true;
+  return normalize(data.features.filter(f=>/^mx$/i.test(f.properties?.countrycode||'')).map(f=>{
+   const p=f.properties;
+   return {lat:f.geometry?.coordinates?.[1],lng:f.geometry?.coordinates?.[0],address:[...new Set([p.name,p.street,p.housenumber,p.district,p.city,p.state,'México'].filter(Boolean))].join(', '),precision:p.housenumber?'building':'street'};
+  }),candidate.approx);
+ };
+ for(const candidate of variants){
+  if(supabaseClient){
+   try{
+    const {data,error}=await supabaseClient.functions.invoke('catalog-address',{body:{query:candidate.query},signal:AbortSignal.timeout(4500)});
+    if(!error&&!data?.error&&Array.isArray(data?.results)){
+     responded=true;
+     const rows=normalize(data.results,candidate.approx);
+     if(rows.length)return rows;
+    }
+   }catch{}
+  }
+  for(const provider of [publicSearch,photonSearch]){
+   try{const rows=await provider(candidate);if(rows.length)return rows}catch{}
+  }
  }
+ if(!responded)throw Error('Los buscadores de direcciones no respondieron. Intenta de nuevo, usa tu ubicación o marca la entrada en el mapa.');
+ return [];
 }
 foodSearch=async function(query){const results=await addressCandidates(query);if(!results.length)throw Error('No encontramos esa dirección. Añade municipio o usa tu ubicación.');if(results.length>1)throw Error('Selecciona una dirección de las sugerencias.');return results[0]};
 function invalidateDestination(){checkout.lat=checkout.lng=null;checkout.distance=checkout.shipping=0;checkout.savedAddressId='';invalidateCommerceQuote();if(customerMarker&&clientMap){clientMap.removeLayer(customerMarker);customerMarker=null}if(publicFoodPin&&publicFoodMap){publicFoodMap.removeLayer(publicFoodPin);publicFoodPin=null}if(publicFoodRoute&&publicFoodMap){publicFoodMap.removeLayer(publicFoodRoute);publicFoodRoute=null}const info=document.getElementById('distanceInfo');if(info)info.textContent='Selecciona una dirección o marca la entrada.';document.getElementById('foodQuote').textContent='Confirma el nuevo destino para calcular el recorrido.';updateCommerceTotals()}
 async function setCustomerDestination(p,target){checkout.address=p.address||checkout.address||'Punto de entrega';checkout.delivery='delivery';checkout.lat=p.lat;checkout.lng=p.lng;invalidateCommerceQuote();for(const id of ['foodDestination','clientAddress']){const field=document.getElementById(id);if(field)field.value=checkout.address}if(publicFoodMap){if(publicFoodPin)publicFoodPin.setLatLng([p.lat,p.lng]);else{publicFoodPin=L.marker([p.lat,p.lng],{draggable:true,icon:labeledFoodPin('destination')}).addTo(publicFoodMap);publicFoodPin.on('dragend',e=>{const ll=e.target.getLatLng();setCustomerDestination({lat:ll.lat,lng:ll.lng,address:checkout.address},'public').catch(err=>toast(err.message,'error'))})}publicFoodMap.setView([p.lat,p.lng],17)}if(target==='cart'&&clientMap){if(customerMarker)customerMarker.setLatLng([p.lat,p.lng]);else{customerMarker=L.marker([p.lat,p.lng],{draggable:true,icon:labeledFoodPin('destination')}).addTo(clientMap);customerMarker.on('dragend',e=>{const ll=e.target.getLatLng();setCustomerDestination({lat:ll.lat,lng:ll.lng,address:checkout.address},'cart').catch(err=>toast(err.message,'error'))})}clientMap.setView([p.lat,p.lng],17)}await quoteFoodRoute()}
 chooseFoodDestination=async function(lat,lng){return setCustomerDestination({lat,lng,address:checkout.address||'Punto de entrega'},'public')};
-function attachAddressLookup(input,query,choose,changed,current=()=>true){let timer,serial=0;const host=document.createElement('div');host.className='address-suggestions';host.setAttribute('aria-live','polite');input.after(host);input.setAttribute('autocomplete','off');const search=async()=>{clearTimeout(timer);const value=query().trim();const turn=++serial,epoch=customerSerial;if(value.length<4){host.replaceChildren();return}host.textContent='Buscando direcciones…';try{const results=await addressCandidates(value);if(turn!==serial||epoch!==customerSerial||!host.isConnected||!current())return;host.innerHTML=results.length?results.map((r,i)=>`<button type="button" class="address-suggestion" data-suggestion="${i}">${UI.pin}<span>${esc(r.address)}<small>${['building','amenity'].includes(r.precision)?'Revisa el pin de la entrada':'Ubicación aproximada; ajusta el pin a la entrada'}</small></span></button>`).join(''):'<p class="small">Sin coincidencias. Añade colonia y municipio, utiliza GPS o marca la entrada.</p>';host.querySelectorAll('[data-suggestion]').forEach(b=>b.onclick=async()=>{if(epoch!==customerSerial||!current())return;serial++;clearTimeout(timer);host.replaceChildren();try{await choose(results[Number(b.dataset.suggestion)])}catch(e){toast(e.message,'error')}})}catch(e){if(turn===serial&&host.isConnected)host.textContent=e.message}};input.oninput=()=>{serial++;changed();clearTimeout(timer);timer=setTimeout(search,900)};input.addEventListener('keydown',e=>{if(e.key==='Enter'){e.preventDefault();search()}if(e.key==='Escape'){serial++;host.replaceChildren()}});return{search,invalidate:()=>{serial++;clearTimeout(timer);host.replaceChildren()}};}
+function attachAddressLookup(input,query,choose,changed,current=()=>true){let timer,serial=0;const host=document.createElement('div');host.className='address-suggestions';host.setAttribute('aria-live','polite');input.after(host);input.setAttribute('autocomplete','off');const search=async()=>{clearTimeout(timer);const value=query().trim();const turn=++serial,epoch=customerSerial;if(value.length<4){host.replaceChildren();return}host.textContent='Buscando direcciones…';try{const results=await addressCandidates(value);if(turn!==serial||epoch!==customerSerial||!host.isConnected||!current())return;host.innerHTML=results.length?results.map((r,i)=>`<button type="button" class="address-suggestion" data-suggestion="${i}">${UI.pin}<span>${esc(r.address)}<small>${['building','amenity'].includes(r.precision)?'Revisa el pin de la entrada':'Ubicación aproximada; ajusta el pin a la entrada'}</small></span></button>`).join(''):'<p class="small">Sin coincidencias. Añade colonia y municipio, utiliza GPS o marca la entrada.</p>';host.querySelectorAll('[data-suggestion]').forEach(b=>b.onclick=async()=>{if(epoch!==customerSerial||!current())return;serial++;clearTimeout(timer);host.replaceChildren();try{await choose(results[Number(b.dataset.suggestion)])}catch(e){toast(e.message,'error')}})}catch(e){if(turn===serial&&host.isConnected)host.textContent=e.message}};input.oninput=()=>{serial++;host.replaceChildren();changed();clearTimeout(timer);timer=setTimeout(search,900)} /* MODIFICADO: limpiar sugerencias de la consulta anterior. */;input.addEventListener('keydown',e=>{if(e.key==='Enter'){e.preventDefault();search()}if(e.key==='Escape'){serial++;clearTimeout(timer);host.replaceChildren()} /* MODIFICADO */});return{search,invalidate:()=>{serial++;clearTimeout(timer);host.replaceChildren()}};}
 const destinationLookups=new Map();function bindDestinationSearch(input,target){if(!input)return;const lookup=attachAddressLookup(input,()=>input.value,p=>setCustomerDestination(p,target),()=>{checkout.address=input.value;invalidateDestination()});destinationLookups.set(input.id,lookup)}
 function runDestinationSearch(id,target){destinationLookups.get(id)?.search()}
 bindDestinationSearch(document.getElementById('foodDestination'),'public');document.getElementById('foodSearchDestination').onclick=()=>runDestinationSearch('foodDestination','public');
@@ -7039,14 +7084,12 @@ if(db){for(const [table,type] of [['service_locations','Sede'],['vibra_venues','
 const options=locations.map((x,i)=>'<option value="'+i+'">'+escape(x.name)+'</option>').join('');const from=q('#vscopeTripFrom'),to=q('#vscopeTripTo');if(!from||!to)return;from.innerHTML=to.innerHTML=options||'<option value="">Sin coordenadas registradas</option>';if(locations.length>1)to.value='1';q('#vscopeTripEstimate').onclick=async()=>{const a=locations[Number(from.value)],b=locations[Number(to.value)],out=q('#vscopeTripResult');if(!a||!b){out.textContent='Selecciona ubicaciones válidas.';return}out.textContent='Calculando recorrido…';try{const url='https://router.project-osrm.org/route/v1/driving/'+a.lon+','+a.lat+';'+b.lon+','+b.lat+'?overview=false';const response=await fetch(url,{signal:AbortSignal.timeout(14000)});if(!response.ok)throw Error('El servicio de rutas no respondió');const data=await response.json(),route=data.routes?.[0];if(!route)throw Error('No se encontró una ruta');out.textContent='Distancia '+(route.distance/1000).toFixed(2)+' km · Duración aproximada '+Math.round(route.duration/60)+' minutos. Aplica el costo establecido en la calculadora.'}catch(err){out.textContent=err.message}}}
 // NUEVO: sugerencias Nominatim de calles, colonias, municipios y estados sin librerías adicionales.
 let timer=0,seq=0;
-function addressSearch(){const input=q('#foodDestination');if(!input||input.dataset.vscopeSuggest)return;input.dataset.vscopeSuggest='1';const parent=input.closest('label')||input.parentElement;if(!parent)return;parent.style.position='relative';const panel=document.createElement('div');panel.id='vscopeDestinationAutocomplete';panel.hidden=true;parent.append(panel);
-const close=()=>{panel.hidden=true;panel.replaceChildren()};input.addEventListener('input',()=>{clearTimeout(timer);const value=input.value.trim();if(value.length<3){close();return;}const req=++seq;timer=setTimeout(async()=>{try{const params=new URLSearchParams({q:value+', Colima, México',format:'json',addressdetails:'1',limit:'6',countrycodes:'mx'});const r=await fetch('https://nominatim.openstreetmap.org/search?'+params,{signal:AbortSignal.timeout(9000)});if(!r.ok)throw Error('Búsqueda no disponible');const results=await r.json();if(req!==seq)return;panel.replaceChildren();for(const item of results){const b=document.createElement('button');b.type='button';const name=document.createElement('span');name.textContent=item.display_name;const detail=document.createElement('small');detail.textContent=[item.address?.road,item.address?.suburb,item.address?.city||item.address?.town,item.address?.state].filter(Boolean).join(' · ');b.append(name,detail);b.onclick=()=>{input.value=item.display_name;input.dispatchEvent(new Event('input',{bubbles:true}));close();if(typeof chooseFoodDestination==='function')chooseFoodDestination(Number(item.lat),Number(item.lon)).catch(console.warn)};panel.append(b)}panel.hidden=!results.length;}catch{if(req===seq)close()}},450)});
-document.addEventListener('click',e=>{if(!parent.contains(e.target))close()});input.addEventListener('keydown',e=>{if(e.key==='Escape')close()})}
+// MODIFICADO: el destino público usa el único buscador enlazado por bindDestinationSearch.
 // NUEVO: selector de iconos SVG existentes filtrado para evitar motivos alimenticios en el ticket.
 function ticketIconTools(){const picker=q('#tvIconPicker');if(!picker||q('#vscopeTicketIconTools'))return;const card=document.createElement('section');card.id='vscopeTicketIconTools';card.className='vscope-ticket-tools';card.innerHTML='<strong>Iconos apropiados para boutique</strong><p class="small muted">Elige entre los iconos SVG existentes. Los motivos de alimentos y reparto se ocultan en esta biblioteca.</p><label class="field">Filtrar iconos<input class="input" type="search" placeholder="Buscar: corazón, estrella, regalo, ubicación…"></label>';picker.before(card);const input=card.querySelector('input');const forbidden=/utensils|burger|pizza|plate|taco|fries|coffee|drink|food|restaurant|motorcycle|delivery|chef|cake|icecream|fork|spoon/i;const filter=()=>{picker.querySelectorAll('[data-icon],[data-icon-key],.icon-option').forEach(item=>{const key=[item.dataset.icon,item.dataset.iconKey,item.title,item.getAttribute('aria-label'),item.textContent].join(' ');item.hidden=forbidden.test(key)||!!(input.value&&!key.toLocaleLowerCase('es').includes(input.value.toLocaleLowerCase('es')));})};input.oninput=filter;filter()}
 
 function expensesLabel(){qa('#adminTabs .tab-btn').filter(x=>/Calculadora de viajes/i.test(x.textContent)).forEach(x=>{x.innerHTML=x.innerHTML.replace(/\s*\(heredado\)/ig,'')});qa('#adminTabs .tab-btn').filter(x=>/Gastos e insumos/i.test(x.textContent)).forEach(x=>x.title='Registro de gastos conectado a Supabase mediante catalog_expense')}
-function execute(){adminSubmenu();socialIcons();ticketLinks();ticketIconTools();tripOrigins().catch(console.warn);addressSearch();expensesLabel()}
+function execute(){adminSubmenu();socialIcons();ticketLinks();ticketIconTools();tripOrigins().catch(console.warn);expensesLabel() /* MODIFICADO: retirar el buscador duplicado. */}
 function start(){execute();let last='';const run=()=>{const state=[q('#adminModal')?.className,q('#adminTabs .tab-btn.active')?.textContent,q('#vsmGallery')?.className,q('#foodDestination')?.isConnected].join('|');if(state===last)return;last=state;execute()};document.addEventListener('click',e=>{if(e.target.closest('#adminTabs,.vsm-media-button,#adminModal .modal-head'))setTimeout(run,80)},true);const obs=new MutationObserver(ms=>{if(ms.some(m=>m.type==='childList'&&[...m.addedNodes].some(n=>n.nodeType===1&&(['adminTabs','vsmProfileSocial','foodDeliveryPlanner'].includes(n.id)||n.querySelector?.('#adminTabs,#vsmProfileSocial,#foodDestination')))))requestAnimationFrame(run)});obs.observe(document.body,{subtree:true,childList:true})}if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',start,{once:true});else start();
 })();
 </script>
@@ -9507,4 +9550,78 @@ function adminUiMountOrders(host,orders){
  if(!reduced)section.animate?.([{opacity:.85,transform:'translateY(4px)'},{opacity:1,transform:'none'}],{duration:240,easing:'ease-out'});
 }
 </script>
+<!-- NUEVO: ajuste visual de ubicacion y catalogo -->
+<style>
+/* NUEVO: composición pública centrada y proporciones del ZIP. */
+html body{--ve-width:min(1280px,calc(100% - 36px))}
+html body :is(.topbar .header,.topbar #v12HomeNav,main .container,#foodDeliveryPlanner,#vibraLegalFooter .vibra-legal-inner){
+ width:var(--ve-width);max-width:1280px;margin-inline:auto!important;box-sizing:border-box;
+}
+html body .topbar{background:var(--art-header)!important;color:var(--art-header-ink)!important}
+html body .topbar .header{min-height:56px;padding-block:5px!important}
+html body .topbar #v12HomeNav{padding-block:4px 7px!important}
+html body .topbar #v12HomeNav .chip{font-size:.79rem}
+html body main .hero{padding-block:10px!important}
+html body main .hero-card{padding:clamp(14px,2vw,24px)!important}
+html body main .hero-card h2{font-family:Outfit,var(--font);font-size:clamp(1.55rem,3vw,2.45rem)!important}
+html body :is(main,.topbar,#vibraLegalFooter){font-family:"Plus Jakarta Sans",var(--font)}
+html body #foodDeliveryPlanner{margin-block:6px 14px!important}
+html body #foodDeliveryPlanner>.section-card:first-child{
+ display:grid;grid-template-columns:minmax(0,1fr) minmax(0,1.4fr);gap:7px 14px;align-items:end;
+ padding:clamp(12px,1.8vw,22px)!important;
+}
+html body #foodDeliveryPlanner>.section-card:first-child>:not(#foodSavedAddresses):not(.address-picker-row){grid-column:1/-1}
+html body:not(.vibra-customer-signed-in) #foodDeliveryPlanner>.section-card:first-child>.address-picker-row{grid-column:1/-1}
+html body #foodDeliveryPlanner .address-picker-row{
+ display:flex;align-items:end;gap:7px;margin:0;min-width:0;
+}
+html body #foodDeliveryPlanner .address-picker-row>.field{position:relative;flex:1;min-width:0;margin:0}
+html body #foodDeliveryPlanner .address-picker-row :is(input,select){width:100%;min-width:0;min-height:44px}
+html body #foodDeliveryPlanner .address-picker-row>button{flex:none;margin:0}
+html body #foodDeliveryPlanner .address-suggestions{
+ position:absolute;z-index:710;top:100%;left:0;right:0;max-height:240px;overflow:auto;
+ background:var(--art-panel);color:var(--art-ink);border:1px solid var(--art-line);border-radius:8px;
+ box-shadow:var(--art-shadow);margin-top:4px;padding:6px;overflow-wrap:anywhere;
+}
+html body #foodDeliveryPlanner .address-suggestions:empty{display:none}
+html body #foodDeliveryPlanner .address-suggestions :is(button,small,p){color:var(--art-ink)!important}
+html body #foodDeliveryPlanner .address-suggestions button{
+ width:100%;min-height:44px;background:var(--art-soft)!important;border:1px solid var(--art-line)!important;text-align:left;
+}
+html body #foodDeliveryPlanner .address-suggestions button:is(:hover,:focus-visible){outline:2px solid var(--art-focus);outline-offset:-2px}
+html body #foodDeliveryPlanner #foodPublicMap{height:clamp(240px,31vw,375px)!important;max-height:none;margin-top:4px}
+html body main #viPublicWrap .vi-filter-panel{border-radius:15px 15px 0 0!important}
+html body main #viPublicWrap+.controls{border-radius:0 0 15px 15px!important}
+html body main #v15Experience{padding:11px 14px!important}
+html body main #catalogGrid{
+ grid-template-columns:repeat(4,minmax(0,1fr))!important;gap:13px!important;margin-top:12px!important;align-items:stretch!important;
+}
+html body main #catalogGrid :is(.product-card,.vibra-service-card){align-self:stretch!important;min-width:0;padding:9px!important;border-radius:14px!important}
+html body main #catalogGrid :is(.product-visual,.product-zoom-trigger,.vibra-service-photo,.product-zoom-trigger img){
+ height:clamp(135px,17vw,226px)!important;min-height:0!important;max-height:none!important;
+}
+html body main #catalogGrid :is(.product-zoom-trigger img,.vibra-service-photo){object-fit:contain!important}
+html body main #catalogGrid :is(.product-body,.vibra-service-content){flex:1 1 auto!important}
+html body main #catalogGrid .product-card .qty-row{margin-top:auto!important}
+html body main #catalogGrid :is(.v11-unit-badge,.product-zoom-label){background:var(--art-soft)!important;color:var(--art-ink)!important}
+html body :is(main,#foodDeliveryPlanner,#vibraLegalFooter,.modal,.drawer,#vsmGallery) :is(button:disabled,input:disabled,select:disabled,textarea:disabled){opacity:1!important;border-style:dashed!important}
+@media(max-width:1040px){
+ html body #foodDeliveryPlanner>.section-card:first-child{grid-template-columns:minmax(0,1fr)}
+ html body main #catalogGrid{grid-template-columns:repeat(2,minmax(0,1fr))!important}
+}
+@media(max-width:540px){
+ html body{--ve-width:calc(100% - 22px)}
+ html body #foodDeliveryPlanner .address-picker-row{flex-wrap:wrap}
+ html body #foodDeliveryPlanner .address-picker-row>.field{flex-basis:100%}
+ html body main #catalogGrid{grid-template-columns:minmax(0,1fr)!important}
+ html body main #catalogGrid :is(.product-visual,.product-zoom-trigger,.vibra-service-photo,.product-zoom-trigger img){height:190px!important}
+}
+html body #foodDeliveryPlanner :is(.address-picker-row,.address-picker-row>.field){overflow:visible}
+html body #foodDeliveryPlanner>.section-card:first-child{overflow:visible}
+html body .topbar .header{flex-wrap:wrap}
+html body .topbar .header>.brand{min-width:min(180px,100%)}
+html body #foodDeliveryPlanner .address-picker-row>button{max-width:100%}
+html body :is(main,#foodDeliveryPlanner,.v12-menu-list,.toast,.vibra-cart-feedback) :is(input,textarea)::placeholder{color:var(--art-muted);opacity:1}
+html body :is(.v12-menu-list,.toast,.vibra-cart-feedback){background:var(--art-panel)!important;color:var(--art-ink)!important;border-color:var(--art-line)!important}
+</style>
 </html>
