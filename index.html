@@ -5610,7 +5610,7 @@ let vsmSaving=false;async function save(){if(vsmSaving||!activeEdit)return;vsmSa
  }catch(e){status('No se pudo completar el cambio: '+e.message)}finally{button.disabled=false}}
 function attach(){const pane=q('#adminContent');if(!pane||typeof activeAdmin==='undefined'||activeAdmin!=='products'||!q('#adminModal.show'))return;if(q('#vibraServiceManage'))return;const root=document.createElement('section');root.id='vibraServiceManage';root.className='section-card';root.innerHTML=`<h3>Profesionales publicados: editar y establecer horarios</h3><p class="small muted">Edita los registros existentes, su tarifa fija y los horarios individuales de cada profesional. Los cambios se guardan en Supabase.</p><button type="button" class="btn secondary" id="vsmReload">Actualizar lista</button><div id="vsmList" class="vsm-list"></div><section id="vsmEditForm" class="vsm-edit" hidden><h3>Editar profesional</h3><div class="admin-grid two"><label class="field">Nombre<input class="input" id="vsmName"></label><label class="field">Nombre del servicio<input class="input" id="vsmService"></label><label class="field">Tarifa fija del masaje (MXN)<input class="input" type="number" min="0" step="0.01" id="vsmPrice"></label><label class="field">Teléfono<input class="input" id="vsmPhone"></label><label class="field">Descripción<textarea class="textarea" id="vsmBio"></textarea></label><label class="field">Instagram<input class="input" id="vsm_instagram"></label><label class="field">Facebook<input class="input" id="vsm_facebook"></label><label class="field">TikTok<input class="input" id="vsm_tiktok"></label></div><label class="field"><span><input type="checkbox" id="vsmActive"> Perfil publicado</span></label><h3>Horarios por día</h3><div id="vsmHours" class="vsm-hours"></div><p id="vsmMediaInfo" class="small muted"></p><div class="toolbar"><button type="button" class="btn" id="vsmSave">Guardar cambios y horarios</button><button type="button" class="btn secondary" id="vsmCancel">Cancelar edición</button></div></section><p id="vsmStatus" class="small muted" role="status"></p><hr><h3>Catálogo de demostración: productos y categorías</h3><p class="small muted">15 ejemplos con precios ilustrativos en MXN, no son cotizaciones ni registros publicados. No se modifica el inventario.</p><button type="button" class="btn secondary" id="vsmTogglePreview">Mostrar u ocultar vista previa</button><div id="vsmPreviewItems" hidden></div>`;
  pane.prepend(root);q('#vsmReload').onclick=load;q('#vsmSave').onclick=save;q('#vsmCancel').onclick=()=>{q('#vsmEditForm').hidden=true;activeEdit=null};q('#vsmTogglePreview').onclick=()=>{const e=q('#vsmPreviewItems');e.hidden=!e.hidden};q('#vsmPreviewItems').innerHTML=previews.map(([n,c,p])=>`<article><strong>${esc(n)}</strong><small>${esc(c)}</small><span>$${p.toLocaleString('es-MX')} MXN</span><small>Precio de ejemplo, sin existencias</small></article>`).join('');load();}
-function viewer(){let e=q('#vsmGallery');if(e)return e;e=document.createElement('div');e.id='vsmGallery';e.className='vsm-gallery';e.setAttribute('role','dialog');e.setAttribute('aria-modal','true');e.setAttribute('aria-label','Galería de fotos y videos');e.innerHTML='<div class="vsm-dialog"><header class="vsm-viewer-header"><div><h2 id="vsmViewerName">Servicio</h2><p id="vsmViewerDetails"></p></div><button class="vsm-close" type="button" aria-label="Cerrar visor">×</button></header><div class="vsm-viewer-body"><div class="vsm-viewer-stage" id="vsmGalleryMedia"></div><aside class="vsm-viewer-sidebar"><h3>Información del servicio</h3><div id="vsmProfileInfo"></div><div class="vsm-viewer-social" id="vsmProfileSocial"></div><div class="vsm-viewer-interact"><button type="button" id="vsmLike">♡ Me gusta <span id="vsmLikes"></span></button><button type="button" id="vsmFavorite">☆ Favorito</button><button type="button" id="vsmShowComments">Comentarios</button></div><div id="vsmComments" hidden><div id="vsmCommentList"></div><textarea id="vsmCommentText" placeholder="Tu opinión sobre el servicio" rows="3"></textarea><button type="button" id="vsmSendComment">Publicar opinión</button><p id="vsmCommentStatus"></p></div></aside></div><nav class="vsm-actions"><button id="vsmPrev" aria-label="Anterior">← Anterior</button><span class="vsm-count" id="vsmCount"></span><button id="vsmNext" aria-label="Siguiente">Siguiente →</button></nav></div>';document.body.append(e);q('.vsm-close',e).onclick=closeViewer;q('#vsmPrev').onclick=()=>drawGallery(-1);q('#vsmNext').onclick=()=>drawGallery(1);e.onclick=event=>{if(event.target===e)closeViewer()};return e;}
+function viewer(){let e=q('#vsmGallery');if(e)return e;e=document.createElement('div');e.id='vsmGallery';e.className='vsm-gallery';e.setAttribute('role','dialog');e.setAttribute('aria-modal','true');e.setAttribute('aria-label','Galería de fotos y videos');e.innerHTML=/* MODIFICADO: galeria y controles en una sola columna. */'<div class="vsm-dialog"><header class="vsm-viewer-header"><div><h2 id="vsmViewerName">Servicio</h2><p id="vsmViewerDetails"></p></div><button class="vsm-close" type="button" aria-label="Cerrar visor">×</button></header><div class="vsm-viewer-body"><div class="vsm-viewer-gallery"><div class="vsm-viewer-stage" id="vsmGalleryMedia"></div><nav class="vsm-actions"><button id="vsmPrev" aria-label="Anterior">← Anterior</button><span class="vsm-count" id="vsmCount"></span><button id="vsmNext" aria-label="Siguiente">Siguiente →</button></nav></div><aside class="vsm-viewer-sidebar"><h3>Información del servicio</h3><div id="vsmProfileInfo"></div><div class="vsm-viewer-social" id="vsmProfileSocial"></div><div class="vsm-viewer-interact"><button type="button" id="vsmLike">♡ Me gusta <span id="vsmLikes"></span></button><button type="button" id="vsmFavorite">☆ Favorito</button><button type="button" id="vsmShowComments">Comentarios</button></div><div id="vsmComments" hidden><div id="vsmCommentList"></div><textarea id="vsmCommentText" placeholder="Tu opinión sobre el servicio" rows="3"></textarea><button type="button" id="vsmSendComment">Publicar opinión</button><p id="vsmCommentStatus"></p></div></aside></div></div>';document.body.append(e);q('.vsm-close',e).onclick=closeViewer;q('#vsmPrev').onclick=()=>drawGallery(-1);q('#vsmNext').onclick=()=>drawGallery(1);e.onclick=event=>{if(event.target===e)closeViewer()};return e;}
 function closeViewer(){const e=q('#vsmGallery');if(!e)return;const v=q('video',e);if(v)v.pause();e.classList.remove('open');q('#vsmGalleryMedia').replaceChildren();}
 function drawGallery(delta=0){if(!galleryItems.length)return;galleryIndex=(galleryIndex+delta+galleryItems.length)%galleryItems.length;const m=galleryItems[galleryIndex],box=q('#vsmGalleryMedia');q('video',box)?.pause();box.replaceChildren();box.classList.add('vsm-media-changing');const v=document.createElement(m.type==='video'?'video':'img');v.addEventListener('loadeddata',()=>box.classList.remove('vsm-media-changing'),{once:true});v.addEventListener('load',()=>box.classList.remove('vsm-media-changing'),{once:true});v.addEventListener('error',()=>box.classList.remove('vsm-media-changing'),{once:true});/* MODIFICADO: el visor usa el fondo del repositorio para fotos y videos. */v.src=m.url;if(m.type==='video'){v.controls=true;v.playsInline=true;v.loop=true;v.autoplay=true;v.muted=true;v.setAttribute('aria-label','Video del servicio: reproducción automática en bucle');}v.alt=m.alt||'Archivo multimedia';box.append(v); /* MODIFICADO: reiniciar el zoom al cambiar de imagen o video. */
 const actions=q('#vsmGallery .vsm-actions');
@@ -8297,5 +8297,145 @@ html body #adminModal .tab-btn.active{border-color:var(--ref-focus)!important;co
 html body #adminModal .tab-btn.active svg{color:inherit!important}
 html body :is(.vibra-cart-feedback,.vibra-magnifier){--vibra-ui-surface:var(--ref-card);--vibra-ui-text:var(--ref-text);--vibra-ui-border:var(--ref-line);--vibra-ui-stage:var(--ref-stage)}
 html body .vibra-cart-token{background:var(--ref-action);color:var(--ref-on-action)}
+</style>
+<!-- NUEVO: rediseno exclusivo del visor de servicios -->
+<style>
+/* NUEVO: paleta y composición del visor de servicios inspiradas en la maqueta. */
+html body #vsmGallery{
+  --vsm-paper:#fff8ee;--vsm-panel:#fffdf7;--vsm-soft:#f8e7e8;--vsm-ink:#341321;
+  --vsm-muted:#714353;--vsm-gold:#765017;--vsm-border:#b47e88;--vsm-action:#99163e;
+  --vsm-action-hover:#78102e;--vsm-focus:#8c214b;--vsm-good:#13563e;--vsm-good-bg:#e8f3e7;
+  --vsm-bad:#8c1737;--vsm-bad-bg:#fbe1e6;--vsm-overlay:#210914c4;
+  --vsm-stage:radial-gradient(ellipse at 35% 10%,#fae7d7,#eac3cc 70%,#d5a7b7);
+  --vsm-rail:linear-gradient(155deg,#fff1e8,#fae5ed);
+  background:var(--vsm-overlay)!important;backdrop-filter:blur(7px);
+}
+html body.dark-mode #vsmGallery{
+  --vsm-paper:#2a101e;--vsm-panel:#2d1220;--vsm-soft:#411b2d;--vsm-ink:#fff1e9;
+  --vsm-muted:#e0b5c5;--vsm-gold:#f3d18e;--vsm-border:#87576a;--vsm-action:#b71d52;
+  --vsm-action-hover:#92133d;--vsm-focus:#ffd395;--vsm-good:#a9f3cb;--vsm-good-bg:#19382e;
+  --vsm-bad:#ffd2db;--vsm-bad-bg:#5a2034;--vsm-overlay:#160811e8;
+  --vsm-stage:radial-gradient(ellipse at 35% 10%,#4e1831,#2b0d20 70%,#1e0815);
+  --vsm-rail:linear-gradient(155deg,#381323,#200b18);
+}
+html body #vsmGallery .vsm-dialog{
+  width:min(1110px,100%)!important;height:min(91dvh,910px);max-height:94dvh!important;
+  grid-template-rows:auto minmax(0,1fr);gap:0;padding:0;overflow:hidden;
+  background:var(--vsm-paper)!important;color:var(--vsm-ink)!important;
+  border:1px solid var(--vsm-border)!important;border-radius:21px;
+  box-shadow:0 28px 90px #1706107a;
+}
+html body #vsmGallery.open .vsm-dialog{animation:vsm-reference-enter .22s ease-out both}
+@keyframes vsm-reference-enter{from{opacity:0;transform:translateY(8px) scale(.985)}to{opacity:1;transform:none}}
+html body #vsmGallery .vsm-viewer-header{
+  padding:14px clamp(12px,2vw,24px);background:var(--vsm-paper)!important;
+  color:var(--vsm-ink)!important;border-bottom:1px solid var(--vsm-border)!important;
+}
+html body #vsmGallery :is(#vsmViewerName,.vsm-viewer-sidebar h3){
+  color:var(--vsm-ink)!important;font-family:Georgia,serif;font-weight:700;letter-spacing:-.015em;
+}
+html body #vsmGallery #vsmViewerName{font-size:clamp(1.24rem,2.6vw,1.8rem);overflow-wrap:anywhere}
+html body #vsmGallery #vsmViewerDetails{
+  display:inline-block;margin:5px 0 0;padding:4px 9px;border:1px solid var(--vsm-border);border-radius:999px;
+  background:var(--vsm-soft);color:var(--vsm-gold)!important;font-weight:700;
+}
+html body #vsmGallery .vsm-viewer-body{
+  display:grid;grid-template-columns:minmax(0,1.05fr) minmax(0,1fr);gap:0;overflow:hidden;
+}
+html body #vsmGallery .vsm-viewer-gallery{
+  display:grid;grid-template-rows:minmax(0,1fr) auto;gap:12px;min-width:0;min-height:0;
+  padding:clamp(14px,3vw,34px);background:var(--vsm-rail);border-inline-end:1px solid var(--vsm-border);
+}
+html body #vsmGallery #vsmGalleryMedia{
+  width:min(100%,420px);height:100%;min-height:0;max-height:none;justify-self:center;
+  border:1px solid var(--vsm-border);border-radius:16px;overflow:hidden;background:var(--vsm-stage);
+}
+html body #vsmGallery[data-vsm-backdrop=ready] #vsmGalleryMedia{
+  background:linear-gradient(#41152838,#41152838),url('./Img/Fondo%20productos') center/cover no-repeat;
+  background-blend-mode:multiply;
+}
+html body #vsmGallery #vsmGalleryMedia>:is(img,video){max-height:100%;max-width:100%;object-fit:contain}
+html body #vsmGallery #vsmGalleryMedia>video{background:#1a0714}
+html body #vsmGallery .vsm-media-changing::after{background:var(--vsm-paper);color:var(--vsm-ink);border:1px solid var(--vsm-border)}
+html body #vsmGallery .vsm-actions{
+  width:min(100%,420px);justify-self:center;display:grid;grid-template-columns:1fr auto 1fr;
+  align-items:center;gap:8px;padding:0;background:transparent;color:var(--vsm-ink);
+}
+html body #vsmGallery .vsm-actions .vibra-step-zoom{
+  grid-column:1/-1;justify-content:center;padding:3px 8px;gap:8px;background:var(--vsm-soft);
+  border:1px solid var(--vsm-border);border-radius:999px;color:var(--vsm-ink);
+}
+html body #vsmGallery .vsm-count{font-weight:700;color:var(--vsm-gold);white-space:nowrap}
+html body #vsmGallery .vsm-viewer-sidebar{
+  padding:clamp(13px,2.3vw,26px)!important;max-height:100%!important;min-width:0;
+  background:var(--vsm-panel)!important;color:var(--vsm-ink)!important;border-radius:0;
+}
+html body #vsmGallery .vsm-viewer-sidebar h3{
+  padding-bottom:9px;margin:0 0 10px;border-bottom:1px solid var(--vsm-border);font-size:1.24rem;
+}
+html body #vsmGallery #vsmProfileInfo{display:grid;gap:0}
+html body #vsmGallery #vsmProfileInfo>p{
+  padding:9px 2px;margin:0!important;border:0;border-bottom:1px solid var(--vsm-border);
+  border-radius:0;background:transparent!important;color:var(--vsm-ink)!important;overflow-wrap:anywhere;
+}
+html body #vsmGallery #vsmProfileInfo>p>strong{
+  display:block;margin-bottom:3px;color:var(--vsm-muted)!important;font-size:.71rem;letter-spacing:.06em;text-transform:uppercase;
+}
+html body #vsmGallery #vsmProfileInfo>p:nth-child(2){
+  order:-1;padding:10px 12px;color:var(--vsm-gold)!important;background:var(--vsm-soft)!important;
+  border:1px solid var(--vsm-border);border-radius:10px;font:700 clamp(1.32rem,2.7vw,2rem)/1.1 Georgia,serif;
+}
+html body #vsmGallery #vsmProfileInfo>p:nth-child(2)>strong{font-family:var(--font);color:var(--vsm-gold)!important}
+html body #vsmGallery #vsmProfileInfo>p:nth-child(5){
+  margin-top:7px!important;padding:8px 10px;border:1px solid var(--vsm-border);border-radius:9px;
+  background:var(--vsm-good-bg)!important;color:var(--vsm-good)!important;
+}
+html body #vsmGallery #vsmProfileInfo>p[data-vibra-unavailable=true]{background:var(--vsm-bad-bg)!important;color:var(--vsm-bad)!important}
+html body #vsmGallery #vsmProfileInfo>p:nth-child(5)>strong{color:inherit!important}
+html body #vsmGallery #vsmProfileSocial:not(:empty){display:flex;gap:8px;margin:11px 0}
+html body #vsmGallery #vsmProfileSocial:empty{display:none}
+html body #vsmGallery #vsmProfileSocial a{
+  flex:1 1 auto;justify-content:center;min-height:40px;background:var(--vsm-action)!important;
+  color:#fff!important;border:1px solid var(--vsm-border)!important;text-decoration:none;
+}
+html body #vsmGallery #vsmProfileSocial a:has(svg) span{color:inherit!important}
+html body #vsmGallery #vsmProfileSocial a svg{order:-1;color:inherit!important;stroke:currentColor}
+html body #vsmGallery :is(.vibra-book-service,#vsmSendComment){
+  min-height:44px;background:linear-gradient(105deg,var(--vsm-action-hover),var(--vsm-action))!important;
+  color:#fff!important;border:1px solid var(--vsm-border)!important;border-radius:11px;
+  box-shadow:0 5px 16px #82143745;
+}
+html body #vsmGallery .vibra-book-service{margin-top:10px}
+html body #vsmGallery .vibra-availability-note{color:var(--vsm-muted)!important;margin:5px 0 10px}
+html body #vsmGallery .vsm-viewer-interact{border-color:var(--vsm-border);padding:10px 0;gap:6px}
+html body #vsmGallery :is(.vsm-close,.vsm-actions button,.vsm-viewer-interact button,.vibra-compact-service-tabs button){
+  min-height:38px;background:var(--vsm-soft)!important;color:var(--vsm-ink)!important;
+  border:1px solid var(--vsm-border)!important;border-radius:999px;
+  transition:background-color .16s ease,border-color .16s ease,color .16s ease;
+}
+html body #vsmGallery :is(.vsm-viewer-interact button[data-active="1"],.vibra-compact-service-tabs button[aria-pressed=true]){
+  background:var(--vsm-action)!important;color:#fff!important;border-color:var(--vsm-action)!important;
+}
+html body #vsmGallery :is(button,a,textarea):focus-visible{outline:2px solid var(--vsm-focus)!important;outline-offset:2px}
+html body #vsmGallery :is(button,a):hover:not(:disabled){border-color:var(--vsm-focus)!important}
+html body #vsmGallery button:disabled{opacity:1;border-style:dashed!important}
+html body #vsmGallery :is(#vsmCommentText,#vsmComments){
+  background:var(--vsm-paper)!important;color:var(--vsm-ink)!important;border-color:var(--vsm-border)!important;
+}
+html body #vsmGallery #vsmCommentText::placeholder{color:var(--vsm-muted)!important}
+html body #vsmGallery :is(.vsm-comment,#vsmCommentStatus){color:var(--vsm-ink)!important;border-color:var(--vsm-border)!important}
+html body #vsmGallery .vibra-compact-service-tabs{gap:6px;padding:7px 10px;background:var(--vsm-paper)}
+@media(max-width:760px){
+  html body #vsmGallery .vsm-dialog{grid-template-rows:auto auto minmax(0,1fr)}
+  html body #vsmGallery .vsm-viewer-body{display:block;overflow:auto}
+  html body #vsmGallery .vsm-viewer-gallery{padding:12px;border:0;grid-template-rows:minmax(0,1fr) auto}
+  html body #vsmGallery[data-vibra-service-pane=info] .vsm-viewer-gallery{display:none}
+  html body #vsmGallery #vsmGalleryMedia{height:clamp(130px,48dvh,460px)}
+  html body #vsmGallery .vsm-viewer-sidebar{overflow:visible;max-height:none!important}
+}
+@media(prefers-reduced-motion:reduce){
+  html body #vsmGallery.open .vsm-dialog{animation:none}
+  html body #vsmGallery :is(button,a){transition:none}
+}
 </style>
 </html>
