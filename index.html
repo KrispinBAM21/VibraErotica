@@ -401,6 +401,11 @@ body:not(.dark-mode) #catalogGrid [style*="background:var(--secondary)"]{color:#
     <div class="search-wrap" id="searchWrap"><input id="searchInput" placeholder="Buscar productos" /></div>
     <div class="chips" id="categoryChips"></div>
   </section>
+  <!-- NUEVO: encabezado del catálogo con resultados de la vista actual. -->
+  <header class="container ve-catalog-heading" id="veCatalogHeading">
+    <div><h2>Catálogo destacado y terapeutas</h2><p>Explora los productos y servicios disponibles.</p></div>
+    <span id="veCatalogCount"></span>
+  </header>
   <section class="container grid" id="catalogGrid"></section>
 </main>
 <button class="fab-whatsapp" id="whatsappFab" aria-label="WhatsApp"></button>
@@ -1661,7 +1666,7 @@ async function refreshFoodOffers(){if(!supabaseClient)return;const{data,error}=a
 function offerForProduct(p){const time=Date.now()+offerClockOffset;return foodOffers.filter(o=>o.product_ids.includes(p.id)&&(!o.starts_at||new Date(o.starts_at).getTime()<=time)&&(!o.ends_at||new Date(o.ends_at).getTime()>time)).sort((a,b)=>b.percent-a.percent)[0]}
 function productPrice(p){const o=offerForProduct(p);return o?Math.round(p.price*(1-o.percent/100)*100)/100:p.price}
 subtotal=function(){return cartItems().reduce((s,x)=>s+x.qty*productPrice(x.p),0)};
-renderCatalog=function(){const grid=document.getElementById('catalogGrid');if(siteStatus&&!siteStatus.active&&!siteStatus.master){grid.replaceChildren();return}const arr=state.products.filter(p=>p.active&&(currentCategory==='Todos'||p.category===currentCategory)&&(`${p.name} ${p.description}`.toLowerCase().includes(searchTerm.toLowerCase())));const productMarkup=arr.map(p=>{const q=state.cart[p.id]||0,o=offerForProduct(p);return `<article class="product-card"><button type="button" class="product-visual product-zoom-trigger" data-view-product="${esc(p.id)}" aria-label="Ver ${esc(p.name)} en grande">${productVisual(p)}<span class="product-zoom-label">${UI.search}<span>Ver producto</span></span></button><div class="product-body"><div class="product-head"><h3 class="product-name">${esc(p.name)}</h3><div class="price">${o?`<del>${money(p.price)}</del>`:''}${money(productPrice(p))}</div></div>${o?`<div class="offer-badge">${esc(o.title)} · ${o.percent}%${o.ends_at?`<small>Hasta ${esc(new Date(o.ends_at).toLocaleString('es-MX'))}</small>`:''}</div>`:''}<p class="desc">${esc(p.description)}</p><div class="meta"><span>${esc(p.category)}</span><span>Stock: ${p.stock}</span></div><div class="qty-row">${p.stock<=0?'<span class="stock-out">Agotado</span>':`<div class="qty-control"><button class="icon-btn" data-dec="${esc(p.id)}" aria-label="Quitar cantidad" ${q<=0?'disabled':''}>${UI.minus}</button><span class="qty-value">${q}</span><button class="icon-btn" data-inc="${esc(p.id)}" aria-label="Agregar cantidad" ${q>=p.stock?'disabled':''}>${UI.plus}</button></div>`}<button class="btn secondary" data-inc="${esc(p.id)}" ${p.stock<=0||q>=p.stock?'disabled':''}>${UI.cart}<span>Agregar</span></button></div></div></article>`}).join('')||'<div class="section-card">No hay productos para mostrar.</div>';const serviceSection=grid.querySelector(':scope > #vibraServiceCatalog');if(serviceSection){for(const child of [...grid.childNodes])if(child!==serviceSection)child.remove();serviceSection.insertAdjacentHTML('beforebegin',productMarkup)}else grid.innerHTML=productMarkup;grid.querySelectorAll('[data-view-product]').forEach(b=>b.onclick=()=>openProductViewer(b.dataset.viewProduct,b));updateCartCount()}; // MODIFICADO: mantener montados los servicios al actualizar los productos.
+renderCatalog=function(){const grid=document.getElementById('catalogGrid');if(siteStatus&&!siteStatus.active&&!siteStatus.master){grid.replaceChildren();return}const arr=state.products.filter(p=>p.active&&(currentCategory==='Todos'||p.category===currentCategory)&&(`${p.name} ${p.description}`.toLowerCase().includes(searchTerm.toLowerCase())));const productMarkup=arr.map(p=>{const q=state.cart[p.id]||0,o=offerForProduct(p);return `<!-- MODIFICADO: composición de la tarjeta de producto --><article class="product-card ve-reference-card"><div class="ve-card-media"><button type="button" class="product-visual product-zoom-trigger" data-view-product="${esc(p.id)}" aria-label="Ver ${esc(p.name)} en grande">${productVisual(p)}<span class="product-zoom-label">${UI.search}<span>Ver producto</span></span></button></div><div class="product-body"><div class="product-head"><h3 class="product-name">${esc(p.name)}</h3><div class="price">${o?`<del>${money(p.price)}</del>`:''}${money(productPrice(p))}</div></div>${o?`<div class="offer-badge">${esc(o.title)} · ${o.percent}%${o.ends_at?`<small>Hasta ${esc(new Date(o.ends_at).toLocaleString('es-MX'))}</small>`:''}</div>`:''}<p class="desc">${esc(p.description)}</p><div class="meta"><span>${esc(p.category)}</span><span>Stock: ${p.stock}</span></div><div class="qty-row">${p.stock<=0?'<span class="stock-out">Agotado</span>':`<div class="qty-control"><button class="icon-btn" data-dec="${esc(p.id)}" aria-label="Quitar cantidad" ${q<=0?'disabled':''}>${UI.minus}</button><span class="qty-value">${q}</span><button class="icon-btn" data-inc="${esc(p.id)}" aria-label="Agregar cantidad" ${q>=p.stock?'disabled':''}>${UI.plus}</button></div>`}<button class="btn secondary" data-inc="${esc(p.id)}" ${p.stock<=0||q>=p.stock?'disabled':''}>${UI.cart}<span>Agregar</span></button></div></div></article>`}).join('')||'<div class="section-card">No hay productos para mostrar.</div>';const serviceSection=grid.querySelector(':scope > #vibraServiceCatalog');if(serviceSection){for(const child of [...grid.childNodes])if(child!==serviceSection)child.remove();serviceSection.insertAdjacentHTML('beforebegin',productMarkup)}else grid.innerHTML=productMarkup;grid.querySelectorAll('[data-view-product]').forEach(b=>b.onclick=()=>openProductViewer(b.dataset.viewProduct,b));updateCartCount()}; // MODIFICADO: mantener montados los servicios al actualizar los productos.
 function openProductViewer(id,focus){const p=state.products.find(p=>p.id===id);if(!p)return;productFocus=focus;const m=v4Modal('productViewerModal',p.name),body=m.querySelector('.modal-body');m.classList.add('product-viewer');m.setAttribute('role','dialog');m.setAttribute('aria-modal','true');m.querySelector('.modal-head strong').textContent=p.name;body.innerHTML=`<div class="product-large-view"><div id="productZoomImage">${productVisual(p)}</div></div><!-- MODIFICADO: zoom por pasos --><div class="field vibra-step-zoom" data-vibra-zoom="product"></div><h3>${esc(p.name)} · ${money(productPrice(p))}</h3><p>${esc(p.description)}</p><p class="small">${p.stock} disponibles</p>${panelButton('productViewerAdd','Agregar al pedido',UI.cart,'full')}`;vibraStepZoom(body.querySelector('[data-vibra-zoom]'),body.querySelector('#productZoomImage'),'productZoomRange'); /* MODIFICADO: ampliar únicamente por acción del usuario. */body.querySelector('#productViewerAdd').disabled=p.stock<=0||(state.cart[id]||0)>=p.stock;body.querySelector('#productViewerAdd').onclick=()=>{changeQty(id,1);body.querySelector('#productViewerAdd').disabled=(state.cart[id]||0)>=p.stock;toast('Producto agregado.','ok')};openModal(m.id);m.querySelector('[data-close-modal]').focus()}
 const v5CloseModal=closeModal;closeModal=function(id){v5CloseModal(id);if(id==='productViewerModal')productFocus?.focus()};
 const v5Load=loadPublicCloudState;loadPublicCloudState=async function(){await v5Load();await refreshFoodOffers()};
@@ -3228,6 +3233,9 @@ renderCatalog=function(){
       const body=card.querySelector('.product-body');
       const qty=body?.querySelector('.qty-row');
       qty?.insertAdjacentHTML('beforebegin',v12SocialButtons(id));
+      // NUEVO: favorito flotante sin cambiar su controlador.
+      const favorite=body?.querySelector('[data-v12-favorite]');
+      if(favorite){favorite.classList.add('ve-card-favorite');card.querySelector('.ve-card-media')?.append(favorite)}
     }
   });
   v12BindSocial(document.getElementById('catalogGrid'));
@@ -4190,11 +4198,17 @@ async function refreshExperience(){
  try{summary=await community('summary',{})||summary}catch{}
  paintExperience();
 }
+// NUEVO: presentar únicamente la puntuación y contadores reales.
+window.veRatingSummary=function(avg,reviews,followers){
+ const rated=Number(reviews)>0&&Number.isFinite(avg)&&avg>0;
+ const stars=Array.from({length:5},(_,i)=>'<svg viewBox="0 0 24 24" aria-hidden="true" fill="'+(rated&&i<Math.round(avg)?'currentColor':'none')+'" stroke="currentColor" stroke-width="1.5"><path d="m12 3 2.7 5.6 6.2.9-4.4 4.3 1 6.2-5.5-3-5.5 3 1-6.2-4.4-4.3 6.2-.9z"/></svg>').join('');
+ return '<span class="ve-stars">'+stars+'</span><span><strong>'+(rated?avg.toFixed(1)+' de 5':'Sin calificaciones')+'</strong><small>'+Number(reviews||0)+' opiniones · '+Number(followers||0)+' seguidores</small></span>';
+};
 function paintExperience(){
  let h=document.getElementById('v15Experience');
  if(!h){h=document.createElement('section');h.id='v15Experience';h.className='container v15-experience-card';document.querySelector('.container.controls')?.after(h) /* MODIFICADO: reputación debajo del panel de filtros. */}
  const s=summary.scores||{},avg=Number(s.overall||0);
- h.innerHTML=`<div><h3>Tu experiencia importa</h3><p>Califica el negocio, servicio y experiencia. También puedes consultar lo que opinan otros clientes.</p><div class="v15-rating-summary"><span class="v15-stars-text">${avg?('★'.repeat(Math.round(avg))):'☆☆☆☆☆'}</span><span>${avg?avg.toFixed(1):'Sin calificaciones'} · ${Number(s.reviews||0)} opiniones · ${Number(summary.followers||0)} seguidores</span></div></div>
+ h.innerHTML=`<!-- MODIFICADO: reputación en tres zonas --><div class="ve-reputation-copy"><h3>Reputación y experiencia</h3><p>Califica el negocio, servicio y experiencia. También puedes consultar lo que opinan otros clientes.</p></div><div class="v15-rating-summary ve-reputation-rating">${veRatingSummary(avg,s.reviews,summary.followers)}</div>
  <!-- MODIFICADO: SVG de la barra V15 en cada renderizado -->
  <div class="v15-experience-actions"><button class="btn" id="v15RateBusiness"><svg aria-hidden="true" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M8 4h8v3a4 4 0 0 1-8 0V4Zm0 1H4v2a4 4 0 0 0 4 4m8-6h4v2a4 4 0 0 1-4 4m-4 0v5m-4 4h8l-1-4H9l-1 4Z"/></svg> <span>Calificar negocio</span></button><button class="btn secondary" id="v15ViewOpinions"><svg aria-hidden="true" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M5 4h14v12H9l-4 4V4Zm3 4h8m-8 4h5"/></svg><span>Ver opiniones</span></button><button class="btn secondary" id="v15Follow">${summary.following?'<svg aria-hidden="true" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M10 4a5 5 0 0 0-5 5v4l-2 3h14l-2-3V9a5 5 0 0 0-5-5Zm-2 15a2 2 0 0 0 4 0m5-12h5"/></svg>':'<svg aria-hidden="true" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M10 4a5 5 0 0 0-5 5v4l-2 3h14l-2-3V9a5 5 0 0 0-5-5Zm-2 15a2 2 0 0 0 4 0m5-12h5m-2.5-2.5v5"/></svg>'}<span>${summary.following?'Siguiendo':'Seguir'}</span></button></div>`;
  document.getElementById('v15RateBusiness').onclick=()=>openRating(false);
@@ -4765,13 +4779,13 @@ const v17RenderAdminBase=renderAdmin;renderAdmin=function(){v17EnsureCouponTab()
 let paintExperience=window.vibraPaintExperience||function(){};
 paintExperience=function(){
   let h=document.getElementById('v15Experience');if(!h){h=document.createElement('section');h.id='v15Experience';document.querySelector('.container.controls')?.after(h) /* MODIFICADO: reputación debajo del panel de filtros. */}
-  h.className='container v17-experience';const s=summary?.scores||{},avg=Number(s.overall||0);
+  h.className='container v17-experience open'; // MODIFICADO: mostrar la franja completa al abrir.const s=summary?.scores||{},avg=Number(s.overall||0);
   // MODIFICADO: iconos propios para las acciones y la puntuación de la barra.
   const experienceSvg=path=>`<svg aria-hidden="true" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round">${path}</svg>`;
   // MODIFICADO: fachada con ubicación, reseña destacada, seguimiento y apertura.
-  h.innerHTML=`<button class="v17-experience-toggle" id="v17ExperienceToggle" aria-expanded="false"><div><h3>Tu experiencia importa</h3><p>Califica el negocio, conoce el perfil, consulta opiniones y síguenos.</p></div><span class="v17-experience-chevron">${experienceSvg('<path d="M5 7h14v10H5z M9 10l3 3 3-3"/>')}</span></button><div class="v17-experience-panel"><div><div class="v17-experience-inner"><div class="v17-experience-summary"><span class="v17-stars">${Array.from({length:avg?Math.min(5,Math.max(0,Math.round(avg))):5},()=>experienceSvg('<path d="m12 3 2.8 5.7 6.2.9-4.5 4.4 1 6.2-5.5-2.9-5.5 2.9 1-6.2L3 9.6l6.2-.9L12 3Z"/>')).join('')}</span><span>${avg?avg.toFixed(1):'Sin calificaciones'} · ${Number(s.reviews||0)} opiniones · ${Number(summary?.followers||0)} seguidores</span></div><div class="v17-experience-actions"><button class="btn v16-glow-btn" id="v17KnowBusiness">${experienceSvg('<path d="M3 20h18M5 20V9l7-5 7 5v11M9 20v-5h6v5M10 10h4M12 2v2"/>')}<span>Conocer el negocio</span></button><button class="btn" id="v17Rate">${experienceSvg('<path d="M4 5h16v12H9l-4 3v-3H4z"/><path d="m12 7 1.1 2.3 2.6.4-1.9 1.8.5 2.6-2.3-1.2-2.3 1.2.5-2.6-1.9-1.8 2.6-.4z"/>')}<span>Opiniones y calificar</span></button><button class="btn secondary" id="v17Follow">${experienceSvg(summary?.following?'<path d="M8 13a4 4 0 1 0 0-8 4 4 0 0 0 0 8ZM2 21v-2c0-2 3-4 6-4s6 2 6 4v2M16 11h6"/>':'<path d="M8 13a4 4 0 1 0 0-8 4 4 0 0 0 0 8ZM2 21v-2c0-2 3-4 6-4s6 2 6 4v2M16 11h6m-3-3v6"/>')}<span>${summary?.following?'Siguiendo':'Seguir'}</span></button></div></div></div></div>`;
+  h.innerHTML=`<button class="v17-experience-toggle" id="v17ExperienceToggle" aria-expanded="true"><div class="ve-reputation-copy"><h3>Reputación y experiencia</h3><p>Califica el negocio, conoce el perfil, consulta opiniones y síguenos.</p></div><span class="v17-experience-chevron">${experienceSvg('<path d="M5 7h14v10H5z M9 10l3 3 3-3"/>')}</span></button><div class="v17-experience-panel"><div><div class="v17-experience-inner"><div class="v17-experience-summary ve-reputation-rating">${veRatingSummary(avg,s.reviews,summary?.followers)}</div><div class="v17-experience-actions"><button class="btn v16-glow-btn" id="v17KnowBusiness">${experienceSvg('<path d="M3 20h18M5 20V9l7-5 7 5v11M9 20v-5h6v5M10 10h4M12 2v2"/>')}<span>Conocer el negocio</span></button><button class="btn" id="v17Rate">${experienceSvg('<path d="M4 5h16v12H9l-4 3v-3H4z"/><path d="m12 7 1.1 2.3 2.6.4-1.9 1.8.5 2.6-2.3-1.2-2.3 1.2.5-2.6-1.9-1.8 2.6-.4z"/>')}<span>Calificar</span></button><button class="btn secondary" id="veViewOpinions">${experienceSvg('<path d="M4 5h16v12H9l-5 3zM8 9h8m-8 4h5"/>')}<span>Ver opiniones</span></button><button class="btn secondary" id="v17Follow">${experienceSvg(summary?.following?'<path d="M8 13a4 4 0 1 0 0-8 4 4 0 0 0 0 8ZM2 21v-2c0-2 3-4 6-4s6 2 6 4v2M16 11h6"/>':'<path d="M8 13a4 4 0 1 0 0-8 4 4 0 0 0 0 8ZM2 21v-2c0-2 3-4 6-4s6 2 6 4v2M16 11h6m-3-3v6"/>')}<span>${summary?.following?'Siguiendo':'Seguir'}</span></button></div></div></div></div>`;
   const toggle=document.getElementById('v17ExperienceToggle');toggle.onclick=()=>{const open=!h.classList.contains('open');h.classList.toggle('open',open);toggle.setAttribute('aria-expanded',String(open));clearTimeout(v17ExperienceTimer);if(open)v17ExperienceTimer=setTimeout(()=>{if(h.isConnected){h.classList.remove('open');toggle.setAttribute('aria-expanded','false')}},10*60*1000)};
-  document.getElementById('v17KnowBusiness').onclick=()=>openBusinessShowcase();document.getElementById('v17Rate').onclick=()=>openRateBusinessModal();document.getElementById('v17Follow').onclick=async e=>{if(!customerSession){renderCustomerProfile();openModal('customerProfileModal');return toast('Inicia sesión para seguir al negocio.','info')}try{const r=await v16Community('toggle_follow',{});summary.following=r.following;summary.followers=r.followers;paintExperience()}catch(err){toast(err.message,'error')}};
+  document.getElementById('v17KnowBusiness').onclick=()=>openBusinessShowcase();document.getElementById('v17Rate').onclick=()=>openRateBusinessModal();document.getElementById('veViewOpinions').onclick=()=>openRateBusinessModal(true); /* NUEVO: acceso directo a opiniones. */document.getElementById('v17Follow').onclick=async e=>{if(!customerSession){renderCustomerProfile();openModal('customerProfileModal');return toast('Inicia sesión para seguir al negocio.','info')}try{const r=await v16Community('toggle_follow',{});summary.following=r.following;summary.followers=r.followers;paintExperience()}catch(err){toast(err.message,'error')}};
 };
 
 /* ---------- Ruta del usuario al local al pulsar el pin ---------- */
@@ -5697,7 +5711,7 @@ function updateServices(){
     const action=c.querySelector('button[data-p]'),id=action?.dataset.p||'';
     const img=c.querySelector('img'),title=c.querySelector('h3')?.textContent||'Servicio',desc=c.querySelector('.v9staff p')?.textContent||'';
     const ps=[...c.querySelectorAll('p')].map(x=>x.textContent).filter(Boolean);
-    return `<article class="vibra-service-card"><div>${img?`<img class="vibra-service-photo" src="${escText(img.getAttribute('src'))}" alt="${escText(title)}">`:`<div class="vibra-service-photo" style="display:grid;place-items:center;color:var(--primary)">${typeof UI!=='undefined'?UI.business:''}</div>`}</div><div class="vibra-service-content"><h3>${escText(title)}</h3><p>${escText(desc)}</p>${ps.slice(1,3).map(x=>`<p>${escText(x)}</p>`).join('')}</div><button class="btn" data-vibra-book="${escText(id)}">Reservar</button></article>`;
+    return `<!-- MODIFICADO: composición de la tarjeta de servicio --><article class="vibra-service-card ve-reference-card"><div class="ve-card-media">${img?`<img class="vibra-service-photo" src="${escText(img.getAttribute('src'))}" alt="${escText(title)}">`:`<div class="vibra-service-photo" style="display:grid;place-items:center;color:var(--primary)">${typeof UI!=='undefined'?UI.business:''}</div>`}</div><div class="vibra-service-content"><h3>${escText(title)}</h3><div class="ve-service-info"><p>${escText(desc)}</p>${ps.slice(1,3).map(x=>`<p>${escText(x)}</p>`).join('')}</div></div><div class="ve-service-actions"><button class="btn" data-vibra-book="${escText(id)}">Reservar</button></div></article>`;
   }).join(''):'';
   if(html!==lastServices||(html&&!wrap.childElementCount)){wrap.innerHTML=html;lastServices=html;}
   wrap.hidden=!html;
@@ -5831,7 +5845,7 @@ q('#vsmShowComments').onclick=()=>{comments.hidden=!comments.hidden};q('#vsmSend
 renderFeedback();
 drawGallery();}
 function enhanceCards(){qa('#vibraServiceCatalog .vibra-service-card').forEach(card=>{const id=q('[data-vibra-book]',card)?.dataset.vibraBook;if(!id)return;const s=allServices.find(x=>x.id===serviceLinks.find(y=>y.practitioner_id===id)?.service_id);let price=q('.vsm-price',card);if(s&&!price){price=document.createElement('p');price.className='vsm-price';q('.vibra-service-content',card)?.append(price);}if(price&&s)price.textContent=`${s.name} · Tarifa: $${Number(s.hourly_price).toLocaleString('es-MX',{minimumFractionDigits:2})} MXN`;
- const items=allMedia.filter(x=>x.practitioner_id===id&&x.object_path);if(items.length){const photo=q('.vibra-service-photo',card);if(photo&&!photo.closest('.vsm-view-trigger')){const b=document.createElement('button');b.className='vsm-view-trigger';b.type='button';b.setAttribute('aria-label','Ver servicio completo y galería');photo.replaceWith(b);b.append(photo);b.onclick=()=>showViewer(id);}if(!q('.vsm-media-button',card)){const b=document.createElement('button');b.type='button';b.className='btn secondary vsm-media-button';b.innerHTML='<svg aria-hidden="true" viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="11" cy="11" r="7"/><path d="m16 16 4 4"/><path d="M8 11h6m-3-3v6"/></svg><span>Ver servicio</span><small>Fotos y videos ('+items.length+')</small>';b.onclick=()=>showViewer(id);q('.vibra-service-content',card)?.append(b);}}});}
+ const items=allMedia.filter(x=>x.practitioner_id===id&&x.object_path);if(items.length){const photo=q('.vibra-service-photo',card);if(photo&&!photo.closest('.vsm-view-trigger')){const b=document.createElement('button');b.className='vsm-view-trigger';b.type='button';b.setAttribute('aria-label','Ver servicio completo y galería');photo.replaceWith(b);b.append(photo);b.onclick=()=>showViewer(id);}if(!q('.vsm-media-button',card)){const b=document.createElement('button');b.type='button';b.className='btn secondary vsm-media-button';b.innerHTML='<svg aria-hidden="true" viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="11" cy="11" r="7"/><path d="m16 16 4 4"/><path d="M8 11h6m-3-3v6"/></svg><span>Ver servicio</span><small>Fotos y videos ('+items.length+')</small>';b.onclick=()=>showViewer(id);q('.ve-service-actions',card)?.prepend(b); /* MODIFICADO: acciones juntas al pie. */}}});}
 let scheduled=false;const observe=new MutationObserver(m=>{if(scheduled)return;const admin=m.some(x=>x.target.id==='adminContent'||x.target.closest?.('#adminContent'));const catalog=m.some(x=>x.target.id==='catalogGrid'||x.target.closest?.('#vibraServiceCatalog'));if(!admin&&!catalog)return;scheduled=true;requestAnimationFrame(()=>{scheduled=false;if(admin)attach();if(catalog)enhanceCards()});});
 const vsmPreviousRender=renderProductsAdmin;renderProductsAdmin=function(c){vsmPreviousRender(c);queueMicrotask(attach)};
 function init(){observe.observe(document.body,{subtree:true,childList:true});attach();load();document.addEventListener('keydown',e=>{if(!q('#vsmGallery.open'))return;if(e.key==='Escape')closeViewer();if(e.key==='ArrowRight')drawGallery(1);if(e.key==='ArrowLeft')drawGallery(-1)});}
@@ -9624,4 +9638,124 @@ html body #foodDeliveryPlanner .address-picker-row>button{max-width:100%}
 html body :is(main,#foodDeliveryPlanner,.v12-menu-list,.toast,.vibra-cart-feedback) :is(input,textarea)::placeholder{color:var(--art-muted);opacity:1}
 html body :is(.v12-menu-list,.toast,.vibra-cart-feedback){background:var(--art-panel)!important;color:var(--art-ink)!important;border-color:var(--art-line)!important}
 </style>
+<!-- NUEVO: composición pública del ZIP -->
+<style>
+/* NUEVO: anchos, escala y ritmo de la maqueta con los temas del sitio. */
+html body{--ve-width:min(1216px,calc(100% - 64px));--ve-gap:20px;--ve-radius:16px}
+html body :is(.topbar .header,.topbar #v12HomeNav,main .container,#foodDeliveryPlanner,#vibraLegalFooter .vibra-legal-inner){width:var(--ve-width);margin-inline:auto!important}
+html body :is(main,.topbar,#foodDeliveryPlanner){font-family:"Plus Jakarta Sans",var(--font)}
+html body :is(main,.topbar) :is(h1,h2,h3){font-family:Outfit,var(--font)}
+html body .topbar .header{min-height:76px;padding-block:10px!important;gap:8px}
+html body .topbar #brandName{font-size:1.25rem;letter-spacing:.025em}
+html body .topbar #v12HomeNav .chip{min-height:36px;padding:5px 13px}
+html body #foodDeliveryPlanner{margin-block:20px 28px!important}
+html body #foodDeliveryPlanner>.section-card:first-child{padding:clamp(16px,3vw,36px)!important;border-radius:24px!important}
+html body #foodDeliveryPlanner .eyebrow{font-size:1.15rem}
+html body #foodDeliveryPlanner #foodPublicMap{height:320px!important}
+html body main #viPublicWrap .vi-filter-panel{padding:17px 20px 12px!important}
+html body main #viPublicWrap+.controls{padding:10px 20px 18px!important}
+
+/* NUEVO: reputación en tres zonas y acciones con jerarquías diferenciadas. */
+html body main #v15Experience{
+ display:grid!important;grid-template-columns:minmax(0,1fr) minmax(0,.9fr) minmax(0,2.2fr)!important;align-items:center;
+ gap:24px;padding:24px!important;margin-block:28px!important;border-radius:var(--ve-radius)!important;
+}
+html body main #v15Experience .ve-reputation-copy h3{font-size:.79rem!important;text-transform:uppercase;letter-spacing:.035em;color:var(--art-link)!important;margin:0 0 5px!important}
+html body main #v15Experience .ve-reputation-copy p{font-size:.81rem!important;line-height:1.35!important}
+html body main #v15Experience .ve-reputation-rating{
+ display:flex;align-items:center;gap:9px;flex-wrap:wrap;border-inline-start:1px solid var(--art-line);padding-inline-start:18px;margin:0!important;color:var(--art-ink)!important;
+}
+#v15Experience .ve-reputation-rating small{display:block;color:var(--art-muted)!important}
+#v15Experience .ve-stars{display:inline-flex;gap:2px;color:var(--art-link)}
+#v15Experience .ve-stars svg{width:17px;height:17px}
+html body main #v15Experience :is(.v15-experience-actions,.v17-experience-actions){
+ display:grid!important;grid-template-columns:repeat(4,minmax(0,1fr));gap:8px;width:100%;min-width:0;
+}
+html body main #v15Experience :is(.v15-experience-actions,.v17-experience-actions) .btn{
+ min-height:36px;padding:5px 7px!important;border-radius:12px!important;font-size:.78rem;line-height:1.2;gap:4px;white-space:normal;
+}
+html body main #v15Experience :is(.v15-experience-actions,.v17-experience-actions) .btn svg{width:15px;height:15px}
+html body main #v15Experience :is(#v16OpenBusiness,#v17KnowBusiness,#v15ViewOpinions,#veViewOpinions){
+ background:var(--art-soft)!important;color:var(--art-ink)!important;border:1px solid var(--art-line)!important;
+}
+html body main #v15Experience :is(#v16OpenBusiness,#v17KnowBusiness,#v15ViewOpinions,#veViewOpinions) :is(svg,span){color:inherit!important}
+html body main #v15Experience :is(#v15Follow,#v17Follow){background:linear-gradient(105deg,var(--art-main),var(--art-action-end))!important;color:#fff!important}
+html body main #v15Experience.v17-experience.open :is(.v17-experience-panel,.v17-experience-panel>div,.v17-experience-inner){display:contents!important}
+html body main #v15Experience #v17ExperienceToggle{padding:0;text-align:start}
+html body main #v15Experience .v17-experience-chevron{width:23px;height:23px;background:var(--art-soft)}
+html body main #v15Experience.v17-experience:not(.open) .v17-experience-panel{display:none}
+
+/* NUEVO: encabezado, imagen protagonista y pie de acciones de las tarjetas. */
+html body main .ve-catalog-heading{display:flex;align-items:center;justify-content:space-between;gap:12px;margin-block:26px 14px}
+.ve-catalog-heading h2{display:flex;align-items:center;gap:8px;margin:0;font-size:1.25rem;color:var(--art-ink)}
+.ve-catalog-heading h2::before{content:"";width:10px;height:24px;border-radius:999px;background:linear-gradient(var(--art-main),var(--art-action-end));flex:none}
+.ve-catalog-heading p{margin:3px 0 0;font-size:.82rem;color:var(--art-muted)}
+#veCatalogCount{font-size:.81rem;color:var(--art-link);font-weight:700;text-align:end}
+html body main #catalogGrid{gap:var(--ve-gap)!important;margin-top:0!important}
+html body main #catalogGrid .ve-reference-card{
+ padding:0!important;gap:0!important;border-radius:var(--ve-radius)!important;overflow:hidden;
+ display:flex;flex-direction:column;align-self:stretch!important;
+}
+html body main #catalogGrid .ve-reference-card[hidden]{display:none!important}
+html body main #catalogGrid .ve-card-media{position:relative;height:240px;background:var(--art-bg);overflow:hidden}
+html body main #catalogGrid .ve-card-media :is(.product-visual,.product-zoom-trigger,.vibra-service-photo,.vsm-view-trigger,img){
+ width:100%;height:100%!important;max-height:none!important;min-height:0!important;border-radius:0;object-fit:contain!important;
+}
+html body main #catalogGrid .ve-card-media .product-zoom-label{inset:auto 10px 10px auto}
+html body main #catalogGrid .ve-card-favorite{
+ position:absolute;z-index:2;top:10px;right:10px;width:36px;min-width:36px;min-height:36px!important;
+ justify-content:center;padding:0!important;color:var(--art-ink)!important;background:var(--art-panel)!important;border-color:var(--art-line)!important;
+}
+html body main #catalogGrid .ve-card-favorite span{display:none}
+html body main #catalogGrid .ve-card-favorite.active{color:var(--art-link)!important;border-color:var(--art-focus)!important}
+html body main #catalogGrid .ve-reference-card :is(.product-body,.vibra-service-content){padding:16px!important;flex:1 1 auto!important;gap:6px;min-width:0}
+html body main #catalogGrid .ve-reference-card :is(.product-name,.vibra-service-content h3){font-size:.97rem;line-height:1.35}
+html body main #catalogGrid .ve-reference-card :is(.price,.vsm-price){font-size:1.12rem!important;color:var(--art-link)!important}
+.ve-service-info{background:var(--art-soft);border:1px solid var(--art-line);border-radius:10px;padding:6px 8px}
+.ve-service-info p:empty{display:none}
+.ve-service-actions{display:grid;grid-template-columns:1fr;gap:7px;padding:0 16px 16px;margin-top:auto}
+.ve-service-actions:has(.vsm-media-button){grid-template-columns:repeat(2,minmax(0,1fr))}
+html body main #catalogGrid .ve-service-actions button{margin:0!important;padding:6px 8px;font-size:.8rem;white-space:normal}
+html body main #catalogGrid .ve-service-actions small{color:inherit!important}
+html body main #catalogGrid .ve-reference-card .qty-row{border-top:1px solid var(--art-line);padding-top:9px}
+html body main #catalogGrid .ve-reference-card .qty-row>.btn{width:100%;background:linear-gradient(105deg,var(--art-main),var(--art-action-end))!important;color:#fff!important}
+html body main #catalogPages{margin-block:22px 35px;padding-top:13px;border-top:1px solid var(--art-line)}
+@media(max-width:1100px){html body main #v15Experience{grid-template-columns:1fr 1fr!important}html body main #v15Experience :is(.v15-experience-actions,.v17-experience-actions){grid-column:1/-1}}
+@media(max-width:760px){
+ html body{--ve-width:calc(100% - 32px);--ve-gap:13px}
+ html body .topbar .header{min-height:60px}
+ html body main #catalogGrid .ve-card-media{height:180px}
+}
+@media(max-width:540px){
+ html body main #v15Experience{grid-template-columns:1fr!important;gap:12px;padding:15px!important}
+ html body main #v15Experience .ve-reputation-rating{border-inline-start:0;padding-inline-start:0}
+ html body main #v15Experience :is(.v15-experience-actions,.v17-experience-actions){grid-template-columns:1fr 1fr}
+ html body main .ve-catalog-heading{align-items:start;flex-direction:column}
+}
+.ve-catalog-heading[hidden]{display:none!important}
+html body main #catalogGrid .ve-reference-card .product-head{align-items:start;gap:8px}
+html body main #catalogGrid .ve-reference-card .product-head .price{white-space:nowrap}
+html body main #catalogGrid .ve-reference-card :is(.meta,.v12-social-row){flex-wrap:wrap}
+</style>
+<script>
+// NUEVO: contar las publicaciones de la vista después de aplicar filtros y paginación.
+(()=>{
+ const heading=document.getElementById('veCatalogHeading'), count=document.getElementById('veCatalogCount');
+ const main=heading.closest('main');
+ let frame=0;
+ function paint(){
+  frame=0;
+  const cards=[...main.querySelectorAll('#catalogGrid .product-card,#vibraServiceCatalog .vibra-service-card,#viIndieResults .vi-card')];
+  const visible=cards.filter(card=>card.getClientRects().length>0).length;
+  const text=visible+' '+(visible===1?'publicación visible':'publicaciones visibles');
+  if(count.textContent!==text)count.textContent=text;
+  heading.hidden=!!(siteStatus&&!siteStatus.active&&!siteStatus.master);
+ }
+ const update=()=>{if(!frame)frame=requestAnimationFrame(paint)};
+ new MutationObserver(records=>{
+  if(records.some(({target})=>target!==heading&&!heading.contains(target)))update();
+ }).observe(main,{subtree:true,childList:true,attributes:true,attributeFilter:['hidden','style','class']});
+ window.addEventListener('resize',update,{passive:true});update();
+})();
+</script>
 </html>
