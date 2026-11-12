@@ -850,11 +850,55 @@ function showMapConfigNeeded(containerId){
   if(!el)return;
   el.innerHTML=`<div class="empty-state" style="height:100%;min-height:220px;display:grid;place-items:center;padding:24px;text-align:center"><div>${UI.map}<strong style="display:block;margin:8px 0">Falta configurar CARTO</strong><span class="small muted">El administrador debe guardar una clave CARTO y desplegar la función carto-tiles.</span></div></div>`;
 }
+// NUEVO: selector accesible para las capas ya disponibles en el mapa principal.
+let vibraPublicLayerPreference='auto';
+function vibraPublicLayerControl(map,tileState){
+  const control=L.control({position:'topright'});
+  let details,options,status;
+  control.onAdd=()=>{
+    details=document.createElement('details');
+    details.className='vibra-public-layers leaflet-control';
+    const summary=document.createElement('summary');
+    summary.innerHTML='<svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linejoin="round" aria-hidden="true"><path d="m12 3 9 5-9 5-9-5 9-5Zm-9 9 9 5 9-5M3 16l9 5 9-5"/></svg><span>Capas</span>';
+    options=document.createElement('fieldset');
+    options.innerHTML='<legend>Estilo del mapa</legend>';
+    for(const [value,label] of [['auto','Automática'],['light_all','Clara'],['dark_all','Oscura'],['voyager','Voyager']]){
+      const row=document.createElement('label'),radio=document.createElement('input');
+      radio.type='radio';radio.name='vibraPublicMapLayer';radio.value=value;
+      radio.checked=value===vibraPublicLayerPreference;
+      row.append(radio,document.createTextNode(label));options.append(row);
+    }
+    status=document.createElement('p');
+    status.setAttribute('role','status');
+    details.append(summary,options,status);
+    L.DomEvent.disableClickPropagation(details);
+    L.DomEvent.disableScrollPropagation(details);
+    details.addEventListener('change',event=>{
+      if(!event.target.matches('input[name=vibraPublicMapLayer]'))return;
+      vibraPublicLayerPreference=event.target.value;
+      tileState.applyTheme?.();
+    });
+    details.addEventListener('keydown',event=>{
+      if(event.key==='Escape'&&details.open){event.stopPropagation();details.open=false;summary.focus()}
+    });
+    return details;
+  };
+  control.addTo(map);
+  return (message='',available=true)=>{
+    status.textContent=message;
+    options.disabled=!available;
+  };
+}
+
 // MODIFICADO: comprobar el proxy actualizado y resolver la capa inicial antes de cualquier clic.
 function addConfiguredTileLayer(map,containerId){
   const host=map.getContainer();
   if(map._vibraTileState)return true;
   const state=map._vibraTileState={active:true};
+  // NUEVO: ofrecer el selector solo en el mapa público.
+  const publicMap=containerId==='foodPublicMap';
+  const showLayerStatus=publicMap?vibraPublicLayerControl(map,state):null;
+  showLayerStatus?.('Cargando capas…',false);
   const resize=new ResizeObserver(()=>{
     if(host.clientWidth&&host.clientHeight)map.invalidateSize({pan:false});
   });
@@ -867,6 +911,8 @@ function addConfiguredTileLayer(map,containerId){
     clearTimeout(deadline);
     controller.abort();
     if(tiles&&map.hasLayer(tiles))map.removeLayer(tiles);
+    // NUEVO: mostrar el estado real al usar el respaldo existente.
+    showLayerStatus?.('CARTO no disponible. Se muestra OpenStreetMap.',false);
     map._vibraFallbackTiles=L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png',{
       maxZoom:20,maxNativeZoom:19,subdomains:'abc',attribution:'&copy; OpenStreetMap contributors'
     }).addTo(map);
@@ -877,9 +923,12 @@ function addConfiguredTileLayer(map,containerId){
     clearTimeout(deadline);
     controller.abort();
   });
-  // MODIFICADO: el mapa público solicita la variante del mismo proxy según el tema.
-  const publicMap=containerId==='foodPublicMap';
-  const themedUrl=url=>publicMap&&url?url.replace(/(carto-tiles\/)(?:voyager|light_all|dark_all)\//,'$1'+(document.body.classList.contains('dark-mode')?'dark_all':'light_all')+'/'):url;
+  // MODIFICADO: respetar la capa manual y seguir el tema solo en Automática.
+  const themedUrl=url=>{
+    if(!publicMap||!url)return url;
+    const style=vibraPublicLayerPreference==='auto'?(document.body.classList.contains('dark-mode')?'dark_all':'light_all'):vibraPublicLayerPreference;
+    return url.replace(/(carto-tiles\/)(?:voyager|light_all|dark_all)\//,'$1'+style+'/');
+  };
   const url=themedUrl(cartoTileUrl());
   if(!url){fallback();return true}
   deadline=setTimeout(fallback,4500);
@@ -909,9 +958,9 @@ function addConfiguredTileLayer(map,containerId){
         const next=themedUrl(cartoTileUrl());
         if(!state.active||!next||next===currentUrl||!map.hasLayer(tiles))return;
         currentUrl=next;
-        tiles.once('tileerror',fallback);
-        tiles.setUrl(next);
+        tiles.setUrl(next); // MODIFICADO: reutilizar el manejador de error ya instalado.
       };
+      showLayerStatus?.(); // NUEVO: habilitar la selección al instalar CARTO.
       state.applyTheme();
     }
   })().catch(()=>fallback());
@@ -1542,7 +1591,7 @@ async function renderSubscription(c,epoch){await refreshSiteStatus();const histo
 const v4Catalog=renderCatalog;renderCatalog=function(){if(siteStatus&&!siteStatus.active&&!siteStatus.master){document.getElementById('catalogGrid').replaceChildren();return}v4Catalog()};
 state.orders=[];saveLocal();
 // Inicialización pública: el mapa no depende de iniciar sesión ni de guardar un domicilio.
-const foodPublic=document.createElement('section');foodPublic.id='foodDeliveryPlanner';foodPublic.className='food-delivery-planner';foodPublic.innerHTML=`<div class="section-card"><span class="eyebrow">UBICACIÓN DEL LOCAL</span><p class="small muted" id="foodOriginLabel">${esc(state.config.origin.address)}</p><div id="foodSavedAddresses"></div><div class="address-picker-row"><label class="field">Calle o dirección de entrega<input class="input" id="foodDestination" placeholder="Busca una calle o marca tu destino en el mapa"></label>${panelButton('foodSearchDestination','Buscar',UI.search,'secondary')}${panelButton('foodGpsDestination','Mi ubicación',UI.pin,'secondary')}</div><div class="map" id="foodPublicMap"></div><p class="small muted">El marcador Local indica el punto de salida. Ajusta el marcador de entrega a la entrada.</p></div><aside class="section-card"><h3>Información de la ruta</h3><div id="foodQuote">Utiliza tu ubicación para localizar el establecimiento.</div><div id="foodSocials" class="toolbar"></div></aside>`;document.getElementById('catalogGrid').after(foodPublic);document.getElementById('foodGoCart')?.addEventListener('click',openDrawer);document.getElementById('foodCalculate')?.addEventListener('click',e=>panelRun(e.currentTarget,()=>quoteFoodRoute()));document.getElementById('foodDestination').oninput=e=>{checkout.address=e.target.value;checkout.savedAddressId=''};document.getElementById('foodSearchDestination').onclick=e=>panelRun(e.currentTarget,async()=>{const p=await foodSearch(document.getElementById('foodDestination').value);checkout.address=p.address;document.getElementById('foodDestination').value=p.address;await chooseFoodDestination(p.lat,p.lng)});document.getElementById('foodGpsDestination').onclick=e=>panelRun(e.currentTarget,async()=>{const p=await foodGps();checkout.address=document.getElementById('foodDestination').value||'Ubicación actual';await chooseFoodDestination(p.coords.latitude,p.coords.longitude);if(p.coords.accuracy>100)toast('Precisión GPS aproximada: ±'+Math.round(p.coords.accuracy)+' metros. Ajusta el pin manualmente.');});renderAccountButton();renderSavedAddressShortcut();setTimeout(initFoodPublicMap,200);const v4Cloud=loadPublicCloudState;loadPublicCloudState=async function(){await v4Cloud();const o=state.config.origin;document.getElementById('foodOriginLabel').textContent=o.address;publicFoodOrigin?.setLatLng([o.lat,o.lng]);renderSavedAddressShortcut()};
+const foodPublic=document.createElement('section');foodPublic.id='foodDeliveryPlanner';foodPublic.className='food-delivery-planner';foodPublic.innerHTML=`<div class="section-card"><span class="eyebrow">UBICACIÓN DEL LOCAL</span><p class="small muted" id="foodOriginLabel">${esc(state.config.origin.address)}</p><div id="foodSavedAddresses"></div><div class="address-picker-row"><label class="field">Calle o dirección de entrega<input class="input" id="foodDestination" placeholder="Busca una calle o marca tu destino en el mapa"></label>${panelButton('foodSearchDestination','Buscar',UI.search,'secondary')}${panelButton('foodGpsDestination','Mi ubicación',UI.pin,'secondary')}</div><div class="map" id="foodPublicMap"></div><p class="small muted">El marcador Local indica el punto de salida. Ajusta el marcador de entrega a la entrada.</p></div><aside class="section-card"><h3>Información de la ruta</h3><div id="foodQuote">Utiliza tu ubicación para localizar el establecimiento.</div><div id="foodSocials" class="toolbar"></div></aside>`;document.querySelector('main .hero').after(foodPublic);/* MODIFICADO: ubicación antes de los filtros. */document.getElementById('foodGoCart')?.addEventListener('click',openDrawer);document.getElementById('foodCalculate')?.addEventListener('click',e=>panelRun(e.currentTarget,()=>quoteFoodRoute()));document.getElementById('foodDestination').oninput=e=>{checkout.address=e.target.value;checkout.savedAddressId=''};document.getElementById('foodSearchDestination').onclick=e=>panelRun(e.currentTarget,async()=>{const p=await foodSearch(document.getElementById('foodDestination').value);checkout.address=p.address;document.getElementById('foodDestination').value=p.address;await chooseFoodDestination(p.lat,p.lng)});document.getElementById('foodGpsDestination').onclick=e=>panelRun(e.currentTarget,async()=>{const p=await foodGps();checkout.address=document.getElementById('foodDestination').value||'Ubicación actual';await chooseFoodDestination(p.coords.latitude,p.coords.longitude);if(p.coords.accuracy>100)toast('Precisión GPS aproximada: ±'+Math.round(p.coords.accuracy)+' metros. Ajusta el pin manualmente.');});renderAccountButton();renderSavedAddressShortcut();setTimeout(initFoodPublicMap,200);const v4Cloud=loadPublicCloudState;loadPublicCloudState=async function(){await v4Cloud();const o=state.config.origin;document.getElementById('foodOriginLabel').textContent=o.address;publicFoodOrigin?.setLatLng([o.lat,o.lng]);renderSavedAddressShortcut()};
 setInterval(()=>{if(!document.hidden&&supabaseClient){refreshSiteStatus().catch(()=>{});if(customerSession)panelVerify().catch(()=>{})}},30000);
 
 /* Estructura del panel y ticket basada en el index de maniobras adjunto. */
@@ -8983,4 +9032,74 @@ function vibraArtZoom(controls,target,setScale,getScale,pan,resetPan){
  }
 }
 </script>
+<!-- NUEVO: ubicacion, capas y estilos de la referencia -->
+<style>
+/* NUEVO: panel de ubicación, filtros y catálogo de la referencia. */
+#foodDeliveryPlanner,#viPublicWrap,#v15Experience,#catalogGrid{
+  --panel-rim:#a56a84;--panel-shadow:0 9px 28px #661d4820;
+}
+body.dark-mode :is(#foodDeliveryPlanner,#viPublicWrap,#v15Experience,#catalogGrid){
+  --panel-rim:#91537e;--panel-shadow:0 12px 30px #1004198a;
+}
+html body #foodDeliveryPlanner{margin:8px auto 18px!important}
+html body #foodDeliveryPlanner>.section-card:first-child{
+  --location-ink:#fff3fa;--location-muted:#f8d4e5;--location-field:#fff7fc;--location-field-ink:#38182e;
+  background:linear-gradient(112deg,#791239,#a51d50 49%,#5c1039)!important;
+  color:var(--location-ink)!important;border:1px solid var(--panel-rim)!important;
+  border-radius:21px!important;box-shadow:var(--panel-shadow);
+}
+html body.dark-mode #foodDeliveryPlanner>.section-card:first-child{
+  --location-field:#221026;--location-field-ink:#fff1fa;
+  background:linear-gradient(112deg,#3e0b29,#670d3e 49%,#25082e)!important;
+}
+html body #foodDeliveryPlanner>.section-card:first-child :is(.eyebrow,.field,label){color:var(--location-ink)!important}
+html body #foodDeliveryPlanner>.section-card:first-child :is(#foodOriginLabel,.small.muted){color:var(--location-muted)!important}
+html body #foodDeliveryPlanner>.section-card:first-child :is(#foodSavedAddresses select,#foodDestination){
+  background:var(--location-field)!important;color:var(--location-field-ink)!important;border:1px solid var(--panel-rim)!important;
+  border-radius:9px;min-height:44px;
+}
+html body #foodDeliveryPlanner #foodDestination::placeholder{color:var(--location-field-ink);opacity:1}
+html body #foodDeliveryPlanner :is(#foodSearchDestination,#foodGpsDestination,#foodSavedAddresses button){
+  min-height:44px;background:#86113e!important;color:#fff!important;border:1px solid #dfa3c4!important;border-radius:10px;
+}
+html body.dark-mode #foodDeliveryPlanner :is(#foodSearchDestination,#foodGpsDestination,#foodSavedAddresses button){
+  background:linear-gradient(105deg,#c01960,#7426a9)!important;
+}
+html body #foodDeliveryPlanner :is(#foodSearchDestination,#foodGpsDestination,#foodSavedAddresses button) :is(svg,span){color:inherit!important}
+html body #foodDeliveryPlanner #foodPublicMap{margin-top:10px;border:1px solid var(--panel-rim);border-radius:13px}
+html body main #viPublicWrap .vi-filter-panel{padding:14px 16px 7px!important}
+html body main #viPublicWrap :is(.vi-field label,.vi-filter-header h3){color:var(--art-link)!important}
+html body main :is(.controls,#v15Experience,#catalogGrid .product-card,#catalogGrid .vibra-service-card){
+  border-color:var(--art-line)!important;border-radius:15px!important;
+}
+html body main #v15Experience{margin-block:13px!important;padding:12px 16px!important}
+html body main #catalogGrid :is(.product-card,.vibra-service-card){box-shadow:var(--panel-shadow)!important}
+html body main #catalogGrid :is(.product-card,.vibra-service-card):hover{border-color:var(--art-focus)!important}
+html body main .controls .chip:not(.active){background:var(--art-soft)!important;color:var(--art-ink)!important}
+html body main :is(.vibra-filter-picker,.controls .chip){transition:transform .22s ease}
+@media(hover:hover) and (prefers-reduced-motion:no-preference){
+  html body main :is(.vibra-filter-picker,.controls .chip):hover{transform:translateY(-1px)}
+}
+/* NUEVO: control Leaflet temático, separado del formulario de destino. */
+#foodPublicMap .vibra-public-layers{
+  position:relative;min-width:44px;background:var(--art-panel);color:var(--art-ink);
+  border:1px solid var(--art-line);border-radius:10px;box-shadow:var(--art-shadow);
+}
+#foodPublicMap .vibra-public-layers summary{
+  display:flex;align-items:center;gap:6px;min-height:44px;padding:0 9px;
+  list-style:none;cursor:pointer;color:var(--art-ink);font-weight:700;
+}
+#foodPublicMap .vibra-public-layers summary::-webkit-details-marker{display:none}
+#foodPublicMap .vibra-public-layers :is(summary,input):focus-visible{outline:2px solid var(--art-focus);outline-offset:2px}
+#foodPublicMap .vibra-public-layers fieldset{
+  min-width:142px;margin:0 7px 7px;padding:0 6px 4px;border:1px solid var(--art-line);border-radius:7px;
+}
+#foodPublicMap .vibra-public-layers legend{color:var(--art-muted);padding-inline:3px}
+#foodPublicMap .vibra-public-layers label{
+  display:flex;align-items:center;gap:7px;min-height:34px;color:var(--art-ink)!important;
+}
+#foodPublicMap .vibra-public-layers input{accent-color:var(--art-main);margin:0}
+#foodPublicMap .vibra-public-layers p{max-width:150px;margin:0 8px 8px;color:var(--art-muted)!important}
+#foodPublicMap .vibra-public-layers p:empty{display:none}
+</style>
 </html>
