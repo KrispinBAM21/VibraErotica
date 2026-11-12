@@ -780,10 +780,18 @@ function applyPublicTheme(){
   }
 }
 function togglePublicTheme(){
-  publicThemeMode=publicThemeMode==='dark'?'default':'dark';
-  localStorage.setItem(THEME_STORE,publicThemeMode);
-  applyDesign();
-  applyPublicTheme();
+  // MODIFICADO: animar el cambio visual sin cambiar la preferencia guardada.
+  const apply=()=>{
+    publicThemeMode=publicThemeMode==='dark'?'default':'dark';
+    localStorage.setItem(THEME_STORE,publicThemeMode);
+    applyDesign();
+    applyPublicTheme();
+    publicFoodMap?._vibraTileState?.applyTheme?.();
+  };
+  if(matchMedia('(prefers-reduced-motion: reduce)').matches){apply();return}
+  if(document.startViewTransition){document.startViewTransition(apply);return}
+  apply();
+  document.querySelector('main')?.animate?.([{opacity:.85},{opacity:1}],{duration:240,easing:'ease-out'});
 }
 
 /* ==============================
@@ -869,7 +877,10 @@ function addConfiguredTileLayer(map,containerId){
     clearTimeout(deadline);
     controller.abort();
   });
-  const url=cartoTileUrl();
+  // MODIFICADO: el mapa público solicita la variante del mismo proxy según el tema.
+  const publicMap=containerId==='foodPublicMap';
+  const themedUrl=url=>publicMap&&url?url.replace(/(carto-tiles\/)(?:voyager|light_all|dark_all)\//,'$1'+(document.body.classList.contains('dark-mode')?'dark_all':'light_all')+'/'):url;
+  const url=themedUrl(cartoTileUrl());
   if(!url){fallback();return true}
   deadline=setTimeout(fallback,4500);
   (async()=>{
@@ -891,6 +902,18 @@ function addConfiguredTileLayer(map,containerId){
     tiles.once('tileerror',fallback);
     tiles.once('load',()=>clearTimeout(deadline));
     tiles.addTo(map);
+    // NUEVO: conservar el mapa y sus marcadores al cambiar el aspecto de las teselas.
+    if(publicMap){
+      let currentUrl=url;
+      state.applyTheme=()=>{
+        const next=themedUrl(cartoTileUrl());
+        if(!state.active||!next||next===currentUrl||!map.hasLayer(tiles))return;
+        currentUrl=next;
+        tiles.once('tileerror',fallback);
+        tiles.setUrl(next);
+      };
+      state.applyTheme();
+    }
   })().catch(()=>fallback());
   return true;
 }
@@ -7770,9 +7793,14 @@ function vibraStepZoom(controls,target,rangeId){
   if(range){range.type='hidden';range.id=rangeId}
   controls.replaceChildren(minus,value,plus);
   if(range)controls.append(range);
-  let percent=100;
+  let percent=100,panX=0,panY=0,panFrame=0;
   const paint=()=>{
-    target.style.transform='scale('+percent/100+')';
+    // MODIFICADO: los gestos y botones comparten posición y escala.
+    const stage=target.closest('.product-large-view,#vsmGalleryMedia');
+    const limitX=(stage?.clientWidth||0)*(percent/100-1)/2;
+    const limitY=(stage?.clientHeight||0)*(percent/100-1)/2;
+    panX=Math.max(-limitX,Math.min(limitX,panX));panY=Math.max(-limitY,Math.min(limitY,panY));
+    target.style.transform='translate('+panX+'px,'+panY+'px) scale('+percent/100+')';
     value.textContent=percent+' %';
     if(range)range.value=String(percent);
     minus.disabled=percent===100;
@@ -7782,6 +7810,11 @@ function vibraStepZoom(controls,target,rangeId){
   plus.onclick=()=>{percent=Math.min(250,percent+25);paint()};
   paint();
   vibraPointerZoom(target); // NUEVO
+  // NUEVO: rueda, pellizco, arrastre y pantalla completa.
+  vibraArtZoom(controls,target,next=>{percent=Math.max(100,Math.min(250,Math.round(next)));paint()},()=>percent,(dx,dy)=>{
+    panX+=dx;panY+=dy;
+    if(!panFrame)panFrame=requestAnimationFrame(()=>{panFrame=0;paint()});
+  },()=>{panX=0;panY=0});
 }
 
 // NUEVO: prefijos de países y territorios, incluidos los planes compartidos.
@@ -8125,10 +8158,17 @@ function vibraFilterPicker(select){
     if(source?.width&&end.width){
       const token=document.createElement('span');
       token.className='vibra-cart-token';token.setAttribute('aria-hidden','true');token.innerHTML=svg(bag);
+      // NUEVO: usar la miniatura real cuando el producto dispone de foto.
+      if(product?.image){
+        const thumbnail=document.createElement('img');
+        thumbnail.alt='';thumbnail.decoding='async';thumbnail.src=product.image;
+        thumbnail.addEventListener('error',()=>{token.innerHTML=svg(bag)},{once:true});
+        token.replaceChildren(thumbnail);
+      }
       const x=source.left+source.width/2,y=source.top+source.height/2;
       token.style.left=x-18+'px';token.style.top=y-18+'px';document.body.append(token);
       const dx=end.left+end.width/2-x,dy=end.top+end.height/2-y;
-      token.animate([{transform:'translate(0,0)'},{transform:'translate('+dx+'px,'+dy+'px) scale(.45)',opacity:.25}],{duration:400,easing:'ease-in-out'}).finished.then(()=>token.remove(),()=>token.remove());
+      token.animate([{transform:'translate(0,0)'},{transform:'translate('+dx+'px,'+dy+'px) scale(.45)',opacity:.25}],{duration:340,easing:'ease-in-out'}).finished.then(()=>token.remove(),()=>token.remove()); /* MODIFICADO: duración visual. */
     }
     cart.animate([{transform:'scale(1)'},{transform:'scale(1.1)'},{transform:'scale(1)'}],{duration:240,delay:source?330:0});
     return result;
@@ -8575,4 +8615,372 @@ html body #vsmGallery .vsm-viewer-interact{padding-block:6px}
   html body #productViewerModal.product-viewer button{transition:none}
 }
 </style>
+<!-- NUEVO: bloques visuales del rediseno Vibra Erotica -->
+<style>
+/* NUEVO: paleta de referencia sobre el mecanismo de tema existente. */
+:root{
+ --art-bg:#faf5f8;--art-panel:#fffafc;--art-soft:#f8eaf2;--art-ink:#271326;--art-muted:#67445c;
+ --art-line:#96667f;--art-main:#961747;--art-action-end:#86113e;--art-link:#87133f;--art-focus:#9e1955;
+ --art-header:#fffafc;--art-header-ink:#36162b;--art-hero:linear-gradient(112deg,#791137,#a41d48 47%,#570b29);
+ --art-shadow:0 8px 20px #6320411c;--art-gold:#764b12;--art-modal:#fff8f2;
+}
+body.dark-mode{
+ --art-bg:#10091a;--art-panel:#1b1127;--art-soft:#271634;--art-ink:#fff0fa;--art-muted:#e2b9d7;
+ --art-line:#93658b;--art-main:#c01960;--art-action-end:#7426a9;--art-link:#ff91c7;--art-focus:#ffc2df;
+ --art-header:#190f24;--art-header-ink:#fff0fa;--art-hero:linear-gradient(112deg,#370d2c,#671039 47%,#361041);
+ --art-shadow:0 8px 24px #090410a0;--art-gold:#f4d391;--art-modal:#241021;
+}
+html body[data-vibra-ref-background]{background:var(--art-bg)!important}
+html body[data-vibra-ref-background]::before{background:var(--art-bg)}
+html body :is(main,.topbar,#foodDeliveryPlanner,#vibraLegalFooter,.modal,#cartDrawer,#vsmGallery,#vibraReserveOverlay,#vibraLegalDialog){
+ --card:var(--art-panel);--surface:var(--art-soft);--secondary:var(--art-soft);--text:var(--art-ink);
+ --muted:var(--art-muted);--line:var(--art-line);--primary:var(--art-main);--vibra-on-primary:#fff;
+ --vibra-ui-surface:var(--art-panel);--vibra-ui-neutral:var(--art-soft);--vibra-ui-text:var(--art-ink);
+ --vibra-ui-muted:var(--art-muted);--vibra-ui-border:var(--art-line);--vibra-ui-stage:var(--art-soft);
+ --ref-card:var(--art-panel);--ref-soft:var(--art-soft);--ref-text:var(--art-ink);--ref-muted:var(--art-muted);
+ --ref-line:var(--art-line);--ref-focus:var(--art-focus);--ref-link:var(--art-link);--ref-shadow:var(--art-shadow);
+ --vibra-pink:var(--art-main);--vibra-pink-hover:var(--art-action-end);
+}
+html body .topbar{background:var(--art-header)!important;color:var(--art-header-ink)!important;box-shadow:none;border-color:var(--art-line)!important}
+html body .topbar[data-art-scrolled]{background:color-mix(in srgb,var(--art-header) 94%,transparent)!important;backdrop-filter:blur(14px);box-shadow:var(--art-shadow)}
+html body .topbar :is(#brandName,#brandTagline){color:var(--art-header-ink)!important}
+html body .topbar #brandTagline{color:var(--art-muted)!important}
+html body .topbar .header>button:not([hidden]),html body .topbar #v12HomeNav .chip{min-height:44px}
+html body .topbar .header>.icon-btn:not(#cartBtn):not(.account-labelled){color:var(--art-ink)!important;background:var(--art-soft)!important}
+html body main .hero-card{isolation:isolate;background:var(--art-hero)!important}
+html body main .hero-card::before{
+ content:"";position:absolute;inset:-15%;z-index:-1;pointer-events:none;
+ background:radial-gradient(ellipse at 70% 45%,#f655ab25,transparent 62%);
+ animation:art-hero 12s ease-in-out infinite alternate;
+}
+@keyframes art-hero{from{transform:translateX(-5%)}to{transform:translateX(5%)}}
+html body main .hero-card :is(h2,p){color:#fff!important}
+html body :is(main,.topbar,#foodDeliveryPlanner,#vibraLegalFooter,#productViewerModal,#vsmGallery,#cartDrawer,.modal) :is(button,input,textarea,select,a,[tabindex]):focus-visible{
+ outline:2px solid var(--art-focus)!important;outline-offset:2px;
+}
+@media(hover:hover) and (pointer:fine) and (prefers-reduced-motion:no-preference){
+ .hero-card :is(.vibra-custom-figures,.vibra-hero-linearts){translate:var(--art-hero-x,0px) var(--art-hero-y,0px);transition:translate .22s ease-out}
+}
+
+/* NUEVO: paneles, filtros, tarjetas y estados de interacción. */
+html body main :is(#viPublicWrap .vi-filter-panel,.controls,#v15Experience,#catalogGrid .product-card,#catalogGrid .vibra-service-card),
+html body #foodDeliveryPlanner>.section-card{
+ background:var(--art-panel)!important;color:var(--art-ink)!important;border-color:var(--art-line)!important;
+ box-shadow:var(--art-shadow)!important;
+}
+html body main :is(#catalogGrid,#viIndieHost) :is(.desc,.meta,.vsm-pricing,.unit-label,.product-name,p){
+ color:var(--art-muted)!important;
+}
+html body main :is(#catalogGrid,#viIndieHost) :is(h3,.product-name){color:var(--art-ink)!important}
+html body main :is(#catalogGrid,#viIndieHost) :is(.price,.vsm-price){color:var(--art-link)!important}
+html body main :is(.product-zoom-trigger,.product-visual,.vibra-service-photo){background-color:var(--art-soft)!important}
+html body main :is(.vibra-filter-picker,.vibra-filter-options button,.chip,.v12-social-btn){min-height:44px}
+html body main .vibra-filter-picker{height:auto}
+html body main :is(.vibra-filter-options button,.vibra-filter-picker,.search-wrap input){background:var(--art-soft)!important;color:var(--art-ink)!important;border-color:var(--art-line)!important}
+html body main .vibra-filter-options button:is(:hover,:focus-visible,[aria-current=true]){background:var(--art-main)!important;color:#fff!important}
+html body :is(main,#foodDeliveryPlanner,#cartDrawer,#productViewerModal,#vsmGallery,.modal) :is(.btn:not(.secondary):not(.ghost):not(.danger):not(.success),.v23-cart-add,.vibra-book-service){
+ background:linear-gradient(105deg,var(--art-main),var(--art-action-end))!important;color:#fff!important;
+ border-color:var(--art-line)!important;
+}
+html body :is(main,#foodDeliveryPlanner,#cartDrawer,#productViewerModal,#vsmGallery,.modal) :is(.btn.secondary,.btn.ghost,.v12-social-btn){
+ background:var(--art-soft)!important;color:var(--art-link)!important;border-color:var(--art-line)!important;
+}
+html body :is(main,#foodDeliveryPlanner,#cartDrawer,#productViewerModal,#vsmGallery) :is(button,.btn)>svg{color:inherit}
+html body #catalogPages :is(button,.btn){min-height:44px}
+html body :is(main,#foodDeliveryPlanner,#cartDrawer,#productViewerModal,#vsmGallery) button:disabled{opacity:1;border-style:dashed}
+[data-art-media-loading]{position:relative;background:linear-gradient(115deg,var(--art-soft),var(--art-panel))!important}
+[data-art-media-loading]>img{visibility:hidden}
+@media(hover:hover) and (pointer:fine) and (prefers-reduced-motion:no-preference){
+ html body #catalogGrid :is(.product-card,.vibra-service-card){
+  transition:transform .24s ease-out;transform:perspective(650px) rotateX(var(--art-rx,0deg)) rotateY(var(--art-ry,0deg));
+ }
+ html body #catalogGrid :is(.product-card,.vibra-service-card):hover{
+  transform:perspective(650px) translateY(-4px) rotateX(var(--art-rx,0deg)) rotateY(var(--art-ry,0deg));
+  box-shadow:0 8px 24px #a91d6348!important;
+ }
+ html body #catalogGrid :is(.product-zoom-trigger,.vibra-service-photo) img{transition:transform .24s ease-out}
+ html body #catalogGrid :is(.product-zoom-trigger,.vibra-service-photo):hover img{transform:scale(1.035)}
+}
+.art-ripple{
+ position:absolute;inset:0;pointer-events:none;border-radius:inherit;overflow:hidden;
+ background:radial-gradient(circle at var(--art-x) var(--art-y),#ffffff57 0,transparent 66%);
+}
+html body :is(main,#productViewerModal,#vsmGallery,#cartDrawer) :is(button.btn,.v23-cart-add,.vibra-book-service){position:relative}
+
+/* NUEVO: mapa, pie de página, menús y avisos. */
+html body #foodDeliveryPlanner #foodPublicMap{background:var(--art-soft);border:1px solid var(--art-line)}
+html body #foodPublicMap .leaflet-control :is(a,button),html body #foodPublicMap .leaflet-control-attribution{
+ background:var(--art-panel)!important;color:var(--art-ink)!important;border-color:var(--art-line)!important;
+}
+html body #foodPublicMap .leaflet-control-attribution a{color:var(--art-link)!important}
+html body #vibraLegalFooter{background:var(--art-panel)!important;color:var(--art-ink)!important;border-color:var(--art-line)!important}
+html body #vibraLegalFooter :is(button,summary){color:var(--art-link)!important}
+html body :is(.v12-menu-list,.toast,.vibra-cart-feedback,.notification-item){
+ background:var(--art-panel)!important;color:var(--art-ink)!important;border-color:var(--art-line)!important;box-shadow:var(--art-shadow);
+}
+html body :is(.v12-menu-list,.toast,.notification-item) :is(span,small,p,strong){color:var(--art-ink)!important}
+html body #whatsappFab svg{animation:none!important}
+.vibra-cart-token img{width:100%;height:100%;object-fit:contain;border-radius:7px}
+
+/* NUEVO: composición, encuadre y contraste de los visores. */
+html body #productViewerModal.product-viewer .vibra-product-details{grid-template-columns:minmax(0,1fr);grid-template-rows:minmax(0,1fr) auto}
+html body #productViewerModal.product-viewer #productViewerAdd{
+ grid-area:2/1;align-self:end;justify-self:stretch;width:100%;height:auto;min-height:44px;max-height:none;
+}
+html body #productViewerModal.product-viewer .product-large-view{grid-area:auto;display:grid!important;grid-template:minmax(0,1fr)/minmax(0,1fr)}
+html body #productViewerModal.product-viewer #productZoomImage{display:grid!important;grid-template:minmax(0,1fr)/minmax(0,1fr);place-items:center;min-height:0!important;min-width:0}
+html body #productViewerModal.product-viewer #productZoomImage img{width:100%!important;height:100%!important;object-fit:contain!important;object-position:center}
+html body #productViewerModal.product-viewer{
+ --pv-paper:var(--art-modal);--pv-panel:var(--art-panel);--pv-soft:var(--art-soft);--pv-ink:var(--art-ink);
+ --pv-muted:var(--art-muted);--pv-border:var(--art-line);--pv-gold:var(--art-gold);--pv-action:var(--art-main);--pv-hover:var(--art-action-end);
+}
+html body #vsmGallery{
+ --vsm-paper:var(--art-modal);--vsm-panel:var(--art-panel);--vsm-soft:var(--art-soft);--vsm-ink:var(--art-ink);
+ --vsm-muted:var(--art-muted);--vsm-border:var(--art-line);--vsm-gold:var(--art-gold);--vsm-action:var(--art-main);--vsm-action-hover:var(--art-action-end);
+}
+html body #vsmGallery #vsmGalleryMedia{grid-template:minmax(0,1fr)/minmax(0,1fr)}
+html body #vsmGallery #vsmGalleryMedia>:is(img,video){min-width:0;min-height:0}
+html body :is(#vsmGallery,#productViewerModal) :is(button,.vibra-step-zoom button){min-height:44px}
+html body :is(#vsmGallery,#productViewerModal) :is(.vsm-close,[data-close-modal]){min-width:44px}
+html body :is(.modal.show,.drawer.show){overscroll-behavior:contain}
+html body .overlay.show{backdrop-filter:blur(6px)}
+html body :is(#productViewerModal,#vsmGallery) .art-fullscreen{padding:4px 12px;border:1px solid var(--art-line);border-radius:999px;background:var(--art-soft);color:var(--art-ink)}
+:is(#productViewerModal,#vsmGallery) :fullscreen{width:100%;height:100%!important;max-width:none!important;background:var(--art-bg)!important}
+@media(max-width:760px){
+ html body #productViewerModal.product-viewer.show{
+  inset:0;width:100%;height:100dvh!important;max-height:none!important;transform:none;border-radius:16px 16px 0 0;
+ }
+ html body #vsmGallery.open{padding:0!important}
+ html body #vsmGallery .vsm-dialog{width:100%!important;height:100dvh;max-height:none!important;border-radius:16px 16px 0 0}
+}
+@media(prefers-reduced-motion:reduce){
+ html body main .hero-card::before{animation:none}
+ html body :is(#productViewerModal,#vsmGallery) :is(button,.vsm-dialog){animation:none;transition:none}
+}
+html body #productViewerModal.product-viewer #productZoomImage>img{grid-area:1/1}
+html body :is(#productViewerModal,#vsmGallery) .vibra-step-zoom button{min-width:44px}
+::view-transition-old(root),::view-transition-new(root){animation-duration:.24s}
+@media(prefers-reduced-motion:reduce){
+ ::view-transition-old(root),::view-transition-new(root){animation:none}
+}
+</style>
+<script>
+// NUEVO: efectos de presentación y accesibilidad, sin invocar acciones comerciales.
+(()=>{
+ const reduced=matchMedia('(prefers-reduced-motion: reduce)');
+ const fine=matchMedia('(hover:hover) and (pointer:fine)');
+ const publicScope='.topbar,main,#vsmGallery,#productViewerModal,#cartDrawer';
+ const dialogs=['#productViewerModal','#vsmGallery'];
+ const modalState=new WeakMap(), seen=new WeakSet(), loading=new WeakSet();
+ const active=()=>[...document.querySelectorAll(dialogs.join(','))].filter(el=>el.matches('.show,.open')).at(-1);
+ const play=(el,frames,ms=250)=>!reduced.matches&&el?.animate?.(frames,{duration:ms,easing:'ease-out'});
+ const rise=[{opacity:.85,transform:'translateY(6px)'},{opacity:1,transform:'none'}];
+ const reveal='main .hero,main #viPublicWrap,main .controls,#v15Experience,#catalogGrid .product-card,#catalogGrid .vibra-service-card,#viIndieHost .vi-card,#foodDeliveryPlanner';
+ const observer=typeof IntersectionObserver==='function'?new IntersectionObserver(entries=>{
+  for(const {target,isIntersecting} of entries)if(isIntersecting){play(target,rise,280);observer.unobserve(target)}
+ },{threshold:.12}):null;
+ function syncTabs(group){
+  const owner=group.closest(dialogs.join(','));
+  const product=owner?.id==='productViewerModal';
+  const panels=product?[owner.querySelector('.vibra-product-layout'),owner.querySelector('#v12ProductSocial')]:
+   [owner?.querySelector('.vsm-viewer-gallery'),owner?.querySelector('.vsm-viewer-sidebar')];
+  if(panels.some(panel=>!panel))return;
+  const tabs=[...group.querySelectorAll('button')];
+  group.setAttribute('role','tablist');
+  tabs.forEach((tab,i)=>{
+   const panel=panels[i];
+   if(!panel)return;
+   const on=tab.getAttribute('aria-pressed')==='true';
+   tab.id||=owner.id+'ArtTab'+i;panel.id||=owner.id+'ArtPanel'+i;
+   tab.setAttribute('role','tab');tab.setAttribute('aria-controls',panel.id);tab.setAttribute('aria-selected',String(on));
+   tab.tabIndex=on?0:-1;
+   panel.setAttribute('role','tabpanel');panel.setAttribute('aria-labelledby',tab.id);
+  });
+ }
+ const focusable=dialog=>[...dialog.querySelectorAll('a[href],button,input,textarea,select,[tabindex],video[controls]')].filter(el=>!el.disabled&&el.tabIndex>=0&&el.getClientRects().length&&getComputedStyle(el).visibility==='visible');
+ function scan(){
+  for(const el of document.querySelectorAll(reveal)){
+   if(seen.has(el))continue;
+   seen.add(el);observer?.observe(el);
+  }
+  for(const img of document.querySelectorAll('#catalogGrid img,#viIndieHost img')){
+   if(loading.has(img))continue;
+   loading.add(img);img.loading='lazy';img.decoding='async';
+   if(img.complete)continue;
+   const wrapper=img.parentElement;
+   wrapper.setAttribute('data-art-media-loading','');
+   const done=()=>{wrapper.removeAttribute('data-art-media-loading');img.removeEventListener('load',done);img.removeEventListener('error',done)};
+   img.addEventListener('load',done);img.addEventListener('error',done);
+  }
+  for(const selector of dialogs){
+   const dialog=document.querySelector(selector);
+   if(!dialog)continue;
+   dialog.setAttribute('role','dialog');dialog.setAttribute('aria-modal','true');
+   const title=dialog.querySelector(selector==='#vsmGallery'?'#vsmViewerName':'.modal-head strong');
+   if(title){title.id||='artProductTitle';dialog.setAttribute('aria-labelledby',title.id)}
+   dialog.querySelectorAll('.vibra-compact-controls').forEach(syncTabs);
+   const open=dialog.matches('.show,.open'), last=modalState.get(dialog);
+   if(open&&!last){
+    modalState.set(dialog,{focus:lastTrigger});
+    if(!dialog.contains(document.activeElement))focusable(dialog)[0]?.focus({preventScroll:true});
+   }else if(!open&&last){
+    modalState.delete(dialog);
+    if(!active()&&last.focus?.isConnected&&(!document.activeElement||document.activeElement===document.body||dialog.contains(document.activeElement)))last.focus.focus({preventScroll:true});
+   }
+  }
+ }
+ let lastTrigger=null,scanFrame=0;
+ const schedule=()=>{if(!scanFrame)scanFrame=requestAnimationFrame(()=>{scanFrame=0;scan()})};
+ document.addEventListener('click',event=>{
+  const el=event.target.closest('button,a');
+  if(!el)return;
+  if(!active())lastTrigger=el;
+  if(el.closest('[role=tablist]'))schedule();
+  if(!el.closest(publicScope)||reduced.matches)return;
+  if(el.matches('.v12-social-btn,#vsmLike,#vsmFavorite,#themeBtn,.icon-btn')){
+   play(el,[{transform:'scale(1)'},{transform:'scale(1.09)'},{transform:'scale(1)'}]);
+  }
+  if(!el.animate||!el.matches('button.btn,.v23-cart-add,.vibra-book-service')||getComputedStyle(el).position==='static')return;
+  const rect=el.getBoundingClientRect(), ripple=document.createElement('span');
+  ripple.className='art-ripple';ripple.setAttribute('aria-hidden','true');
+  ripple.style.setProperty('--art-x',event.detail?(event.clientX-rect.left)+'px':'50%');
+  ripple.style.setProperty('--art-y',event.detail?(event.clientY-rect.top)+'px':'50%');
+  el.append(ripple);
+  play(ripple,[{opacity:.65,transform:'scale(.8)'},{opacity:0,transform:'scale(1)'}],270)?.finished.then(()=>ripple.remove(),()=>ripple.remove());
+ },true);
+ document.addEventListener('keydown',event=>{
+  const tab=event.target.closest('[role=tab]');
+  if(tab&&['ArrowLeft','ArrowRight','Home','End'].includes(event.key)){
+   const tabs=[...tab.parentElement.querySelectorAll('[role=tab]')],i=tabs.indexOf(tab);
+   const next=event.key==='Home'?0:event.key==='End'?tabs.length-1:(i+(event.key==='ArrowRight'?1:-1)+tabs.length)%tabs.length;
+   event.preventDefault();tabs[next].focus();tabs[next].click();syncTabs(tab.parentElement);return;
+  }
+  const dialog=active();
+  if(!dialog||document.fullscreenElement)return;
+  if(event.key==='Escape'&&dialog.id==='vsmGallery'){
+   event.preventDefault();event.stopPropagation();dialog.querySelector('.vsm-close')?.click();return;
+  }
+  if(event.key!=='Tab')return;
+  const nodes=focusable(dialog),first=nodes[0],last=nodes.at(-1);
+  if(!first)return;
+  if(!dialog.contains(document.activeElement)||(event.shiftKey?document.activeElement===first:document.activeElement===last)){
+   event.preventDefault();(event.shiftKey?last:first).focus();
+  }
+ },true);
+ const grid=document.getElementById('catalogGrid');
+ let tiltFrame=0,tiltCard=null;
+ grid?.addEventListener('pointermove',e=>{
+  if(!fine.matches||reduced.matches||tiltFrame)return;
+  const card=e.target.closest('.product-card,.vibra-service-card');
+  if(!card)return;
+  const x=e.clientX,y=e.clientY;
+  tiltFrame=requestAnimationFrame(()=>{
+   tiltFrame=0;
+   if(tiltCard!==card){tiltCard?.style.removeProperty('--art-rx');tiltCard?.style.removeProperty('--art-ry');tiltCard=card}
+   const r=card.getBoundingClientRect();
+   if(!r.width||!r.height)return;
+   card.style.setProperty('--art-rx',((.5-(y-r.top)/r.height)*5)+'deg');
+   card.style.setProperty('--art-ry',(((x-r.left)/r.width-.5)*5)+'deg');
+  });
+ },{passive:true});
+ grid?.addEventListener('pointerleave',()=>{
+  cancelAnimationFrame(tiltFrame);tiltFrame=0;
+  tiltCard?.style.removeProperty('--art-rx');tiltCard?.style.removeProperty('--art-ry');tiltCard=null;
+ },{passive:true});
+ const hero=document.querySelector('.hero-card');
+ let heroFrame=0;
+ hero?.addEventListener('pointermove',e=>{
+  if(!fine.matches||reduced.matches||heroFrame)return;
+  const x=e.clientX,y=e.clientY;
+  heroFrame=requestAnimationFrame(()=>{
+   heroFrame=0;
+   const r=hero.getBoundingClientRect();
+   if(!r.width||!r.height)return;
+   hero.style.setProperty('--art-hero-x',((x-r.left)/r.width-.5)*14+'px');
+   hero.style.setProperty('--art-hero-y',((y-r.top)/r.height-.5)*8+'px');
+  });
+ },{passive:true});
+ hero?.addEventListener('pointerleave',()=>{
+  cancelAnimationFrame(heroFrame);heroFrame=0;
+  hero.style.removeProperty('--art-hero-x');hero.style.removeProperty('--art-hero-y');
+ },{passive:true});
+ const header=document.querySelector('.topbar');
+ const scroll=()=>header?.toggleAttribute('data-art-scrolled',window.scrollY>8);
+ window.addEventListener('scroll',scroll,{passive:true});scroll();
+ for(const el of document.querySelectorAll('.topbar,.hero,#viPublicWrap')){
+  seen.add(el);play(el,rise,280);
+ }
+ const counts='.topbar .badge-count,.topbar .followup-count,.topbar .v17-badge-host';
+ const lastCounts=new WeakMap();
+ const headerObserver=new MutationObserver(()=>{
+  for(const el of document.querySelectorAll(counts)){
+   const text=el.textContent.trim(),previous=lastCounts.get(el);lastCounts.set(el,text);
+   if(previous!==undefined&&text!==previous)play(el,[{transform:'scale(1)'},{transform:'scale(1.22)'},{transform:'scale(1)'}]);
+  }
+ });
+ if(header)headerObserver.observe(header,{subtree:true,characterData:true,childList:true});
+ new MutationObserver(schedule).observe(document.body,{subtree:true,childList:true,attributes:true,attributeFilter:['class']});
+ scan();
+})();
+
+// NUEVO: gestos y pantalla completa comparten la escala de los botones existentes.
+const vibraArtZoomSessions=new WeakMap();
+function vibraArtZoom(controls,target,setScale,getScale,pan,resetPan){
+ const stage=target.closest('.product-large-view,#vsmGalleryMedia');
+ const photo=target.matches('img')?target:target.querySelector('img');
+ if(!stage)return;
+ vibraArtZoomSessions.get(stage)?.abort();
+ const session=new AbortController();
+ const {signal}=session;
+ vibraArtZoomSessions.set(stage,session);
+ const viewer=stage.closest('#productViewerModal,#vsmGallery');
+ const watch=new MutationObserver(()=>{
+  if(!viewer?.matches('.show,.open'))session.abort();
+ });
+ if(viewer)watch.observe(viewer,{attributes:true,attributeFilter:['class']});
+ const full=document.createElement('button');
+ full.type='button';full.className='art-fullscreen';full.textContent='Pantalla completa';
+ full.onclick=()=>{
+  if(document.fullscreenElement===stage)document.exitFullscreen?.().catch(()=>{});
+  else stage.requestFullscreen?.().catch(()=>{});
+ };
+ if(stage.requestFullscreen)controls.append(full);
+ const points=new Map();
+ let frame=0;
+ signal.addEventListener('abort',()=>{watch.disconnect();cancelAnimationFrame(frame)},{once:true});
+ if(!photo)return;
+ let startGap=0,startScale=100,queued;
+ const queue=callback=>{
+  queued=callback;
+  if(!frame)frame=requestAnimationFrame(()=>{frame=0;queued()});
+ };
+ const gap=()=>{
+  const [a,b]=points.values();
+  return a&&b?Math.hypot(a.x-b.x,a.y-b.y):0;
+ };
+ stage.addEventListener('wheel',e=>{
+  e.preventDefault();
+  const next=getScale()+(e.deltaY<0?12:-12);
+  queue(()=>setScale(next));
+ },{passive:false,signal});
+ stage.addEventListener('dblclick',()=>getScale()>100?(resetPan(),setScale(100)):setScale(150),{signal});
+ stage.addEventListener('pointerdown',e=>{
+  if(e.button!==0)return;
+  points.set(e.pointerId,{x:e.clientX,y:e.clientY});
+  if(points.size===2){startGap=gap();startScale=getScale()}
+  if(e.pointerType!=='touch')stage.setPointerCapture(e.pointerId);
+ },{passive:true,signal});
+ stage.addEventListener('pointermove',e=>{
+  const previous=points.get(e.pointerId);
+  if(!previous)return;
+  points.set(e.pointerId,{x:e.clientX,y:e.clientY});
+  if(points.size===2&&startGap){
+   const scale=startScale*gap()/startGap;queue(()=>setScale(scale));
+  }else if(getScale()>100)pan(e.clientX-previous.x,e.clientY-previous.y);
+ },{passive:true,signal});
+ for(const type of ['pointerup','pointercancel','lostpointercapture','pointerleave']){
+  stage.addEventListener(type,e=>{if(type==='pointerleave'&&stage.hasPointerCapture(e.pointerId))return;points.delete(e.pointerId);if(points.size<2)startGap=0},{passive:true,signal});
+ }
+}
+</script>
 </html>
