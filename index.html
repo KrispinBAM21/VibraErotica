@@ -3527,10 +3527,13 @@ async function renderAdminDashboard(c){
     </div>
   </section>
   <div id="v12DashboardBody"><p class="muted">Cargando métricas…</p></div>`;
-  let current=null;
+  let current=null,dashboardRequest=0; // MODIFICADO
+  const dashboardRoot=c.querySelector('#v12DashboardBody'); // NUEVO
   const load=async()=>{
+    const request=++dashboardRequest; // NUEVO
     const period=document.getElementById('v12DashPeriod').value,anchor=new Date(document.getElementById('v12DashDate').value+'T12:00:00');
     current=await v12DashboardData(period,anchor);
+    if(!dashboardRoot?.isConnected||request!==dashboardRequest)return; // NUEVO: descartar una actualización visual obsoleta.
     const completed=current.po.filter(v12OrderCompleted),falseOrders=current.po.filter(v12OrderFalse),incomplete=current.po.filter(v12OrderIncomplete);
     const sales=completed.reduce((a,o)=>a+Number(o.total||0),0),expenses=current.pe.reduce((a,x)=>a+Number(x.total_amount||0),0),profit=sales-expenses;
     const avg=completed.length?sales/completed.length:0;
@@ -3555,6 +3558,7 @@ async function renderAdminDashboard(c){
       <div class="v12-top-products">${tops.length?tops.map(t=>`<div class="v12-top-product"><div><strong>${esc(t.name)}</strong><div class="small muted">${t.qty} unidades${t.revenue?' · '+v12Money(t.revenue)+' vendidos':''}${costMap.get(String(t.id))?' · '+v12Money(costMap.get(String(t.id)).cost)+' en gastos asociados':''}</div><div class="v12-bar"><span style="width:${Math.max(3,t.qty/maxQty*100)}%"></span></div></div><strong>${t.qty}</strong></div>`).join(''):'<div class="v12-empty">No hay detalle de productos en las ventas de este periodo.</div>'}</div>
     </section>
     <section class="section-card"><h3>Comparación gasto / ganancia</h3><div class="table-wrap"><table class="admin-table"><thead><tr><th>Concepto</th><th>Importe</th></tr></thead><tbody><tr><td>Ventas concretadas</td><td>${v12Money(sales)}</td></tr><tr><td>Gastos e insumos</td><td>${v12Money(expenses)}</td></tr><tr><td><strong>Ganancia estimada</strong></td><td><strong>${v12Money(profit)}</strong></td></tr></tbody></table></div><p class="v12-report-note">Ganancia estimada = ventas concretadas − gastos registrados. No sustituye contabilidad fiscal ni incluye costos que no hayas capturado.</p></section>`;
+    adminUiMountOrders(host,current.po); // NUEVO: reutilizar las órdenes del periodo.
     requestAnimationFrame(()=>{
       v12DrawChart(document.getElementById('v12SalesChart'),series.labels,series.values,'Ventas concretadas por día');
       v12DrawChart(document.getElementById('v12StatusChart'),['Concretadas','No completadas','Falsas'],[sales,incomplete.reduce((a,o)=>a+Number(o.total||0),0),falseOrders.reduce((a,o)=>a+Number(o.total||0),0)],'Importe por estado');
@@ -8794,7 +8798,8 @@ html body :is(.v12-menu-list,.toast,.vibra-cart-feedback,.notification-item){
  background:var(--art-panel)!important;color:var(--art-ink)!important;border-color:var(--art-line)!important;box-shadow:var(--art-shadow);
 }
 html body :is(.v12-menu-list,.toast,.notification-item) :is(span,small,p,strong){color:var(--art-ink)!important}
-html body #whatsappFab svg{animation:none!important}
+/* MODIFICADO: recuperar el giro de 180° con la animación existente. */
+@media(prefers-reduced-motion:no-preference){html body #whatsappFab svg{animation:vibraWaLeftToRightHalf 7s ease-in-out infinite!important}}
 .vibra-cart-token img{width:100%;height:100%;object-fit:contain;border-radius:7px}
 
 /* NUEVO: composición, encuadre y contraste de los visores. */
@@ -9220,4 +9225,286 @@ html body #productViewerModal.product-viewer .vibra-product-gallery .v12-social-
 html body #productViewerModal.product-viewer .vibra-product-gallery .v12-social-btn :is(svg,span){color:inherit!important}
 html body #productViewerModal.product-viewer .vibra-product-gallery .v12-social-btn{width:auto;min-width:44px;font:700 .83rem var(--font);white-space:nowrap}
 </style>
+<!-- NUEVO: panel y densidad del catalogo -->
+<style>
+/* NUEVO: panel compacto en la paleta del sitio. */
+html body #adminModal{
+ --au-panel:#fff8fc;--au-bg:#faedf5;--au-ink:#32182a;--au-muted:#69415c;--au-edge:#9f6789;--au-accent:#8d174b;
+ --card:var(--au-panel);--site-bg:var(--au-bg);--text:var(--au-ink);--muted:var(--au-muted);--line:var(--au-edge);--secondary:var(--au-bg);
+}
+html body.dark-mode #adminModal{--au-panel:#201227;--au-bg:#170d1e;--au-ink:#fff1fb;--au-muted:#e5b9d6;--au-edge:#946181;--au-accent:#ffabd9}
+#adminModal .admin-ui-sprite{position:absolute;width:0;height:0;overflow:hidden}
+html body #adminModal .modal-head{gap:8px;padding:7px 12px;flex-wrap:wrap;background:var(--au-panel)!important}
+html body #adminModal .modal-head>strong{font-size:1rem}
+.admin-ui-toolbar{display:flex;align-items:center;gap:5px;flex:1;min-width:0;justify-content:flex-end;flex-wrap:wrap;font-size:.8rem}
+.admin-ui-toolbar [data-au-crumb]{margin-right:auto;color:var(--au-muted);overflow-wrap:anywhere}
+.admin-ui-toolbar [data-au-connection]{color:var(--au-muted)}
+#adminModal :is(.admin-ui-toolbar button,.admin-ui-user summary,.admin-ui-palette button,#vscopeBusinessToggle){
+ color:var(--au-ink)!important;background:var(--au-panel)!important;border:1px solid var(--au-edge)!important;border-radius:8px;min-height:44px;min-width:44px;padding:5px 9px;
+}
+#adminModal :is(.admin-ui-toolbar,.admin-ui-palette,.admin-ui-review) svg{width:18px;height:18px;vertical-align:middle;fill:none;stroke:currentColor;stroke-width:1.5}
+.admin-ui-user{position:relative}
+.admin-ui-user summary{display:grid;place-items:center;cursor:pointer;list-style:none}
+.admin-ui-user>div{position:absolute;right:0;top:100%;z-index:20;min-width:190px;width:max-content;max-width:min(300px,70vw);padding:10px;background:var(--au-panel);border:1px solid var(--au-edge);border-radius:10px;overflow-wrap:anywhere}
+.admin-ui-user>div button{display:block;margin-top:8px}
+html body #adminModal .admin-layout{grid-template-columns:minmax(0,188px) minmax(0,1fr)}
+html body #adminModal.admin-ui-compact .admin-layout{grid-template-columns:64px minmax(0,1fr)}
+html body #adminModal #adminTabs{display:block;max-height:none;overflow:auto;padding:6px}
+#adminModal .admin-ui-group>summary{padding:8px 4px;min-height:38px;font-size:.73rem;font-weight:750;color:var(--au-muted);cursor:pointer}
+html body #adminModal #adminTabs .tab-btn{min-height:44px;font-size:.78rem}
+html body #adminModal #adminTabs .tab-btn[aria-current=page]{box-shadow:inset 3px 0 var(--au-accent);color:var(--au-accent)!important}
+#adminModal.admin-ui-compact .admin-ui-group>summary{font-size:0;text-align:center;list-style:none}
+#adminModal.admin-ui-compact .admin-ui-group>summary::before{content:'▸';font-size:1rem}
+#adminModal.admin-ui-compact .admin-ui-group[open]>summary::before{content:'▾'}
+html body #adminModal.admin-ui-compact #adminTabs .tab-btn>span{display:none}
+html body #adminModal.admin-ui-compact #adminTabs .tab-btn{justify-content:center;padding:4px}
+html body #adminModal #vscopeBusinessToggle{min-width:28px;min-height:30px;padding:0}
+html body #adminModal .faithful-session{display:none}
+html body #adminModal #viReviewAdmin.admin-ui-review{background:transparent!important;border:0!important;color:var(--au-accent)!important;box-shadow:none;min-height:44px;padding:4px 8px}
+html body #adminModal #adminContent :is(.section-card,.admin-kpi,.notice,.metric,.review-card,.payment-item,.audit-item,.integration-card){background:var(--au-panel)!important;color:var(--au-ink)!important;border-color:var(--au-edge)!important}
+html body #adminModal #adminContent .section-card{border-width:0 0 1px;border-radius:8px}
+html body #adminModal #adminContent :is(h2,h3){font-size:1.08rem}
+html body #adminModal #adminContent h4{font-size:.94rem}
+html body #adminModal #adminKpis .admin-kpi{display:grid;grid-template-columns:18px minmax(0,1fr);align-items:center;gap:5px 7px;text-align:left;min-height:66px}
+#adminKpis .admin-kpi svg{width:18px;height:18px;fill:none;stroke:currentColor;stroke-width:1.5}
+#adminKpis .admin-kpi strong{grid-column:1/-1}
+html body #adminModal #adminKpis .admin-kpi[aria-pressed=true]{outline:2px solid var(--au-accent)}
+.admin-ui-order-tools{display:flex;gap:8px;align-items:center;flex-wrap:wrap;margin-block:8px}
+.admin-ui-order-tools :is(input,select){min-height:44px;padding:5px 8px;border:1px solid var(--au-edge);border-radius:8px}
+.admin-ui-empty{padding:12px;color:var(--au-muted)}
+.admin-ui-palette{width:min(470px,calc(100% - 26px));max-height:75dvh;background:var(--au-panel);color:var(--au-ink);border:1px solid var(--au-edge);border-radius:14px;padding:14px}
+.admin-ui-palette::backdrop{background:#210a24ae}
+.admin-ui-palette input{width:100%;min-height:44px;margin-block:6px}
+.admin-ui-results{display:grid;gap:5px;margin-block:8px}
+.admin-ui-results>div{display:grid;grid-template-columns:1fr auto;gap:5px}
+#adminModal .admin-ui-results button[aria-pressed=true]{color:var(--au-accent)!important}
+@media(max-width:700px){
+ html body #adminModal .admin-layout{grid-template-columns:minmax(0,1fr);grid-template-rows:auto minmax(0,1fr)}
+ html body #adminModal.admin-ui-compact .admin-layout{grid-template-columns:minmax(0,1fr)}
+ html body #adminModal #adminTabs{max-height:28dvh}
+ html body #adminModal.admin-ui-compact #adminTabs{display:none}
+ html body #adminModal #adminTabs .tab-btn{max-width:none}
+ .admin-ui-toolbar [data-au-connection]{display:none}
+}
+@media(prefers-reduced-motion:no-preference){
+ #adminModal .admin-ui-toolbar button:active{transform:scale(.96)}
+ #adminModal .admin-ui-toolbar button{transition:transform .22s ease}
+}
+/* NUEVO: mostrar más catálogo mediante densidad, sin reducir el tamaño de toda la página. */
+@media(min-width:1050px){
+ html body main #catalogGrid{grid-template-columns:repeat(5,minmax(0,1fr))!important;gap:11px!important}
+ html body main #catalogGrid :is(.product-visual,.product-zoom-trigger,.vibra-service-photo,.product-zoom-trigger img){height:clamp(115px,13vw,180px)!important}
+}
+html body main #catalogGrid :is(.product-card,.vibra-service-card){padding:8px!important;gap:6px}
+html body main #catalogGrid .product-body{padding:7px 2px}
+html body main #catalogGrid :is(.product-name,.vibra-service-content h3){font-size:.92rem}
+html body main #catalogGrid :is(.desc,.meta,.vibra-service-content p){font-size:.78rem}
+#adminModal .admin-ui-order-row{border-bottom:1px solid var(--au-edge);padding:4px 0}
+#adminModal .admin-ui-order-row>summary{min-height:44px;cursor:pointer;align-content:center}
+#adminModal .admin-ui-order-row>p{margin:4px 12px 8px}
+#adminModal .admin-ui-note{margin-block:5px 9px;color:var(--au-muted)}
+#adminModal .admin-ui-note>summary{min-height:44px;align-content:center;cursor:pointer}
+@media(max-width:700px){html body #adminModal.admin-ui-compact .admin-layout{grid-template-rows:minmax(0,1fr)}}
+#adminModal .admin-ui-order-drawer{inset:0 0 0 auto;margin:0;width:min(460px,100%);height:100%;max-height:100%;max-width:100%;padding:18px;background:var(--au-panel);color:var(--au-ink);border:1px solid var(--au-edge)}
+#adminModal .admin-ui-order-drawer::backdrop{background:#210a24ae}
+#adminModal .admin-ui-empty>svg{display:block;margin-bottom:5px}
+@media(prefers-reduced-motion:no-preference){
+ #adminModal .admin-ui-order-drawer[open]{animation:admin-ui-drawer-in .24s ease-out}
+}
+@keyframes admin-ui-drawer-in{from{transform:translateX(18px);opacity:.85}to{transform:translateX(0);opacity:1}}
+</style>
+<script>
+// NUEVO: navegación administrativa sobre los controles que ya autorizó el panel.
+(()=>{
+ const modal=document.getElementById('adminModal'), tabs=document.getElementById('adminTabs'), content=document.getElementById('adminContent');
+ const head=modal.querySelector('.modal-head'), close=head.querySelector('[data-close-modal]');
+ const groups=[
+  ['Inicio',['dashboard']],
+  ['Operación',['orders','delivery','review','receipts','deliveries','tracking','customers']],
+  ['Catálogo',['products','categories','promotions','coupons']],
+  ['Negocio',['business','profile','design','trip','history','expenses','commissions','ticket']],
+  ['Sistema',['audit','integrations','users','subscription']]
+ ];
+ const svg=(name)=>'<svg viewBox="0 0 24 24" aria-hidden="true"><use href="#adminUi-'+name+'"/></svg>';
+ const sprite=document.createElementNS('http://www.w3.org/2000/svg','svg');
+ sprite.setAttribute('aria-hidden','true');sprite.classList.add('admin-ui-sprite');
+ sprite.innerHTML=Object.entries({
+  menu:'M4 6h16M4 12h11M4 18h16',search:'M20 20l-5-5M17 10a7 7 0 1 1-14 0 7 7 0 0 1 14 0Z',
+  person:'M4 21v-2a8 8 0 0 1 16 0v2M16 7a4 4 0 1 1-8 0 4 4 0 0 1 8 0Z',
+  theme:'M20 15A8 8 0 0 1 9 4a8 8 0 1 0 11 11Z',star:'m12 3 2.7 5.5 6.1.9-4.4 4.3 1 6.1-5.4-2.9-5.4 2.9 1-6.1-4.4-4.3 6.1-.9Z'
+ }).map(([name,path])=>'<symbol id="adminUi-'+name+'" viewBox="0 0 24 24"><path d="'+path+'"/></symbol>').join('');
+ modal.prepend(sprite);
+ modal.setAttribute('role','dialog');modal.setAttribute('aria-modal','true');modal.setAttribute('aria-label','Panel de administración');
+ const toolbar=document.createElement('div');toolbar.className='admin-ui-toolbar';
+ toolbar.innerHTML='<button type="button" data-au-nav aria-controls="adminTabs" aria-expanded="true" aria-label="Menú de módulos">'+svg('menu')+'</button><span data-au-crumb></span><span data-au-connection role="status"></span><button type="button" data-au-search title="Ctrl+K / Cmd+K" aria-label="Buscar módulos">'+svg('search')+'</button><button type="button" data-au-theme aria-label="Cambiar tema">'+svg('theme')+'</button><details class="admin-ui-user"><summary aria-label="Cuenta administrativa">'+svg('person')+'</summary><div><span data-au-user></span><button type="button" data-au-logout>Cerrar sesión</button></div></details>';
+ head.insertBefore(toolbar,close);
+ const palette=document.createElement('dialog');palette.className='admin-ui-palette';palette.setAttribute('aria-label','Buscar módulos');
+ palette.innerHTML='<form method="dialog"><button aria-label="Cerrar búsqueda">×</button></form><label>Buscar módulos<input type="search" placeholder="Nombre del módulo"></label><div class="admin-ui-results"></div><small>Ctrl+K / Cmd+K abre la búsqueda. Esc la cierra.</small>';
+ modal.append(palette);
+ const input=palette.querySelector('input'),result=palette.querySelector('.admin-ui-results');
+ let recent=[],favorites=new Set(),previousFocus=null,wasOpen=false,frame=0;
+ const visibleTabs=()=>[...tabs.querySelectorAll('button.tab-btn')].filter(b=>!b.hidden&&getComputedStyle(b).display!=='none');
+ const allowed=()=>visibleTabs().filter(b=>b.dataset.tab&&panelCan(b.dataset.tab));
+ const moduleName=b=>b.querySelector('span')?.textContent.trim()||b.textContent.trim();
+ function results(){
+  result.replaceChildren();
+  const query=input.value.trim().toLocaleLowerCase('es');
+  const list=allowed().filter(b=>moduleName(b).toLocaleLowerCase('es').includes(query));
+  list.sort((a,b)=>Number(favorites.has(b.dataset.tab))-Number(favorites.has(a.dataset.tab))||(recent.indexOf(a.dataset.tab)+1||999)-(recent.indexOf(b.dataset.tab)+1||999));
+  for(const b of list){
+   const row=document.createElement('div'),go=document.createElement('button'),fav=document.createElement('button');
+   go.type=fav.type='button';go.textContent=moduleName(b);
+   go.onclick=()=>{palette.close();b.click()};
+   fav.innerHTML=svg('star');fav.setAttribute('aria-label','Favorito: '+moduleName(b));fav.setAttribute('aria-pressed',String(favorites.has(b.dataset.tab)));
+   fav.onclick=()=>{const id=b.dataset.tab;if(favorites.has(id))favorites.delete(id);else favorites.add(id);fav.setAttribute('aria-pressed',String(favorites.has(id)))};
+   row.append(go,fav);result.append(row);
+  }
+  if(!list.length)result.textContent='No se encontraron módulos.';
+ }
+ const openSearch=()=>{if(!palette.open){input.value='';results();palette.showModal();input.focus()}};
+ toolbar.querySelector('[data-au-search]').onclick=openSearch;
+ input.oninput=results;
+ toolbar.querySelector('[data-au-theme]').onclick=()=>document.getElementById('themeBtn')?.click();
+ toolbar.querySelector('[data-au-logout]').onclick=()=>adminSignOut();
+ const navButton=toolbar.querySelector('[data-au-nav]');
+ navButton.onclick=()=>{
+  const compact=modal.classList.toggle('admin-ui-compact');
+  navButton.setAttribute('aria-expanded',String(!compact));
+ };
+ function groupTabs(){
+  const raw=[...tabs.children].filter(b=>b.matches('button.tab-btn')&&b.dataset.tab);
+  if(!raw.length)return;
+  tabs.querySelectorAll('.admin-ui-group').forEach(group=>{if(!group.querySelector('button.tab-btn'))group.remove()});
+  const actual=groups.concat([['Otros',raw.filter(b=>!groups.some(([,ids])=>ids.includes(b.dataset.tab))).map(b=>b.dataset.tab)]]);
+  for(const [label,ids] of actual){
+   const items=raw.filter(b=>ids.includes(b.dataset.tab));
+   if(!items.length)continue;
+   const group=document.createElement('details');group.className='admin-ui-group';group.open=label==='Inicio'||items.some(b=>b.classList.contains('active'));
+   const summary=document.createElement('summary');summary.textContent=label;
+   group.append(summary);
+   for(const button of items){
+    const submenu=button.nextElementSibling;
+    group.append(button);
+    if(submenu?.id==='vscopeBusinessSubmenu')group.append(submenu);
+   }
+   tabs.append(group);
+  }
+ }
+ function sync(){
+  frame=0;
+  const open=modal.classList.contains('show');
+  if(!open){if(palette.open)palette.close();if(wasOpen&&previousFocus?.isConnected)previousFocus.focus();wasOpen=false;return}
+  if(!wasOpen){previousFocus=document.activeElement;if(!modal.contains(previousFocus))close.focus();wasOpen=true}
+  groupTabs();
+  for(const b of tabs.querySelectorAll('button.tab-btn')){
+   b.title=moduleName(b);b.setAttribute('aria-label',moduleName(b));
+   if(b.classList.contains('active'))b.setAttribute('aria-current','page');else b.removeAttribute('aria-current');
+  }
+  const current=tabs.querySelector('.tab-btn.active');
+  if(current?.closest('.admin-ui-group')&&recent[0]!==current.dataset.tab)current.closest('.admin-ui-group').open=true;
+  if(current?.dataset.tab&&recent[0]!==current.dataset.tab)recent=[current.dataset.tab,...recent.filter(id=>id!==current.dataset.tab)].slice(0,8);
+  toolbar.querySelector('[data-au-crumb]').textContent=current?moduleName(current):'';
+  toolbar.querySelector('[data-au-connection]').textContent=navigator.onLine?'En línea':'Sin conexión';
+  toolbar.querySelector('[data-au-user]').textContent=(adminSession?.user?.email||'')+(panelAccess.owner?' · Propietario':panelAccess.master?' · Administrador':' · Colaborador');
+  const review=content.querySelector('#viReviewAdmin');
+  if(review){review.classList.add('admin-ui-review');if(!review.querySelector('svg'))review.insertAdjacentHTML('afterbegin',svg('person'))}
+ }
+ const queue=()=>{if(!frame)frame=requestAnimationFrame(sync)};
+ new MutationObserver(queue).observe(tabs,{childList:true,subtree:true,attributes:true,attributeFilter:['class']});
+ new MutationObserver(queue).observe(content,{childList:true,subtree:true});
+ new MutationObserver(queue).observe(modal,{attributes:true,attributeFilter:['class']});
+ window.addEventListener('online',queue);window.addEventListener('offline',queue);
+ document.addEventListener('keydown',e=>{
+  if(!modal.classList.contains('show')||[...document.querySelectorAll('.modal.show')].at(-1)!==modal)return;
+  if((e.ctrlKey||e.metaKey)&&e.key.toLowerCase()==='k'){e.preventDefault();openSearch();return}
+  if(e.key==='?'&&!e.target.closest('input,textarea,select,[contenteditable]')&&!palette.open){e.preventDefault();openSearch();return}
+  if(palette.open||e.target.closest('.admin-ui-order-drawer'))return;
+  if(e.key==='Escape'){e.preventDefault();close.click();return}
+  if(e.key!=='Tab')return;
+  const focus=[...modal.querySelectorAll('button,a[href],input,select,textarea,summary,[tabindex]')].filter(b=>!b.disabled&&b.tabIndex>=0&&b.getClientRects().length);
+  if(!focus.length)return;
+  if(!modal.contains(document.activeElement)||(e.shiftKey?document.activeElement===focus[0]:document.activeElement===focus.at(-1))){
+   e.preventDefault();(e.shiftKey?focus.at(-1):focus[0]).focus();
+  }
+ });
+})();
+// NUEVO: filtros locales del Centro de órdenes, sobre la misma consulta y sin escrituras.
+function adminUiOrders(orders){
+ const host=document.getElementById('adminRecent'),kpis=document.getElementById('adminKpis');
+ if(!host||!kpis)return;
+ const toolbar=document.createElement('div'),list=document.createElement('div');
+ toolbar.className='admin-ui-order-tools';
+ toolbar.innerHTML='<input type="search" aria-label="Buscar orden" placeholder="Folio o cliente"><select aria-label="Ordenar por fecha"><option value="new">Más recientes</option><option value="old">Más antiguas</option></select>';
+ host.replaceChildren(toolbar,list);
+ const search=toolbar.querySelector('input'),sort=toolbar.querySelector('select');
+ let filter='',timer;
+ function render(){
+  const query=search.value.trim().toLocaleLowerCase('es');
+  const rows=orders.filter(o=>(!filter||o.payment_status===filter)&&[o.public_id,o.folio,o.customer_name].some(v=>String(v??'').toLocaleLowerCase('es').includes(query)));
+  rows.sort((a,b)=>(sort.value==='old'?1:-1)*(Date.parse(a.created_at)-Date.parse(b.created_at)));
+  list.replaceChildren();
+  if(!rows.length){
+   const empty=document.createElement('div');empty.className='admin-ui-empty';
+   empty.innerHTML='<svg width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" aria-hidden="true"><path d="M5 3h14v18l-3-2-4 2-4-2-3 2V3Zm3 5h8m-8 4h6"/></svg>';
+   empty.append(document.createTextNode(orders.length?'No hay órdenes para este filtro.':'Todavía no hay órdenes.'));
+   if(orders.length||panelCan('orders')){
+    const action=document.createElement('button');action.type='button';action.className='btn secondary';
+    action.textContent=orders.length?'Quitar filtros':'Ir a Pedidos';
+    action.onclick=()=>{if(!orders.length){document.querySelector('#adminTabs [data-tab="orders"]')?.click();return}filter='';search.value='';activate();render()};
+    empty.append(document.createElement('br'),action);
+   }
+   list.append(empty);return;
+  }
+  for(const o of rows.slice(0,12)){
+   const row=document.createElement('details');row.className='admin-ui-order-row';
+   const title=document.createElement('summary');
+   title.textContent=[o.public_id||o.folio,o.customer_name,money(o.total)].filter(Boolean).join(' · ');
+   const detail=document.createElement('p');
+   detail.innerHTML=paymentBadge(o.payment_status||'WAITING_PAYMENT');
+   detail.append(document.createTextNode(' · '+new Date(o.created_at).toLocaleString('es-MX')));
+   const open=document.createElement('button');
+   open.type='button';open.className='btn secondary';open.textContent='Ver detalle';
+   open.onclick=()=>{
+    const drawer=document.createElement('dialog');
+    drawer.className='admin-ui-order-drawer';drawer.setAttribute('aria-label','Detalle de la orden');
+    const heading=document.createElement('h3');heading.textContent=title.textContent;
+    const close=document.createElement('button');close.type='button';close.className='btn secondary';close.textContent='Cerrar detalle';
+    close.onclick=()=>drawer.close();
+    drawer.append(close,heading,detail.cloneNode(true));
+    drawer.addEventListener('close',()=>{drawer.remove();if(open.isConnected)open.focus()},{once:true});
+    row.append(drawer);drawer.showModal();close.focus();
+   };
+   row.append(title,detail,open);list.append(row);
+  }
+ }
+ const keys=['','PENDING_REVIEW','APPROVED','REJECTED','PROCESSING'];
+ const buttons=[...kpis.children].map((card,i)=>{
+  const button=document.createElement('button');button.type='button';button.className=card.className;
+  button.append(...card.childNodes);card.replaceWith(button);
+  button.onclick=()=>{filter=keys[i];activate();render()};
+  return button;
+ });
+ function activate(){buttons.forEach((b,i)=>b.setAttribute('aria-pressed',String(keys[i]===filter)))}
+ search.oninput=()=>{clearTimeout(timer);timer=setTimeout(()=>{if(host.isConnected)render()},220)};
+ sort.onchange=render;activate();render();
+}
+
+// NUEVO: montar Centro de órdenes en la versión activa del Dashboard.
+function adminUiMountOrders(host,orders){
+ const section=document.createElement('section');
+ section.className='section-card admin-ui-orders';
+ section.innerHTML='<h3>Centro de órdenes</h3><details class="admin-ui-note"><summary>Información del centro</summary><p>El panel web administra pedidos y comprobantes. Telegram queda como canal interno y nunca se muestra al cliente.</p></details><div class="admin-dashboard" id="adminKpis"></div><h4>Órdenes recientes</h4><div id="adminRecent"></div>';
+ host.prepend(section);
+ const statuses=['','PENDING_REVIEW','APPROVED','REJECTED','PROCESSING'];
+ const icons=[UI.orders,UI.review,UI.check,UI.close,UI.pending];
+ const names=['Total','En revisión','Aprobadas','Rechazadas','Procesando'];
+ const reduced=matchMedia('(prefers-reduced-motion: reduce)').matches;
+ section.querySelector('#adminKpis').innerHTML=statuses.map((status,i)=>{
+  const count=status?orders.filter(o=>o.payment_status===status).length:orders.length;
+  return '<div class="admin-kpi">'+icons[i]+'<span>'+names[i]+'</span><strong>'+count+'</strong></div>';
+ }).join('');
+ adminUiOrders(orders);
+ if(!reduced)section.animate?.([{opacity:.85,transform:'translateY(4px)'},{opacity:1,transform:'none'}],{duration:240,easing:'ease-out'});
+}
+</script>
 </html>
