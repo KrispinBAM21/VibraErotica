@@ -5403,7 +5403,7 @@ if(el('#v9Section'))return;
 const older=el('#v8Section');if(older)older.remove();
 const n=document.createElement('section');n.id='v9Section';n.innerHTML=`
 <section class="v9panel" id="vibraOldPublicLocations" hidden><div class="v9head">${ic('pin')}<h2>Visítanos · sedes oficiales</h2></div><p class="v9muted">Selecciona la sede que deseas visitar. Solo se muestran ubicaciones publicadas por el negocio.</p><div id="v9Locations" class="v9grid"></div><div id="v9Map" class="v9map"></div><p id="v9PlaceInfo" class="v9muted"></p><button class="v9action" id="v9Directions">${ic('arrow')} Cómo llegar desde mi ubicación</button><a class="v9action secondary" id="v9OpenMap" target="_blank" rel="noopener">Abrir mapa</a><p id="v9GeoState" class="v9small"></p></section>
-<section class="v9panel"><div class="v9head">${ic('spa')}<h2>Profesionales y servicios</h2></div><p class="v9muted">Sesiones de bienestar con opciones según disponibilidad: en el local, a domicilio, hotel o motel.</p><div id="v9Professionals" class="v9grid"></div><div id="v9Modalities" hidden><h3>Opciones de atención</h3><p id="v9ModesText"></p><label class="v9small">Selecciona modalidad<select id="v9Mode" class="v9select"></select></label><!-- MODIFICADO --><button class="v9action ve-reserve-action" id="v9Continue"><svg class="ve-dialog-icon" aria-hidden="true" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M12 3a9 9 0 1 0 0 18 9 9 0 0 0 0-18Zm0 4v5l3 2"/></svg><span>Consultar horarios y reservar</span></button><p class="v9small">Los horarios ocupados se consultan en Supabase. El trayecto externo requiere confirmación.</p><div id="v9Booking" hidden><h3>Selecciona fecha y hora</h3><div class="v9fields"><label>Servicio<select id="v9Service"></select></label><label>Habitación<select id="v9Room"></select></label><label>Duración<select id="v9Duration"></select></label><label><!-- MODIFICADO --><span class="ve-booking-label"><svg class="ve-dialog-icon" aria-hidden="true" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M5 6h14v14H5zM8 4v4m8-4v4M5 10h14m-10 5h6"/></svg>Fecha</span><input id="v9Date" type="date"></label><label><!-- MODIFICADO --><span class="ve-booking-label"><svg class="ve-dialog-icon" aria-hidden="true" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M12 3a9 9 0 1 0 0 18 9 9 0 0 0 0-18Zm0 4v5l3 2"/></svg>Horarios disponibles</span><select id="v9Time"></select></label><label><!-- MODIFICADO --><span class="ve-booking-label"><svg class="ve-dialog-icon" aria-hidden="true" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M5 21v-2a4 4 0 0 1 4-4h6a4 4 0 0 1 4 4v2M12 11a4 4 0 1 0 0-8 4 4 0 0 0 0 8"/></svg>Nombre</span><input id="v9ClientName" maxlength="90"></label><label>Teléfono<input id="v9ClientPhone" maxlength="25"></label></div><label><input id="v9Terms" type="checkbox"> Acepto las condiciones de reserva: el tiempo inicia a la hora seleccionada y la ausencia o retraso no prolongan el servicio. Consulta las condiciones de cancelación aplicables.</label><p><!-- MODIFICADO --><button class="v9action ve-reserve-action" id="v9SubmitBooking"><svg class="ve-dialog-icon" aria-hidden="true" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M5 6h14v14H5zM8 4v4m8-4v4M5 10h14m-10 5h6"/></svg><span>Confirmar reserva local</span></button></p><p id="v9BookingStatus" class="v9small"></p></div></div></section>
+<section class="v9panel"><div class="v9head">${ic('spa')}<h2>Profesionales y servicios</h2></div><p class="v9muted">Sesiones de bienestar con opciones según disponibilidad: en el local, a domicilio, hotel o motel.</p><div id="v9Professionals" class="v9grid"></div><div id="v9Modalities" hidden><h3>Opciones de atención</h3><p id="v9ModesText"></p><label class="v9small">Selecciona modalidad<select id="v9Mode" class="v9select"></select></label><!-- MODIFICADO --><button class="v9action ve-reserve-action" id="v9Continue"><svg class="ve-dialog-icon" aria-hidden="true" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M12 3a9 9 0 1 0 0 18 9 9 0 0 0 0-18Zm0 4v5l3 2"/></svg><span>Consultar horarios y reservar</span></button><p class="v9small">Los horarios ocupados se consultan en Supabase. El trayecto externo requiere confirmación.</p><!-- MODIFICADO --><div id="v9Booking" hidden><section class="ve-res-card ve-res-service"><h3>Servicio y habitación</h3><div class="v9fields"><label>Servicio<select id="v9Service"></select></label><label>Habitación<select id="v9Room"></select></label><label>Duración<select id="v9Duration"></select></label></div></section><section class="ve-res-card ve-res-date"><h3>Fecha y disponibilidad</h3><div class="v9fields"><label><!-- MODIFICADO --><span class="ve-booking-label"><svg class="ve-dialog-icon" aria-hidden="true" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M5 6h14v14H5zM8 4v4m8-4v4M5 10h14m-10 5h6"/></svg>Fecha</span><input id="v9Date" type="date"></label><label><!-- MODIFICADO --><span class="ve-booking-label"><svg class="ve-dialog-icon" aria-hidden="true" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M12 3a9 9 0 1 0 0 18 9 9 0 0 0 0-18Zm0 4v5l3 2"/></svg>Horarios disponibles</span><select id="v9Time"></select></label></div><div class="ve-res-options" data-res-options="time"></div></section><section class="ve-res-card ve-res-client"><h3>Tus datos y confirmación</h3><div class="v9fields"><label><!-- MODIFICADO --><span class="ve-booking-label"><svg class="ve-dialog-icon" aria-hidden="true" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M5 21v-2a4 4 0 0 1 4-4h6a4 4 0 0 1 4 4v2M12 11a4 4 0 1 0 0-8 4 4 0 0 0 0 8"/></svg>Nombre</span><input id="v9ClientName" maxlength="90"></label><label>Teléfono<input id="v9ClientPhone" maxlength="25"></label></div><label><input id="v9Terms" type="checkbox"> Acepto las condiciones de reserva: el tiempo inicia a la hora seleccionada y la ausencia o retraso no prolongan el servicio. Consulta las condiciones de cancelación aplicables.</label></section><p><!-- MODIFICADO --><button class="v9action ve-reserve-action" id="v9SubmitBooking"><svg class="ve-dialog-icon" aria-hidden="true" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M5 6h14v14H5zM8 4v4m8-4v4M5 10h14m-10 5h6"/></svg><span>Confirmar reserva local</span></button></p><p id="v9BookingStatus" role="status" class="v9small"></p></div></div></section>
 <section id="v9Admin" class="v9panel"><div class="v9head">${ic('car')}<h2>Administrar sedes, modalidades y rutas de servicios</h2></div><p class="v9small">Sólo personal autorizado. Hasta 3 sedes. Las direcciones privadas de clientes no aparecen en el mapa público.</p>
 <h3>Sedes autorizadas</h3><div class="v9fields"><label>Nombre de sede<input id="v9LocName" placeholder="Sede Centro"></label><label>Dirección completa<input id="v9LocAddress"></label><label>Latitud<input id="v9LocLat" type="number" step="any"></label><label>Longitud<input id="v9LocLng" type="number" step="any"></label><label>Visible al público<select id="v9LocActive"><option value="true">Sí</option><option value="false">No</option></select></label></div><button class="v9action" id="v9SaveLoc">Guardar nueva sede</button><div id="v9ManageSites"></div>
 <h3>Modalidades por profesional</h3><div class="v9fields"><label>Profesional<select id="v9Practitioner"></select></label><label><span>Local</span><input type="checkbox" data-mode="local" checked></label><label><span>Domicilio</span><input type="checkbox" data-mode="domicilio"></label><label><span>Hotel</span><input type="checkbox" data-mode="hotel"></label><label><span>Motel</span><input type="checkbox" data-mode="motel"></label></div><button class="v9action" id="v9SaveModes">Guardar modalidades</button>
@@ -6235,7 +6235,8 @@ async function hydrate(){[roomDetails,venues,rooms,siteList]=await Promise.all([
 const detail=id=>roomDetails.find(x=>String(x.room_id)===String(id));
 function roomAllowed(r){return r.active!==false && (!detail(r.id)||detail(r.id).status==='free')}
 function setInfo(text){const p=$('#vibraRoomFeedback');if(p)p.textContent=text}
-function shell(){let o=$('#vibraReserveOverlay');if(o)return o;o=document.createElement('div');o.id='vibraReserveOverlay';o.innerHTML='<div id="vibraReserveShell" role="dialog" aria-modal="true" aria-label="Reservar masaje"><div id="vibraReserveTop"><!-- MODIFICADO --><strong><svg class="ve-dialog-icon" aria-hidden="true" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M5 6h14v14H5zM8 4v4m8-4v4M5 10h14m-10 5h6"/></svg>Reserva de masaje · disponibilidad</strong><button type="button" id="vibraReserveClose" aria-label="Cerrar reserva"><svg class="ve-dialog-icon" aria-hidden="true" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="m6 6 12 12M18 6 6 18"/></svg></button></div><div id="vibraReserveBody"></div><div class="vibra-feedback" id="vibraRoomFeedback"></div></div>';document.body.append(o);$('#vibraReserveClose').onclick=close;o.addEventListener('click',e=>{if(e.target===o)close()});/* NUEVO: navegación por teclado dentro de la reserva. */o.addEventListener('keydown',e=>{if(e.key==='Escape'){e.preventDefault();e.stopPropagation();close();return}if(e.key!=='Tab')return;const controls=[...o.querySelectorAll('button,input,select,textarea,a[href],[tabindex]')].filter(x=>!x.disabled&&x.tabIndex>=0&&x.getClientRects().length&&getComputedStyle(x).visibility==='visible');const first=controls[0],last=controls.at(-1);if(first&&(e.shiftKey?document.activeElement===first:document.activeElement===last)){e.preventDefault();(e.shiftKey?last:first).focus()}});return o}
+// MODIFICADO: estructura del modal adaptada al ZIP, con etapas y resumen lateral.
+function shell(){let o=$('#vibraReserveOverlay');if(o)return o;o=document.createElement('div');o.id='vibraReserveOverlay';o.innerHTML='<div id="vibraReserveShell" role="dialog" aria-modal="true" aria-labelledby="veReservationTitle"><div id="vibraReserveTop"><!-- MODIFICADO --><div class="ve-res-headline"><strong id="veReservationTitle"><svg class="ve-dialog-icon" aria-hidden="true" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M5 6h14v14H5zM8 4v4m8-4v4M5 10h14m-10 5h6"/></svg>Reserva de masaje · disponibilidad</strong><span class="ve-res-provider"></span></div><span class="ve-res-assist">Reserva asistida</span><button type="button" id="vibraReserveClose" aria-label="Cerrar reserva"><svg class="ve-dialog-icon" aria-hidden="true" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="m6 6 12 12M18 6 6 18"/></svg></button></div><nav class="ve-res-steps" aria-label="Etapas de reserva"><button type="button" data-res-step="1"><b>1</b>Servicio y modalidad</button><button type="button" data-res-step="2" disabled><b>2</b>Fecha y disponibilidad</button><button type="button" data-res-step="3" disabled><b>3</b>Tus datos y confirmación</button></nav><div id="vibraReserveBody"><aside class="ve-res-summary" aria-label="Resumen de reserva"><h2>Resumen en tiempo real</h2><dl><div><dt>Modalidad</dt><dd data-res-summary="mode"></dd></div><div><dt>Servicio</dt><dd data-res-summary="service"></dd></div><div><dt>Habitación</dt><dd data-res-summary="room"></dd></div><div><dt>Duración</dt><dd data-res-summary="duration"></dd></div><div><dt>Fecha</dt><dd data-res-summary="date"></dd></div><div><dt>Horario</dt><dd data-res-summary="time"></dd></div></dl><p class="ve-res-estimate" hidden></p></aside></div><div class="vibra-feedback" id="vibraRoomFeedback"></div></div>';document.body.append(o);bindReservationPresentation(o);$('#vibraReserveClose').onclick=close;o.addEventListener('click',e=>{if(e.target===o)close()});/* NUEVO: navegación por teclado dentro de la reserva. */o.addEventListener('keydown',e=>{if(e.key==='Escape'){e.preventDefault();e.stopPropagation();close();return}if(e.key!=='Tab')return;const controls=[...o.querySelectorAll('button,input,select,textarea,a[href],[tabindex]')].filter(x=>!x.disabled&&x.tabIndex>=0&&x.getClientRects().length&&getComputedStyle(x).visibility==='visible');const first=controls[0],last=controls.at(-1);if(first&&(e.shiftKey?document.activeElement===first:document.activeElement===last)){e.preventDefault();(e.shiftKey?last:first).focus()}});return o}
 // MODIFICADO: devolver el foco al control desde el que se abrió la reserva.
 let previousParent=null,previousNext=null,reserveTrigger=null;
 function close(){const o=$('#vibraReserveOverlay');if(!o)return;o.classList.remove('open');const n=$('#v9Modalities');if(n&&previousParent){if(previousNext&&previousNext.parentNode===previousParent)previousParent.insertBefore(n,previousNext);else previousParent.append(n)}document.body.style.removeProperty('overflow');/* NUEVO */if(reserveTrigger?.isConnected)reserveTrigger.focus({preventScroll:true});reserveTrigger=null}
@@ -6314,9 +6315,10 @@ if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',
 </style>
 <script id="vroom-enhancements">
 (()=>{'use strict';const $=s=>document.querySelector(s);const esc=s=>String(s??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));const svg=(path)=>'<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">'+path+'</svg>';let photos=[],position=0,room=null;const db=()=>typeof supabaseClient!=='undefined'?supabaseClient:null;
-async function show(id){const client=db();if(!client)return;const [base,det]=await Promise.all([client.from('rooms').select('*').eq('id',id).single(),client.from('vibra_room_details').select('*').eq('room_id',id).maybeSingle()]);if(base.error)return;room=base.data;const d=det.data||{};photos=Array.isArray(d.photos)?d.photos:[];position=0;let wrap=$('#vroomOverlay');if(!wrap){wrap=document.createElement('div');wrap.id='vroomOverlay';wrap.innerHTML='<div id="vroomDialog" role="dialog" aria-modal="true"><div id="vroomHead"><h2 id="vroomTitle"></h2><button class="vroom-button" id="vroomClose" aria-label="Cerrar">'+svg('<path d="M5 5l14 14M19 5L5 19"/>')+'</button></div><div id="vroomGrid"><div><img id="vroomPhoto" alt="Fotografía de habitación"><div class="vroom-controls"><button class="vroom-button" id="vroomPrev">'+svg('<path d="M15 18l-6-6 6-6"/>')+' Anterior</button><span id="vroomCount"></span><button class="vroom-button" id="vroomNext">Siguiente '+svg('<path d="m9 18 6-6-6-6"/>')+'</button></div></div><div id="vroomInfo"></div></div></div>';document.body.append(wrap);$('#vroomClose').onclick=close;wrap.onclick=e=>{if(e.target===wrap)close()};$('#vroomPrev').onclick=()=>{position=(position+photos.length-1)%photos.length;paint()};$('#vroomNext').onclick=()=>{position=(position+1)%photos.length;paint()}}$('#vroomTitle').textContent=room.name;$('#vroomInfo').innerHTML='<p>'+esc(room.description||'Sin descripción adicional')+'</p><p><strong>Estado:</strong> '+esc(d.status==='free'?'Libre':d.status==='occupied'?'Ocupada':'Pendiente')+'</p><p><strong>Servicios:</strong> '+esc((d.amenities||[]).join(', ')||'Sin datos')+'</p><p><strong>Cortesía:</strong> '+esc(d.courtesy||'No especificada')+'</p><p id="vroomLikeCount">Me gusta: consultando…</p><button class="vroom-button vroom-primary" id="vroomLike">'+svg('<path d="M20.8 4.6a5.5 5.5 0 0 0-7.8 0L12 5.7l-1.1-1.1a5.5 5.5 0 0 0-7.8 7.8L12 21l8.8-8.6a5.5 5.5 0 0 0 0-7.8z"/>')+' Me gusta</button>';$('#vroomLike').onclick=like;wrap.classList.add('open');paint();counts()}
+async function show(id){const client=db();if(!client)return;const [base,det]=await Promise.all([client.from('rooms').select('*').eq('id',id).single(),client.from('vibra_room_details').select('*').eq('room_id',id).maybeSingle()]);if(base.error)return;room=base.data;const d=det.data||{};photos=Array.isArray(d.photos)?d.photos:[];position=0;let wrap=$('#vroomOverlay');if(!wrap){wrap=document.createElement('div');wrap.id='vroomOverlay';wrap.innerHTML='<div id="vroomDialog" role="dialog" aria-modal="true"><div id="vroomHead"><h2 id="vroomTitle"></h2><button class="vroom-button" id="vroomClose" aria-label="Cerrar">'+svg('<path d="M5 5l14 14M19 5L5 19"/>')+'</button></div><div id="vroomGrid"><div><img id="vroomPhoto" alt="Fotografía de habitación"><div class="vroom-controls"><button class="vroom-button" id="vroomPrev">'+svg('<path d="M15 18l-6-6 6-6"/>')+' Anterior</button><span id="vroomCount"></span><button class="vroom-button" id="vroomNext">Siguiente '+svg('<path d="m9 18 6-6-6-6"/>')+'</button></div></div><div id="vroomInfo"></div></div></div>';document.body.append(wrap);$('#vroomClose').onclick=close;wrap.onclick=e=>{if(e.target===wrap)close()};$('#vroomPrev').onclick=()=>{position=(position+photos.length-1)%photos.length;paint()};$('#vroomNext').onclick=()=>{position=(position+1)%photos.length;paint()}}$('#vroomTitle').textContent=room.name;$('#vroomInfo').innerHTML='<p>'+esc(room.description||'Sin descripción adicional')+'</p><p><strong>Estado:</strong> '+esc(d.status==='free'?'Libre':d.status==='occupied'?'Ocupada':'Pendiente')+'</p><p><strong>Servicios:</strong> '+esc((d.amenities||[]).join(', ')||'Sin datos')+'</p><p><strong>Cortesía:</strong> '+esc(d.courtesy||'No especificada')+'</p><p id="vroomLikeCount">Me gusta: consultando…</p><button class="vroom-button vroom-primary" id="vroomLike">'+svg('<path d="M20.8 4.6a5.5 5.5 0 0 0-7.8 0L12 5.7l-1.1-1.1a5.5 5.5 0 0 0-7.8 7.8L12 21l8.8-8.6a5.5 5.5 0 0 0 0-7.8z"/>')+' Me gusta</button>';$('#vroomLike').onclick=like;wrap.classList.add('open');/* NUEVO */if($('#vibraReserveOverlay.open'))bindReservationRoomViewer(wrap);paint();counts()}
 function paint(){const image=$('#vroomPhoto');if(!image)return;image.hidden=!photos.length;if(photos.length)image.src=photos[position];$('#vroomCount').textContent=photos.length?((position+1)+' / '+photos.length):'Sin fotografías';$('#vroomPrev').disabled=$('#vroomNext').disabled=photos.length<2}
-function close(){$('#vroomOverlay')?.classList.remove('open')}
+// MODIFICADO: recuperar el foco al cerrar el visor desde la reserva.
+function close(){const wrap=$('#vroomOverlay');wrap?.classList.remove('open');const trigger=wrap?.veBookingTrigger;if(wrap){wrap.veBookingTrigger=null;delete wrap.dataset.reservationViewer}if(trigger?.isConnected)trigger.focus({preventScroll:true});else if(trigger&&$('#vibraReserveOverlay.open'))$('#vibraReserveClose')?.focus({preventScroll:true})}
 async function counts(){if(!room)return;const r=await db().from('vibra_room_likes').select('user_id',{count:'exact',head:true}).eq('room_id',room.id);$('#vroomLikeCount').textContent=r.error?'Likes disponibles al configurar SQL':'Me gusta: '+(r.count||0)}
 async function like(){const b=$('#vroomLike');b.disabled=true;try{const c=db(),u=await c.auth.getUser();if(!u.data.user)throw Error('Inicia sesión para dar me gusta');const q=await c.from('vibra_room_likes').select('room_id').eq('room_id',room.id).eq('user_id',u.data.user.id).maybeSingle();if(q.error)throw q.error;const r=q.data?await c.from('vibra_room_likes').delete().eq('room_id',room.id).eq('user_id',u.data.user.id):await c.from('vibra_room_likes').insert({room_id:room.id,user_id:u.data.user.id});if(r.error)throw r.error;await counts()}catch(e){alert(e.message)}finally{b.disabled=false}}
 window.vibraOpenRoomViewer=show;
@@ -6963,13 +6965,14 @@ async function renderRoomPreview(){
   panel.innerHTML='<div class="vibra-room-empty">Cargando información de la habitación…</div>';
   try{
     const info=await fetchRoomInfo(roomId);
+    /* NUEVO */ if(roomSel.value!==roomId||$('#v9Mode')?.value!=='local')return;
     const photos=Array.isArray(info.photos)?info.photos.filter(Boolean):[];
     const stateLabel=info.status==='occupied'?'Ocupada':info.status==='pending'?'Pendiente':'Libre';
     panel.innerHTML=`<div class="vibra-room-preview-head"><div><h3>Habitación seleccionada</h3><p>${esc(info.name||'Habitación')}</p></div><button type="button" class="vibra-ghost-btn" id="vibraRoomOpenViewer">${icon.gallery}<span>Ver a detalle</span></button></div><p class="vibra-room-description">${esc(info.description||'Conoce el espacio, sus servicios y cortesías antes de confirmar la reserva.')}</p><div class="vibra-room-preview-meta"><div class="vibra-room-preview-chip"><strong>Estado</strong><span>${esc(stateLabel)}</span></div><div class="vibra-room-preview-chip"><strong>Servicios</strong><span>${esc((info.amenities||[]).join(' · ')||'Sin datos')}</span></div><div class="vibra-room-preview-chip"><strong>Cortesía</strong><span>${esc(info.courtesy||'No especificada')}</span></div><div class="vibra-room-preview-chip"><strong>Me gusta</strong><span>${esc(info.likes||0)} personas</span></div></div><div class="vibra-room-photo-strip">${photos.length?photos.map((src,i)=>`<button type="button" class="vibra-room-thumb" data-room-thumb="${i}" aria-label="Abrir fotografía ${i+1}"><img loading="lazy" src="${esc(src)}" alt="Fotografía de ${esc(info.name||'la habitación')}"></button>`).join(''):'<div class="vibra-room-empty">La habitación aún no tiene fotografías publicadas.</div>'}</div>`;
     panel.dataset.loaded='1';
     $('#vibraRoomOpenViewer')?.addEventListener('click',()=>window.vibraOpenRoomViewer?.(roomId));
     panel.querySelectorAll('[data-room-thumb]').forEach(btn=>btn.addEventListener('click',()=>window.vibraOpenRoomViewer?.(roomId)));
-  }catch(e){ panel.innerHTML='<div class="vibra-room-empty">No se pudo cargar la información de la habitación: '+esc(e.message)+'</div>'; }
+  }catch(e){ /* NUEVO */ if(roomSel.value!==roomId||$('#v9Mode')?.value!=='local')return;panel.innerHTML='<div class="vibra-room-empty">No se pudo cargar la información de la habitación: '+esc(e.message)+'</div>'; }
 }
 function replaceEmojiBusinessButtons(){
   $$('.v16-glow-btn,#v17KnowBusiness,#v18BusinessBack,#v18BusinessDirections').forEach(btn=>{
@@ -10191,4 +10194,252 @@ html body #v16RateBusinessModal .v16-review-card{background:var(--art-soft);bord
 html body #v16RateBusinessModal .v16-review-stars{color:var(--art-link)}
 html body #vibraReserveBody #v9BookingStatus:not(:empty){padding:8px 12px;border-inline-start:3px solid var(--art-link);background:var(--art-soft)}
 </style>
+<!-- NUEVO -->
+<style>
+/* NUEVO: composición del ZIP limitada al modal de reserva y su visor de habitaciones. */
+html body :is(#vibraReserveOverlay,#vroomOverlay[data-reservation-viewer]){
+ --res-back:#fff5fb;--res-surface:#fffafd;--res-card:#f9e8f4;--res-field:#fff8fc;
+ --res-ink:#301132;--res-muted:#69294f;--res-accent:#9b1856;--res-line:#ad608f;
+ --res-action:#a21960;--res-end:#7222a4;--res-focus:#912070;--res-glow:#a2196040;
+ --res-header:#f6e0f1;--res-overlay:#210922a6;
+ color-scheme:light;
+}
+html body.dark-mode :is(#vibraReserveOverlay,#vroomOverlay[data-reservation-viewer]){
+ --res-back:#100516;--res-surface:#1b0826;--res-card:#200e2a;--res-field:#170720;
+ --res-ink:#fff1fa;--res-muted:#f0b9dc;--res-accent:#ff91c8;--res-line:#a95a91;
+ --res-action:#bb155f;--res-end:#7928ca;--res-focus:#ff8cc9;--res-glow:#ff2a8566;
+ --res-header:#170822;--res-overlay:#08030ed9;
+ color-scheme:dark;
+}
+html body :is(#vibraReserveOverlay,#vroomOverlay[data-reservation-viewer]){
+ background:var(--res-overlay)!important;backdrop-filter:blur(8px);
+}
+html body #vibraReserveOverlay #vibraReserveShell,
+html body #vroomOverlay[data-reservation-viewer] #vroomDialog{
+ --art-panel:var(--res-surface);--art-soft:var(--res-card);--art-ink:var(--res-ink);
+ --art-muted:var(--res-muted);--art-link:var(--res-accent);--art-line:var(--res-line);
+ --art-focus:var(--res-focus);--art-main:var(--res-action);
+ background:linear-gradient(145deg,var(--res-surface),var(--res-back) 65%,var(--res-card))!important;
+ border:1px solid var(--res-line)!important;box-shadow:0 22px 58px -20px var(--res-glow);
+ color:var(--res-ink)!important;font:500 .875rem/1.45 "Plus Jakarta Sans",sans-serif;
+}
+html body #vibraReserveOverlay #vibraReserveShell{width:min(1024px,100%)!important;max-height:94dvh!important;border-radius:24px!important}
+html body #vibraReserveShell #vibraReserveTop{
+ position:static;flex:none;display:flex;justify-content:space-between;align-items:center;
+ background:var(--res-header)!important;padding:14px clamp(12px,2.2vw,28px)!important;
+}
+#vibraReserveShell .ve-res-headline{flex:1;min-width:0}
+#vibraReserveShell #veReservationTitle{font:800 clamp(1rem,2vw,1.25rem)/1.2 Outfit,sans-serif}
+#veReservationTitle svg{box-sizing:content-box;padding:9px;background:var(--res-card);border:1px solid var(--res-line);border-radius:11px;color:var(--res-accent);box-shadow:0 0 15px var(--res-glow)}
+#vibraReserveShell .ve-res-provider{display:block;margin-inline-start:46px;color:var(--res-muted);font-size:.8rem}
+#vibraReserveShell .ve-res-provider:empty{display:none}
+#vibraReserveShell .ve-res-assist{border:1px solid var(--res-line);border-radius:12px;padding:4px 10px;background:var(--res-card);color:var(--res-muted);font-size:.75rem}
+#vibraReserveShell .ve-res-steps{
+ flex:none;display:grid;grid-template-columns:repeat(3,minmax(0,1fr));position:relative;
+ padding:9px clamp(6px,4vw,90px);background:var(--res-back);border-bottom:1px solid var(--res-line);
+}
+#vibraReserveShell .ve-res-steps::before{content:"";position:absolute;top:24px;left:21%;right:21%;height:1px;background:var(--res-line)}
+#vibraReserveShell .ve-res-steps button{position:relative;background:none;color:var(--res-muted);border:0;display:grid;justify-items:center;align-content:start;gap:4px;padding:0 4px;font:inherit;font-weight:700;font-size:.73rem;line-height:1.25;min-height:44px}
+#vibraReserveShell .ve-res-steps b{display:grid;place-items:center;border:1px solid var(--res-line);border-radius:50%;width:32px;height:32px;background:var(--res-card)}
+#vibraReserveShell .ve-res-steps [aria-current] b{background:var(--res-action);color:white;box-shadow:0 0 12px var(--res-glow)}
+html body #vibraReserveShell #vibraReserveBody{
+ display:grid;grid-template-columns:minmax(0,7fr) minmax(0,5fr);align-items:start;gap:24px;
+ padding:clamp(12px,2.2vw,28px)!important;background:transparent!important;flex:1 1 auto;
+}
+#vibraReserveBody #v9Modalities{grid-area:1/1;min-width:0}
+html body #vibraReserveBody #v9Modalities>h3,html body #vibraReserveBody #v9ModesText,
+html body #vibraReserveBody .vibra-mode-shell{display:none}
+html body #vibraReserveBody .vibra-mode-field{max-width:none;display:grid;margin:0 0 8px;padding:14px!important}
+#vibraReserveBody .ve-res-summary{
+ grid-area:1/2;position:sticky;top:0;border:1px solid var(--res-line);border-radius:24px;
+ background:var(--res-surface);box-shadow:0 10px 26px -12px var(--res-glow);padding:22px;min-width:0;
+}
+#vibraReserveBody .ve-res-summary h2{font:800 1rem Outfit,sans-serif;margin:0;border-bottom:1px solid var(--res-line);padding-bottom:12px}
+#vibraReserveBody .ve-res-summary dl{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:8px;margin:12px 0}
+#vibraReserveBody .ve-res-summary dl div{background:var(--res-card);border:1px solid var(--res-line);padding:8px;border-radius:10px;overflow-wrap:anywhere}
+#vibraReserveBody .ve-res-summary dt{color:var(--res-muted);font-size:.7rem;font-weight:800;text-transform:uppercase}
+#vibraReserveBody .ve-res-summary dd{margin:2px 0 0;font-weight:700}
+#vibraReserveBody .ve-res-estimate{border-top:1px solid var(--res-line);padding-top:12px;color:var(--res-accent);font-weight:800}
+#vibraReserveBody:has(.ve-res-estimate:not([hidden])) #v10Quote{display:none}
+html body #vibraReserveBody .ve-res-card{background:var(--res-card);border:1px solid var(--res-line);border-radius:16px;padding:14px;margin:12px 0;scroll-margin-top:12px}
+html body #vibraReserveBody .ve-res-card h3{font:800 .84rem Outfit,sans-serif;color:var(--res-accent)!important;margin:0 0 12px;text-transform:uppercase}
+html body #vibraReserveBody #v9Booking .v9fields{display:grid;grid-template-columns:repeat(2,minmax(0,1fr))!important;gap:10px!important}
+#vibraReserveBody .ve-res-service label:has(#v9Duration),#vibraReserveBody .ve-res-service [data-res-options="duration"],#vibraReserveBody #vibraRoomCards{grid-column:1/-1}
+html body #vibraReserveBody #v9Booking .v9fields input,html body #vibraReserveBody #v9Booking .v9fields select{width:100%;min-width:0}
+#vibraReserveBody .ve-res-options{display:grid;grid-template-columns:repeat(auto-fit,minmax(min(100%,96px),1fr));gap:8px;margin:8px 0}
+#vibraReserveBody .ve-res-options[hidden]{display:none}
+#vibraReserveBody [data-res-options="mode"]{grid-template-columns:repeat(2,minmax(0,1fr))}
+#vibraReserveBody .ve-res-visual-choices select{display:none!important}
+#vibraReserveBody .ve-res-options button{min-height:44px;background:var(--res-field);border:1px solid var(--res-line);color:var(--res-ink);border-radius:11px;font:inherit;padding:6px;overflow-wrap:anywhere}
+#vibraReserveBody [data-res-options="mode"] button{min-height:58px;font-weight:800}
+#vibraReserveBody .ve-res-options button[aria-pressed="true"]{background:var(--res-action);color:#fff;box-shadow:0 0 14px var(--res-glow)}
+ html body #vibraReserveOverlay:not(.ve-res-local) :is(.ve-res-summary dl div:not(:first-child),#v9Booking){display:none!important}
+html body #vibraReserveShell #vibraReserveBody :is(#v9Continue,#v9SubmitBooking):not(:disabled){
+ background:linear-gradient(105deg,var(--res-action),var(--res-end))!important;color:white!important;box-shadow:0 0 16px -4px var(--res-glow);padding:8px 16px;
+}
+html body #vibraReserveShell #v9SubmitBooking{display:flex;margin-inline:auto}
+html body #vibraReserveShell #vibraReserveBody :is(button,input,select,textarea):disabled{opacity:1!important}
+html body #vibraReserveBody .vibra-room-choice img{width:100%;height:112px;object-fit:contain;background:var(--res-back)}
+html body #vibraReserveBody #vibraRoomCards{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:8px}
+html body #vibraReserveBody #vibraRoomCards>*{min-width:0}
+html body #vibraReserveBody #vibraRoomCards .vroom-more{align-self:center}
+html body #vibraReserveBody .vibra-room-choice.selected{box-shadow:0 0 0 1px var(--res-focus),0 0 14px var(--res-glow)}
+html body #vibraReserveShell :is(.vroom-button,.vibra-ghost-btn),html body #vroomOverlay[data-reservation-viewer] .vroom-button{
+ background:var(--res-card)!important;border-color:var(--res-line)!important;color:var(--res-ink)!important;
+}
+html body #vroomOverlay[data-reservation-viewer] #vroomHead{background:var(--res-header);border-color:var(--res-line);color:var(--res-ink)}
+html body #vroomOverlay[data-reservation-viewer] #vroomInfo{background:var(--res-card);color:var(--res-ink)}
+html body #vroomOverlay[data-reservation-viewer] #vroomPhoto{background:var(--res-back);object-fit:contain}
+html body :is(#vibraReserveShell,#vroomOverlay[data-reservation-viewer]) :is(button,input,select,textarea,section[tabindex]):focus-visible{outline:2px solid var(--res-focus)!important;outline-offset:2px}
+@media(hover:hover){
+ html body :is(#vibraReserveShell,#vroomOverlay[data-reservation-viewer]) button:hover:not(:disabled){border-color:var(--res-focus)!important;filter:brightness(1.1)}
+}
+@media(prefers-reduced-motion:no-preference){
+ html body :is(#vibraReserveShell,#vroomOverlay[data-reservation-viewer]) button{transition:border-color 150ms,box-shadow 150ms,filter 150ms,scale 150ms}
+ html body :is(#vibraReserveShell,#vroomOverlay[data-reservation-viewer]) button:active:not(:disabled){scale:.97}
+ html body #vibraReserveShell .vibra-room-choice img{transition:transform 300ms cubic-bezier(.4,0,.2,1)}
+ @media(hover:hover){html body #vibraReserveShell .vibra-room-choice:hover img{transform:scale(1.05)}}
+}
+@media(max-width:760px){
+ html body #vibraReserveShell #vibraReserveBody{grid-template-columns:minmax(0,1fr);gap:14px}
+ #vibraReserveBody .ve-res-summary{grid-area:2/1;position:static;padding:14px;border-radius:16px}
+ #vibraReserveShell .ve-res-assist{display:none}
+}
+@media(max-width:430px){
+ html body #vibraReserveShell #vibraReserveBody #v9Booking .v9fields{grid-template-columns:minmax(0,1fr)!important}
+ html body #vibraReserveBody #vibraRoomCards{grid-template-columns:minmax(0,1fr)}
+ #vibraReserveShell .ve-res-steps button{font-size:.68rem}
+ #vibraReserveShell .ve-res-provider{margin-inline-start:0}
+}
+html body #vibraReserveBody :is(input:not([type=checkbox],[type=radio],[type=file]),select,textarea){
+ background:var(--res-field)!important;color:var(--res-ink)!important;border-color:var(--res-line)!important;
+}
+html body #vibraReserveBody :is(input,textarea)::placeholder{color:var(--res-muted)!important;opacity:1}
+#vibraReserveBody #v9Terms{accent-color:var(--res-action)}
+#vibraReserveShell .ve-res-steps button:disabled{color:var(--res-muted);cursor:not-allowed}
+#vibraReserveBody .vibra-room-choice{overflow:hidden}
+html body #vibraReserveShell #vibraRoomFeedback:empty{display:none}
+html body #vibraReserveShell #vibraRoomFeedback{color:var(--res-muted)!important}
+html body #vibraReserveShell .vibra-mode-field:focus-visible{outline:2px solid var(--res-focus);outline-offset:2px}
+html body #vibraReserveShell .vibra-mode-field{scroll-margin-top:12px}
+html body #vibraReserveBody #vibraRoomCards .vroom-more{min-height:44px}
+html body #vibraReserveShell :is(button,input,select,textarea):disabled{color:var(--res-muted);cursor:not-allowed}
+</style>
+<script>
+// NUEVO: las tarjetas reflejan los selectores reales y delegan en sus eventos existentes.
+function bindReservationPresentation(root){
+ const get=id=>id?root.querySelector('#'+id):null;
+ const steps=[...root.querySelectorAll('[data-res-step]')];
+ const choices=[['mode','v9Mode'],['duration','v9Duration'],['time','v9Time']];
+ const observer=new MutationObserver(schedule);
+ let frame=0;
+ function schedule(){if(!frame)frame=requestAnimationFrame(update)}
+ function renderChoices(kind,select){
+  const host=root.querySelector('[data-res-options="'+kind+'"]');
+  if(!host||!select)return;
+  const options=[...select.options].filter(option=>option.value);
+  const signature=JSON.stringify(options.map(option=>[option.value,option.textContent,option.disabled]));
+  if(host.dataset.options!==signature){
+   host.dataset.options=signature;
+   host.replaceChildren(...options.map(option=>{
+    const button=document.createElement('button');
+    button.type='button';button.dataset.resValue=option.value;
+    button.textContent=option.textContent;button.disabled=option.disabled;
+    return button;
+   }));
+  }
+  for(const button of host.children)button.setAttribute('aria-pressed',String(button.dataset.resValue===select.value));
+  const enhanced=options.length>0&&!select.disabled;
+  if(host.hidden===enhanced)host.hidden=!enhanced;
+  const label=select.closest('label');
+  if(label){
+   label.classList.toggle('ve-res-visual-choices',enhanced);
+   select.tabIndex=enhanced?-1:0;
+   if(enhanced)select.setAttribute('aria-hidden','true');else select.removeAttribute('aria-hidden');
+  }
+ }
+ function update(){
+  frame=0;
+  if(!root.classList.contains('open'))return;
+  const mode=get('v9Mode'),duration=get('v9Duration'),booking=get('v9Booking');
+  if(!mode||!booking)return;
+  if(!root.querySelector('[data-res-options="mode"]')){
+   const host=document.createElement('div');host.className='ve-res-options';host.dataset.resOptions='mode';
+   mode.closest('label').after(host);
+  }
+  if(duration&&!root.querySelector('[data-res-options="duration"]')){
+   const host=document.createElement('div');host.className='ve-res-options';host.dataset.resOptions='duration';
+   duration.closest('label').after(host);
+  }
+  const local=mode.value==='local'&&!booking.hidden;
+  root.classList.toggle('ve-res-local',local);
+  for(const [kind,id] of choices)renderChoices(kind,get(id));
+  const fields={mode:'v9Mode',service:'v9Service',room:'v9Room',duration:'v9Duration',date:'v9Date',time:'v9Time'};
+  for(const [name,id] of Object.entries(fields)){
+   const field=get(id),target=root.querySelector('[data-res-summary="'+name+'"]');
+   const value=(name==='mode'||local)&&field?.value?(name==='date'?field.value.split('-').reverse().join('/'):field.selectedOptions?.[0]?.textContent||field.value):'Por seleccionar';
+   if(target.textContent!==value)target.textContent=value;
+  }
+  const provider=get('v9ModesText')?.textContent||'';
+  const heading=root.querySelector('.ve-res-provider');
+  if(heading.textContent!==provider)heading.textContent=provider;
+  const quote=local?get('v10Quote')?.textContent||'':'';
+  const estimate=root.querySelector('.ve-res-estimate');
+  if(estimate.hidden===!!quote)estimate.hidden=!quote;
+  if(estimate.textContent!==quote)estimate.textContent=quote;
+  steps.slice(1).forEach(button=>{if(button.disabled===local)button.disabled=!local});
+  if(!local){steps.slice(1).forEach(button=>button.removeAttribute('aria-current'));steps[0].setAttribute('aria-current','step')}
+  for(const card of root.querySelectorAll('.vibra-room-choice[data-room]')){
+   const selected=card.dataset.room===get('v9Room')?.value;
+   card.classList.toggle('selected',selected);card.setAttribute('aria-pressed',String(selected));
+  }
+ }
+ root.addEventListener('click',event=>{
+  const step=event.target.closest('[data-res-step]');
+  if(step){
+   const section=root.querySelector(['.vibra-mode-field','.ve-res-date','.ve-res-client'][Number(step.dataset.resStep)-1]);
+   if(section){
+    section.tabIndex=-1;section.focus({preventScroll:true});
+    section.scrollIntoView({block:'start',behavior:matchMedia('(prefers-reduced-motion: reduce)').matches?'instant':'smooth'});
+    steps.forEach(button=>button.removeAttribute('aria-current'));step.setAttribute('aria-current','step');
+   }
+   return;
+  }
+  const button=event.target.closest('[data-res-value]');
+  if(!button)return;
+  const kind=button.parentElement.dataset.resOptions;
+  const select=get(choices.find(item=>item[0]===kind)?.[1]);
+  if(!select||select.disabled||![...select.options].some(option=>option.value===button.dataset.resValue&&!option.disabled))return;
+  if(select.value!==button.dataset.resValue){
+   select.value=button.dataset.resValue;
+   select.dispatchEvent(new Event('change',{bubbles:true}));
+  }
+  schedule();
+ });
+ root.addEventListener('change',schedule);
+ root.addEventListener('input',schedule);
+ observer.observe(root,{attributes:true,attributeFilter:['class']});
+ observer.observe(get('vibraReserveBody'),{subtree:true,childList:true,characterData:true,attributes:true,attributeFilter:['hidden','disabled']});
+ steps[0].setAttribute('aria-current','step');
+}
+// NUEVO: foco del visor secundario durante la reserva, sin interceptar otros visores.
+function bindReservationRoomViewer(wrap){
+ wrap.veBookingTrigger=document.activeElement;
+ wrap.dataset.reservationViewer='true';
+ if(!wrap.veBookingKeys){
+  wrap.veBookingKeys=true;
+  wrap.addEventListener('keydown',event=>{
+   if(!wrap.veBookingTrigger)return;
+   if(event.key==='Escape'){event.preventDefault();event.stopPropagation();wrap.querySelector('#vroomClose').click();return}
+   if(event.key!=='Tab')return;
+   const buttons=[...wrap.querySelectorAll('button:not(:disabled)')];
+   const first=buttons[0],last=buttons.at(-1);
+   if(first&&(event.shiftKey?document.activeElement===first:document.activeElement===last)){
+    event.preventDefault();(event.shiftKey?last:first).focus();
+   }
+  });
+ }
+ wrap.querySelector('#vroomClose').focus({preventScroll:true});
+}
+</script>
 </html>
