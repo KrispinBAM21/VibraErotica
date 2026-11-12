@@ -1742,6 +1742,8 @@ async function addressCandidates(query){
   }),candidate.approx);
  };
  for(const candidate of variants){
+  // MODIFICADO: usar en paralelo el proveedor existente de predicciones y el backend.
+  const backend=async()=>{
   if(supabaseClient){
    try{
     const {data,error}=await supabaseClient.functions.invoke('catalog-address',{body:{query:candidate.query},signal:AbortSignal.timeout(4500)});
@@ -1752,9 +1754,11 @@ async function addressCandidates(query){
     }
    }catch{}
   }
-  for(const provider of [publicSearch,photonSearch]){
-   try{const rows=await provider(candidate);if(rows.length)return rows}catch{}
-  }
+  return [];
+  };
+  const nonempty=async task=>{const rows=await task;if(rows.length)return rows;throw Error('Sin coincidencias')};
+  try{return await Promise.any([nonempty(backend()),nonempty(photonSearch(candidate))])}catch{}
+  try{const rows=await publicSearch(candidate);if(rows.length)return rows}catch{}
  }
  if(!responded)throw Error('Los buscadores de direcciones no respondieron. Intenta de nuevo, usa tu ubicación o marca la entrada en el mapa.');
  return [];
@@ -1763,7 +1767,7 @@ foodSearch=async function(query){const results=await addressCandidates(query);if
 function invalidateDestination(){checkout.lat=checkout.lng=null;checkout.distance=checkout.shipping=0;checkout.savedAddressId='';invalidateCommerceQuote();if(customerMarker&&clientMap){clientMap.removeLayer(customerMarker);customerMarker=null}if(publicFoodPin&&publicFoodMap){publicFoodMap.removeLayer(publicFoodPin);publicFoodPin=null}if(publicFoodRoute&&publicFoodMap){publicFoodMap.removeLayer(publicFoodRoute);publicFoodRoute=null}const info=document.getElementById('distanceInfo');if(info)info.textContent='Selecciona una dirección o marca la entrada.';document.getElementById('foodQuote').textContent='Confirma el nuevo destino para calcular el recorrido.';updateCommerceTotals()}
 async function setCustomerDestination(p,target){checkout.address=p.address||checkout.address||'Punto de entrega';checkout.delivery='delivery';checkout.lat=p.lat;checkout.lng=p.lng;invalidateCommerceQuote();for(const id of ['foodDestination','clientAddress']){const field=document.getElementById(id);if(field)field.value=checkout.address}if(publicFoodMap){if(publicFoodPin)publicFoodPin.setLatLng([p.lat,p.lng]);else{publicFoodPin=L.marker([p.lat,p.lng],{draggable:true,icon:labeledFoodPin('destination')}).addTo(publicFoodMap);publicFoodPin.on('dragend',e=>{const ll=e.target.getLatLng();setCustomerDestination({lat:ll.lat,lng:ll.lng,address:checkout.address},'public').catch(err=>toast(err.message,'error'))})}publicFoodMap.setView([p.lat,p.lng],17)}if(target==='cart'&&clientMap){if(customerMarker)customerMarker.setLatLng([p.lat,p.lng]);else{customerMarker=L.marker([p.lat,p.lng],{draggable:true,icon:labeledFoodPin('destination')}).addTo(clientMap);customerMarker.on('dragend',e=>{const ll=e.target.getLatLng();setCustomerDestination({lat:ll.lat,lng:ll.lng,address:checkout.address},'cart').catch(err=>toast(err.message,'error'))})}clientMap.setView([p.lat,p.lng],17)}await quoteFoodRoute()}
 chooseFoodDestination=async function(lat,lng){return setCustomerDestination({lat,lng,address:checkout.address||'Punto de entrega'},'public')};
-function attachAddressLookup(input,query,choose,changed,current=()=>true){let timer,serial=0;const host=document.createElement('div');host.className='address-suggestions';host.setAttribute('aria-live','polite');input.after(host);input.setAttribute('autocomplete','off');const search=async()=>{clearTimeout(timer);const value=query().trim();const turn=++serial,epoch=customerSerial;if(value.length<4){host.replaceChildren();return}host.textContent='Buscando direcciones…';try{const results=await addressCandidates(value);if(turn!==serial||epoch!==customerSerial||!host.isConnected||!current())return;host.innerHTML=results.length?results.map((r,i)=>`<button type="button" class="address-suggestion" data-suggestion="${i}">${UI.pin}<span>${esc(r.address)}<small>${['building','amenity'].includes(r.precision)?'Revisa el pin de la entrada':'Ubicación aproximada; ajusta el pin a la entrada'}</small></span></button>`).join(''):'<p class="small">Sin coincidencias. Añade colonia y municipio, utiliza GPS o marca la entrada.</p>';host.querySelectorAll('[data-suggestion]').forEach(b=>b.onclick=async()=>{if(epoch!==customerSerial||!current())return;serial++;clearTimeout(timer);host.replaceChildren();try{await choose(results[Number(b.dataset.suggestion)])}catch(e){toast(e.message,'error')}})}catch(e){if(turn===serial&&host.isConnected)host.textContent=e.message}};input.oninput=()=>{serial++;host.replaceChildren();changed();clearTimeout(timer);timer=setTimeout(search,900)} /* MODIFICADO: limpiar sugerencias de la consulta anterior. */;input.addEventListener('keydown',e=>{if(e.key==='Enter'){e.preventDefault();search()}if(e.key==='Escape'){serial++;clearTimeout(timer);host.replaceChildren()} /* MODIFICADO */});return{search,invalidate:()=>{serial++;clearTimeout(timer);host.replaceChildren()}};}
+function attachAddressLookup(input,query,choose,changed,current=()=>true){let timer,serial=0;const host=document.createElement('div');host.className='address-suggestions';host.setAttribute('aria-live','polite');input.after(host);input.setAttribute('autocomplete','off');const search=async()=>{clearTimeout(timer);const value=query().trim();const turn=++serial,epoch=customerSerial;if(value.length<4){host.replaceChildren();return}host.textContent='Buscando direcciones…';try{const results=await addressCandidates(value);if(turn!==serial||epoch!==customerSerial||!host.isConnected||!current())return;host.innerHTML=results.length?results.map((r,i)=>`<button type="button" class="address-suggestion" data-suggestion="${i}">${UI.pin}<span>${esc(r.address)}<small>${['building','amenity'].includes(r.precision)?'Revisa el pin de la entrada':'Ubicación aproximada; ajusta el pin a la entrada'}</small></span></button>`).join(''):'<p class="small">Sin coincidencias. Añade colonia y municipio, utiliza GPS o marca la entrada.</p>';host.querySelectorAll('[data-suggestion]').forEach(b=>b.onclick=async()=>{if(epoch!==customerSerial||!current())return;serial++;clearTimeout(timer);host.replaceChildren();try{await choose(results[Number(b.dataset.suggestion)])}catch(e){toast(e.message,'error')}})}catch(e){if(turn===serial&&host.isConnected)host.textContent=e.message}};input.oninput=()=>{serial++;host.replaceChildren();changed();clearTimeout(timer);timer=setTimeout(search,450) /* MODIFICADO: mostrar antes las predicciones. */} /* MODIFICADO: limpiar sugerencias de la consulta anterior. */;input.addEventListener('keydown',e=>{if(e.key==='Enter'){e.preventDefault();search()}if(e.key==='Escape'){serial++;clearTimeout(timer);host.replaceChildren()} /* MODIFICADO */});return{search,invalidate:()=>{serial++;clearTimeout(timer);host.replaceChildren()}};}
 const destinationLookups=new Map();function bindDestinationSearch(input,target){if(!input)return;const lookup=attachAddressLookup(input,()=>input.value,p=>setCustomerDestination(p,target),()=>{checkout.address=input.value;invalidateDestination()});destinationLookups.set(input.id,lookup)}
 function runDestinationSearch(id,target){destinationLookups.get(id)?.search()}
 bindDestinationSearch(document.getElementById('foodDestination'),'public');document.getElementById('foodSearchDestination').onclick=()=>runDestinationSearch('foodDestination','public');
@@ -1843,11 +1847,13 @@ async function registerTracking(order){
   // Nunca convertir un pedido anónimo anterior en pedido de otra cuenta por token local.
   return null;
 }
-async function refreshTracking(){if(!customerSession?.user?.id){trackingOrders=[];trackingEvents=[];renderTrackingButtons();return}if(trackingBusy||!supabaseClient)return;trackingBusy=true;const epoch=trackingEpoch,userId=customerSession.user.id;try{const r=await trackingCall('list',{tokens:[]});if(epoch!==trackingEpoch||customerSession?.user?.id!==userId)return;trackingOrders=(r.orders||[]).filter(o=>!o.customer_user_id||o.customer_user_id===userId);trackingEvents=r.events||[];trackingConfig=r.settings||trackingConfig;const closed=new Set(trackingOrders.filter(o=>!o.chat_open).map(o=>o.id));for(const id of closed){chatDrafts.delete(id);delete chatSeen[id]}if(activeChat?.role==='customer'&&closed.has(activeChat.orderId)){closeChat('La conversación se cerró porque el pedido terminó o el chat fue desactivado.')}renderTrackingButtons();renderPreparation();if(document.getElementById('myOrdersModal')?.classList.contains('show'))paintMyOrders();if(document.getElementById('notificationsModal')?.classList.contains('show'))paintNotifications();}finally{trackingBusy=false}}
+// MODIFICADO: compartir la consulta activa dentro de la misma sesión.
+let veTrackingRequest=null;
+async function refreshTracking(){if(!customerSession?.user?.id){trackingOrders=[];trackingEvents=[];renderTrackingButtons();return}if(!supabaseClient)return;const epoch=trackingEpoch,userId=customerSession.user.id;if(veTrackingRequest?.epoch===epoch&&veTrackingRequest.userId===userId)return veTrackingRequest.promise;const request={epoch,userId};veTrackingRequest=request;trackingBusy=true;request.promise=(async()=>{try{const r=await trackingCall('list',{tokens:[]});if(epoch!==trackingEpoch||customerSession?.user?.id!==userId)return;trackingOrders=(r.orders||[]).filter(o=>!o.customer_user_id||o.customer_user_id===userId);trackingEvents=r.events||[];trackingConfig=r.settings||trackingConfig;const closed=new Set(trackingOrders.filter(o=>!o.chat_open).map(o=>o.id));for(const id of closed){chatDrafts.delete(id);delete chatSeen[id]}if(activeChat?.role==='customer'&&closed.has(activeChat.orderId)){closeChat('La conversación se cerró porque el pedido terminó o el chat fue desactivado.')}renderTrackingButtons();renderPreparation();if(document.getElementById('myOrdersModal')?.classList.contains('show'))paintMyOrders();if(document.getElementById('notificationsModal')?.classList.contains('show'))paintNotifications();}finally{if(veTrackingRequest===request){veTrackingRequest=null;trackingBusy=false}}})();return request.promise}
 function renderTrackingButtons(){const adminBtn=document.getElementById('adminBtn');let orders=document.getElementById('myOrdersBtn');if(!orders){orders=document.createElement('button');orders.id='myOrdersBtn';orders.className='icon-btn followup-button';orders.innerHTML=UI.receipt;orders.setAttribute('aria-label','Mis reservaciones');orders.title='Mis reservaciones';adminBtn.before(orders);orders.onclick=openMyOrders}orders.hidden=!customerSession?.user?.id;orders.style.display=orders.hidden?'none':'';let bell=document.getElementById('notificationsBtn');if(!bell){bell=document.createElement('button');bell.id='notificationsBtn';bell.className='icon-btn followup-button';bell.title='Notificaciones';bell.setAttribute('aria-label','Notificaciones');adminBtn.before(bell);bell.onclick=openNotifications}bell.hidden=!customerSession?.user?.id;bell.style.display=bell.hidden?'none':'';const count=customerSession?.user?.id&&trackingConfig.notifications_enabled?trackingEvents.filter(e=>Number(e.id)>trackingSeen).length+trackingOrders.filter(o=>o.chat_open&&o.last_message_sender==='admin'&&Number(o.last_message_id)>(chatSeen[o.id]||0)).length:0;bell.innerHTML=BELL_ICON+(count?'<span class="followup-count">'+count+'</span>':'');let bubble=document.getElementById('orderChatBubble');if(!bubble){bubble=document.createElement('button');bubble.id='orderChatBubble';bubble.className='btn order-chat-bubble';document.body.append(bubble);bubble.onclick=()=>{const open=trackingOrders.filter(o=>o.chat_open);if(open.length===1)openOrderChat(open[0].id);else openMyOrders()}}const open=trackingOrders.filter(o=>o.chat_open);bubble.hidden=!open.length;bubble.innerHTML=CHAT_ICON+'<span>Chat de '+(open.length===1?'pedido '+esc(open[0].folio):'mis pedidos')+'</span>';}
 function preparationText(o){if(o?.fulfillment_stage==='listo')return 'Tu pedido está listo.';if(o?.fulfillment_stage==='en_camino')return 'Entrega en camino.';if(o?.status==='entregado')return 'Pedido entregado.';if(o?.estimated_ready_at){const seconds=Math.ceil((new Date(o.estimated_ready_at)-Date.now())/1000);return seconds>0?'Preparación estimada: '+Math.floor(seconds/60)+' min '+String(seconds%60).padStart(2,'0')+' s restantes.':'El tiempo estimado se cumplió; consulta al local.'}return 'Preparación estimada: '+(o?.preparation_minutes??trackingConfig.preparation_minutes)+' minutos desde la confirmación del local.'}
 function renderPreparation(){document.querySelectorAll('[data-prep-order]').forEach(el=>el.textContent=preparationText(trackingOrders.find(o=>o.id===el.dataset.prepOrder)));const info=document.getElementById('catalogPreparation');if(info)info.textContent='Tiempo habitual de preparación: '+trackingConfig.preparation_minutes+' min. El local confirma el tiempo de tu pedido.'}
-async function openMyOrders(){if(!customerSession?.user?.id){renderCustomerProfile();openModal('customerProfileModal');toast('Inicia sesión para consultar únicamente tus pedidos.','info');return}const m=v4Modal('myOrdersModal','Mis reservaciones');m.classList.add('modal-followup');openModal(m.id);m.querySelector('.modal-body').innerHTML='<p>Cargando reservaciones…</p>';try{await recoverLocalTracking();await refreshTracking();paintMyOrders()}catch(e){m.querySelector('.modal-body').innerHTML='<p class="tracking-error">'+esc(e.message)+'</p>'+panelButton('retryMyOrders','Reintentar',UI.refresh,'secondary');document.getElementById('retryMyOrders').onclick=openMyOrders}}
+async function openMyOrders(){if(!customerSession?.user?.id){renderCustomerProfile();openModal('customerProfileModal');toast('Inicia sesión para consultar únicamente tus pedidos.','info');return}const m=v4Modal('myOrdersModal','Mis reservaciones');m.classList.add('modal-followup');openModal(m.id);const owner=customerSession.user.id,epoch=trackingEpoch;if(trackingOrders.length||v6Pending?.owner===owner)paintMyOrders();else m.querySelector('.modal-body').innerHTML='<p role="status">Cargando reservaciones…</p>';try{await refreshTracking();if(customerSession?.user?.id===owner&&trackingEpoch===epoch&&m.classList.contains('show'))paintMyOrders()}catch(e){if(customerSession?.user?.id!==owner||trackingEpoch!==epoch||!m.classList.contains('show'))return;m.querySelector('.modal-body').innerHTML='<p class="tracking-error">'+esc(e.message)+'</p>'+panelButton('retryMyOrders','Reintentar',UI.refresh,'secondary');document.getElementById('retryMyOrders').onclick=openMyOrders}}
 function paintMyOrders(){const host=document.getElementById('myOrdersModal')?.querySelector('.modal-body');if(!host)return;host.innerHTML=`<p class="small muted">Pedidos asociados a tu cuenta. Solo tú puedes consultarlos al iniciar sesión.</p>${v6Pending&&v6Pending.owner===customerSession?.user?.id?`<div class="followup-card"><h3>Pedido ${esc(v6Pending.order.folio)}</h3><p>Pago pendiente de finalizar.</p>${panelButton('resumeFromOrders','Continuar pago',UI.receipt,'secondary')}</div>`:''}<div class="followup-list">${trackingOrders.map(o=>`<article class="followup-card"><h3>Pedido ${esc(o.folio)} · ${money(o.total)}</h3><span class="followup-stage">${esc(stageLabels[o.fulfillment_stage]||o.status)}</span><p>Pago: ${esc(ticketPaymentLabel(o.payment_status))}</p><p class="prep-clock" data-prep-order="${esc(o.id)}">${esc(preparationText(o))}</p><p>${esc(o.delivery_type==='delivery'?o.delivery_address:'Recoger en el local')}</p><p class="small">Referencia del pedido: ${esc(o.payment_reference||'No aplica')}</p><div class="toolbar"><button class="btn secondary" data-track-pdf="${esc(o.id)}">${UI.download}<span>Ticket</span></button>${o.chat_open?`<button class="btn" data-track-chat="${esc(o.id)}">${CHAT_ICON}<span>Conversar con el local</span></button>`:''}</div></article>`).join('')||'<p>Todavía no hay pedidos disponibles para seguimiento.</p>'}</div><p class="small muted">${trackingConfig.notifications_enabled?'Recibirás avisos aquí cuando el administrador confirme pago, preparación y entrega.':'El local gestiona las confirmaciones por llamada o WhatsApp. Puedes consultar el estado del pedido aquí.'}</p>`;host.querySelectorAll('[data-track-chat]').forEach(b=>b.onclick=()=>openOrderChat(b.dataset.trackChat));host.querySelectorAll('[data-track-pdf]').forEach(b=>b.onclick=e=>panelRun(e.currentTarget,async()=>{const raw=trackingOrders.find(o=>o.id===b.dataset.trackPdf);ticketDownload(await buildPdf(cloudOrderToState(raw)),'pedido-'+raw.folio+'.pdf')}));document.getElementById('resumeFromOrders')?.addEventListener('click',()=>{closeModal('myOrdersModal');resumePending()})}
 function paintNotifications(){const host=document.getElementById('notificationsModal').querySelector('.modal-body');host.innerHTML=trackingConfig.notifications_enabled?`<div>${trackingEvents.slice().sort((a,b)=>Number(b.id)-Number(a.id)).map(e=>`<article class="notification-item"><strong>${esc(e.title)}</strong><small>Pedido ${esc(trackingOrders.find(o=>o.id===e.order_id)?.folio||'')} · ${esc(new Date(e.created_at).toLocaleString('es-MX'))}</small></article>`).join('')||'<p>Sin avisos nuevos.</p>'}${trackingOrders.filter(o=>o.chat_open&&o.last_message_sender==='admin').map(o=>`<article class="notification-item">El local respondió en el pedido ${esc(o.folio)}.</article>`).join('')}</div>`:'<p>El administrador desactivó los avisos automáticos. Las confirmaciones se realizan por llamada o WhatsApp.</p>';}
 async function openNotifications(){if(!customerSession?.user?.id){renderCustomerProfile();openModal('customerProfileModal');return}v4Modal('notificationsModal','Notificaciones');openModal('notificationsModal');try{await refreshTracking();paintNotifications();trackingSeen=Math.max(trackingSeen,...trackingEvents.map(e=>Number(e.id)));persistTracking();renderTrackingButtons()}catch(e){document.getElementById('notificationsModal').querySelector('.modal-body').textContent=e.message}}
@@ -5396,9 +5402,14 @@ const offered=links.filter(x=>x.practitioner_id===id).map(x=>x.service_id);
 el('#v9Service').innerHTML=services.filter(s=>s.active&&offered.includes(s.id)).map(s=>`<option value="${s.id}">${esc(s.name)} · $${s.hourly_price} MXN/h</option>`).join('');
 el('#v9Room').innerHTML=rooms.filter(r=>r.active).map(r=>`<option value="${r.id}">${esc(r.name)}</option>`).join('');
 const d=new Date();el('#v9Date').min=[d.getFullYear(),String(d.getMonth()+1).padStart(2,'0'),String(d.getDate()).padStart(2,'0')].join('-');el('#v9Date').value=el('#v9Date').min;
-refreshDurations();/* modal keeps reservation in place */
+// MODIFICADO: aplicar la duración de tarjeta únicamente si pertenece al servicio y figura en sus opciones.
+const choice=window.veServiceDuration;
+window.veServiceDuration=null;
+if(choice?.practitioner===id&&offered.includes(choice.service)&&[...el('#v9Service').options].some(o=>o.value===choice.service))el('#v9Service').value=choice.service;
+refreshDurations(choice?.practitioner===id&&el('#v9Service').value===choice.service?choice.minutes:undefined);/* modal keeps reservation in place */
 }
-function refreshDurations(){const id=el('#v9Service').value;el('#v9Duration').innerHTML=durations.filter(x=>x.service_id===id).map(x=>`<option value="${x.minutes}">${x.minutes} minutos</option>`).join('');refreshSlots()}
+function refreshDurations(preferred){const id=el('#v9Service').value; // MODIFICADO
+el('#v9Duration').innerHTML=durations.filter(x=>x.service_id===id).map(x=>`<option value="${x.minutes}">${x.minutes} minutos</option>`).join('');if([...el('#v9Duration').options].some(o=>o.value===String(preferred)))el('#v9Duration').value=String(preferred);refreshSlots()}
 async function refreshSlots(){const id=el('#v9Modalities')?.dataset.practitioner;
 const s=el('#v9Time');if(!s||!id)return;s.innerHTML='<option value="">Consultando disponibilidad…</option>';
 const inputs=['#v9Service','#v9Room','#v9Duration','#v9Date'].map(x=>el(x)?.value);
@@ -5718,7 +5729,7 @@ function updateServices(){
   if(html){grid.querySelectorAll(':scope > .section-card').forEach(n=>{if(n.textContent.includes('No hay productos para mostrar'))n.style.display='none'});}
   wrap.querySelectorAll('[data-vibra-book]').forEach(b=>b.onclick=()=>{
     const real=[...source.querySelectorAll('button[data-p]')].find(x=>x.dataset.p===b.dataset.vibraBook);
-    if(real){real.click();$('#v9Modalities')?.scrollIntoView({behavior:'smooth',block:'center'});}
+    if(real){window.veServiceDuration=b.veDuration||null;delete b.veDuration;real.click();$('#v9Modalities')?.scrollIntoView({behavior:'smooth',block:'center'});}
   });
 }
 const observer=new MutationObserver(changes=>{if(changes.some(x=>x.target.id==='v9Professionals'||x.target.closest?.('#v9Professionals'))){updateServices()}});
@@ -5845,6 +5856,43 @@ q('#vsmShowComments').onclick=()=>{comments.hidden=!comments.hidden};q('#vsmSend
 renderFeedback();
 drawGallery();}
 function enhanceCards(){qa('#vibraServiceCatalog .vibra-service-card').forEach(card=>{const id=q('[data-vibra-book]',card)?.dataset.vibraBook;if(!id)return;const s=allServices.find(x=>x.id===serviceLinks.find(y=>y.practitioner_id===id)?.service_id);let price=q('.vsm-price',card);if(s&&!price){price=document.createElement('p');price.className='vsm-price';q('.vibra-service-content',card)?.append(price);}if(price&&s)price.textContent=`${s.name} · Tarifa: $${Number(s.hourly_price).toLocaleString('es-MX',{minimumFractionDigits:2})} MXN`;
+ // NUEVO: opciones reales de duración y reacción del profesional.
+ const book=q('[data-vibra-book]',card), footer=q('.ve-service-actions',card);
+ if(footer&&s?.active!==false&&s){
+  const minutes=[...new Set((window.vsmDurations||[]).filter(row=>row.service_id===s.id).map(row=>Number(row.minutes)).filter(n=>Number.isInteger(n)&&n>0))].sort((a,b)=>a-b);
+  const signature=s.id+':'+minutes.join(',');
+  let row=q('.ve-service-times',card);
+  if(row?.dataset.times!==signature){
+   row?.remove();
+   if(minutes.length){
+    row=document.createElement('div');row.className='ve-service-times';row.dataset.times=signature;row.setAttribute('role','group');row.setAttribute('aria-label','Duración del servicio');
+    for(const time of minutes){
+     const button=document.createElement('button');button.type='button';button.className='btn secondary';button.textContent=time+' min';
+     button.onclick=()=>{book.veDuration={practitioner:id,service:s.id,minutes:time};book.click()};
+     row.append(button);
+    }
+    footer.before(row);
+   }
+  }
+ }
+ const mediaHost=q('.ve-card-media',card);
+ if(mediaHost&&!q('.ve-service-like',card)){
+  const button=document.createElement('button');button.type='button';button.className='v12-social-btn ve-service-like';button.setAttribute('aria-label','Me gusta');
+  button.innerHTML='<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 20 4.8 13a4.5 4.5 0 0 1 6.4-6.4l.8.8.8-.8a4.5 4.5 0 0 1 6.4 6.4z"/></svg><span>Me gusta</span>';
+  button.onclick=async()=>{
+   button.disabled=true;
+   try{
+    const client=db();if(!client)throw Error('Sin conexión a Supabase');
+    const toggle=await client.rpc('vibra_service_feedback',{p_action:'like',p_practitioner_id:id,p_payload:{}});
+    if(toggle.error)throw toggle.error;
+    const read=await client.rpc('vibra_service_feedback',{p_action:'read',p_practitioner_id:id,p_payload:{}});
+    if(read.error)throw read.error;
+    button.setAttribute('aria-pressed',String(!!read.data?.liked));
+    button.querySelector('span').textContent=String(Number(read.data?.likes)||0);
+   }catch(err){toast(err.message,'error')}finally{button.disabled=false}
+  };
+  mediaHost.append(button);
+ }
  const items=allMedia.filter(x=>x.practitioner_id===id&&x.object_path);if(items.length){const photo=q('.vibra-service-photo',card);if(photo&&!photo.closest('.vsm-view-trigger')){const b=document.createElement('button');b.className='vsm-view-trigger';b.type='button';b.setAttribute('aria-label','Ver servicio completo y galería');photo.replaceWith(b);b.append(photo);b.onclick=()=>showViewer(id);}if(!q('.vsm-media-button',card)){const b=document.createElement('button');b.type='button';b.className='btn secondary vsm-media-button';b.innerHTML='<svg aria-hidden="true" viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="11" cy="11" r="7"/><path d="m16 16 4 4"/><path d="M8 11h6m-3-3v6"/></svg><span>Ver servicio</span><small>Fotos y videos ('+items.length+')</small>';b.onclick=()=>showViewer(id);q('.ve-service-actions',card)?.prepend(b); /* MODIFICADO: acciones juntas al pie. */}}});}
 let scheduled=false;const observe=new MutationObserver(m=>{if(scheduled)return;const admin=m.some(x=>x.target.id==='adminContent'||x.target.closest?.('#adminContent'));const catalog=m.some(x=>x.target.id==='catalogGrid'||x.target.closest?.('#vibraServiceCatalog'));if(!admin&&!catalog)return;scheduled=true;requestAnimationFrame(()=>{scheduled=false;if(admin)attach();if(catalog)enhanceCards()});});
 const vsmPreviousRender=renderProductsAdmin;renderProductsAdmin=function(c){vsmPreviousRender(c);queueMicrotask(attach)};
@@ -9758,4 +9806,28 @@ html body main #catalogGrid .ve-reference-card :is(.meta,.v12-social-row){flex-w
  window.addEventListener('resize',update,{passive:true});update();
 })();
 </script>
+<!-- NUEVO: efectos de controles y fichas de servicio -->
+<style>
+/* NUEVO: controles temáticos inspirados en las cápsulas y el relieve del ZIP. */
+#catalogGrid .ve-service-times{display:flex;flex-wrap:wrap;gap:6px;padding:0 16px 10px}
+#catalogGrid .ve-service-times .btn{min-height:34px;padding:4px 9px;font-size:.77rem;border-radius:9px}
+html body main #catalogGrid .ve-service-like{
+ position:absolute;z-index:3;top:10px;right:10px;min-height:36px!important;
+ color:var(--art-ink)!important;background:var(--art-panel)!important;border:1px solid var(--art-line)!important;
+}
+html body main #catalogGrid .ve-service-like[aria-pressed=true]{color:var(--art-link)!important;border-color:var(--art-focus)!important}
+#catalogGrid .ve-service-like[aria-pressed=true] svg{fill:currentColor}
+html body :is(main,.topbar,#foodDeliveryPlanner) :is(.btn,.chip,.v12-social-btn,.vibra-filter-picker):focus-visible{
+ outline:2px solid var(--art-focus);outline-offset:2px;
+}
+@media(hover:hover) and (prefers-reduced-motion:no-preference){
+ html body :is(main,.topbar,#foodDeliveryPlanner) :is(.btn,.chip,.v12-social-btn,.vibra-filter-picker){
+  transition:transform .2s ease,border-color .2s ease,box-shadow .2s ease;
+ }
+ html body :is(main,.topbar,#foodDeliveryPlanner) :is(.btn,.chip,.v12-social-btn,.vibra-filter-picker):hover:not(:disabled){
+  transform:translateY(-2px);border-color:var(--art-focus)!important;box-shadow:0 5px 16px color-mix(in srgb,var(--art-main) 29%,transparent);
+ }
+ html body :is(main,.topbar,#foodDeliveryPlanner) :is(.btn,.chip,.v12-social-btn,.vibra-filter-picker):active:not(:disabled){transform:scale(.97)}
+}
+</style>
 </html>
