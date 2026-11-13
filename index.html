@@ -21,9 +21,64 @@
 <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css">
 
 <style>
+/* NUEVO: tokens semánticos compartidos por catálogo, administración y ventanas. */
+:root{
+  --ui-page:#faf4f9;
+  --ui-surface:#fffafd;
+  --ui-raised:#f6e7f2;
+  --ui-field:#fff7fc;
+  --ui-text:#30152d;
+  --ui-muted:#69415e;
+  --ui-border:#9f688a;
+  --ui-action:#961747;
+  --ui-hover:#84143f;
+  --ui-purple:#7222a4;
+  --ui-link:#891749;
+  --ui-focus:#902060;
+  --ui-header:#fcf0f8;
+  --ui-stage:#f1e3ef;
+  --ui-dialog:#fff8fc;
+  --ui-shadow:0 8px 24px #6d285028;
+  --ui-glow:#a2196040;
+  --ui-overlay:#210922a6;
+  --ui-on-action:#fff;
+  --ui-hero:linear-gradient(112deg,#791137,#a41d48 47%,#570b29);
+  --ui-feature:linear-gradient(105deg,#fff0f7,#ffdeed 52%,#f4e7ff);
+  --ui-success:#087254;
+  --ui-danger:#a42642;
+  --ui-warning:#83500a;
+  --ui-info:#59349a;
+}
+html.vibra-dark-first,body.dark-mode{
+  --ui-page:#0d0815;
+  --ui-surface:#1b1127;
+  --ui-raised:#281935;
+  --ui-field:#160e20;
+  --ui-text:#fff1fa;
+  --ui-muted:#edc0de;
+  --ui-border:#a4739f;
+  --ui-action:#b9145d;
+  --ui-hover:#c21861;
+  --ui-purple:#7928ca;
+  --ui-link:#ffa2cf;
+  --ui-focus:#ffb9df;
+  --ui-header:#21132c;
+  --ui-stage:#110b19;
+  --ui-dialog:#201229;
+  --ui-shadow:0 8px 24px #090410a0;
+  --ui-glow:#ff2a8566;
+  --ui-overlay:#08030ed9;
+  --ui-hero:linear-gradient(112deg,#370d2c,#671039 47%,#361041);
+  --ui-feature:linear-gradient(105deg,#3e0b29,#670d3e 52%,#25082e);
+  --ui-success:#83e9bf;
+  --ui-danger:#ffadc0;
+  --ui-warning:#ffd097;
+  --ui-info:#d6baff;
+}
+
 :root{
   --primary:#e50091; --secondary:#27182b; --accent:#eaa9cb; --text:#232323; --card:#ffffff;
-  --site-bg:#f7f7f9; --muted:#6b7280; --line:#e5e7eb; --success:#16834b; --warning:#b7791f; --danger:#b42318;
+  --site-bg:#f7f7f9; --muted:#6b7280; --line:#e5e7eb; --success:var(--ui-success); --warning:var(--ui-warning); --danger:var(--ui-danger);
   --radius:18px; --product-icon-size:72px; --product-icon-color:#c62828; --font:'Inter',sans-serif;
   --pattern-opacity:.055; --bg-image-opacity:.18;
 }
@@ -34,7 +89,15 @@ body::before{content:"";position:fixed;inset:0;pointer-events:none;z-index:-2;ba
 body.pattern-on::after{content:"";position:fixed;inset:0;pointer-events:none;z-index:-1;opacity:var(--pattern-opacity);background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='150' height='150' viewBox='0 0 150 150'%3E%3Cg fill='none' stroke='%23000' stroke-width='2'%3E%3Cpath d='M18 35h26l-3 20H21zM23 30h16M60 23c8 0 14 6 14 14s-6 14-14 14-14-6-14-14 6-14 14-14zM97 25h28l-4 18H101zM103 21h16M28 96c8-10 22-10 30 0v19H28zM75 91h30v25H75zM109 89c8 0 14 6 14 14s-6 14-14 14-14-6-14-14 6-14 14-14z'/%3E%3C/g%3E%3C/svg%3E");}
 img{max-width:100%;display:block}
 button,input,textarea,select{font:inherit}
+/* MODIFICADO: estados compartidos, también en controles creados dinámicamente. */
 button{cursor:pointer}
+:where(button,input,textarea,select,a[href],[role="button"]):focus-visible{outline:2px solid var(--ui-focus);outline-offset:2px}
+:where(button,input,textarea,select):disabled{cursor:not-allowed;opacity:1}
+:where(input,textarea)::placeholder{color:var(--ui-muted);opacity:1}
+@media(prefers-reduced-motion:no-preference){
+ :where(.btn,.icon-btn,.chip,.tab-btn){transition:background-color .18s,border-color .18s,box-shadow .18s}
+ :where(.btn,.icon-btn,.chip,.tab-btn):active:not(:disabled){scale:.98}
+}
 .container{width:min(1180px,calc(100% - 28px));margin-inline:auto}
 .topbar{position:sticky;top:0;z-index:50;background:color-mix(in srgb,var(--card) 94%,transparent);backdrop-filter:blur(12px);border-bottom:1px solid var(--line)}
 .header{display:flex;align-items:center;gap:14px;padding:12px 0}
@@ -77,7 +140,7 @@ button{cursor:pointer}
 .qty-control .icon-btn{width:34px;height:34px;min-height:34px;border-radius:10px;background:var(--card)}
 .qty-value{min-width:24px;text-align:center;font-weight:800}
 .stock-out{color:var(--danger);font-weight:800;font-size:.86rem}
-.btn{padding:0 16px;background:var(--primary);color:#fff}
+/* MODIFICADO */ .btn{padding:0 16px;background:var(--primary);color:var(--vibra-on-primary,var(--ui-on-action))}
 .btn.secondary{background:var(--secondary);color:var(--primary)}
 .btn.ghost{background:transparent;color:var(--text);border:1px solid var(--line)}
 .btn.danger{background:var(--danger);color:#fff}
@@ -120,23 +183,23 @@ button{cursor:pointer}
 .map{height:290px;border-radius:14px;overflow:hidden;border:1px solid var(--line)}
 .result-grid{display:grid;grid-template-columns:repeat(2,1fr);gap:8px}.metric{padding:12px;border-radius:12px;background:var(--secondary)}.metric strong{display:block;font-size:1.1rem;color:var(--primary)}.metric span{font-size:.75rem;color:var(--muted)}
 .table-wrap{overflow:auto}.admin-table{width:100%;border-collapse:collapse;min-width:720px}.admin-table th,.admin-table td{padding:10px 8px;border-bottom:1px solid var(--line);text-align:left;font-size:.84rem}.admin-table th{color:var(--muted);font-size:.72rem;text-transform:uppercase}
-.status-badge{display:inline-flex;align-items:center;gap:6px;border-radius:999px;padding:6px 9px;font-weight:800;font-size:.75rem}.status-pendiente{background:#fff3cd;color:#7a5700}.status-pagado{background:#dff4e9;color:#176a43}.status-entregado{background:#e6edf8;color:#234c82}.status-badge svg{width:15px;height:15px}
+.status-badge{display:inline-flex;align-items:center;gap:6px;border-radius:999px;padding:6px 9px;font-weight:800;font-size:.75rem}.status-pendiente{background:#fff3cd;color:#7a5700}.status-pagado{background:#dff4e9;color:#176a43}/* MODIFICADO */ .status-entregado{background:var(--ui-surface);color:var(--ui-muted)}.status-badge svg{width:15px;height:15px}
 .toast-wrap{position:fixed;top:76px;right:14px;z-index:200;display:grid;gap:8px;width:min(360px,calc(100% - 28px))}.toast{background:var(--card);border:1px solid var(--line);border-radius:12px;padding:12px 14px;box-shadow:0 12px 26px rgba(0,0,0,.12);display:flex;gap:9px;align-items:flex-start}.toast svg{width:20px;height:20px;stroke:var(--primary);fill:none;stroke-width:1.9;flex:0 0 auto}.hidden{display:none!important}.muted{color:var(--muted)}.small{font-size:.8rem}.stack{display:grid;gap:10px}.row{display:flex;align-items:center;gap:10px}.between{justify-content:space-between}.wrap{flex-wrap:wrap}.right{text-align:right}
 hr{border:0;border-top:1px solid var(--line);margin:14px 0}
 @media(min-width:720px){.controls{grid-template-columns:1.3fr 2fr;align-items:center}.grid{grid-template-columns:repeat(2,1fr)}.admin-grid.two{grid-template-columns:1fr 1fr}.icon-picker{grid-template-columns:repeat(6,1fr)}.palette-grid{grid-template-columns:repeat(3,1fr)}.result-grid{grid-template-columns:repeat(4,1fr)}}
 @media(min-width:1020px){.grid{grid-template-columns:repeat(3,1fr)}.admin-layout{grid-template-columns:220px 1fr}.admin-tabs{display:grid;align-content:start;gap:4px;border-right:1px solid var(--line);border-bottom:0;padding:14px}.tab-btn{justify-content:flex-start}.admin-content{padding:20px}.icon-picker{grid-template-columns:repeat(8,1fr)}}
 
 /* Tema público claro/oscuro */
-.theme-btn{flex:0 0 auto}
+.theme-btn{flex:0 0 auto}/* MODIFICADO */ 
 body.dark-mode{
-  --text:#f3f4f6 !important;
-  --muted:#aeb7c5 !important;
-  --card:#161a20 !important;
-  --site-bg:#0d1015 !important;
-  --secondary:#242a33 !important;
-  --line:#303743 !important;
-}
-body.dark-mode::before{background:#0d1015}
+  --text:var(--ui-text) !important;
+  --muted:var(--ui-muted) !important;
+  --card:var(--ui-surface) !important;
+  --site-bg:var(--ui-page) !important;
+  --secondary:var(--ui-raised) !important;
+  --line:var(--ui-border) !important;
+}/* MODIFICADO */ 
+body.dark-mode::before{background:var(--ui-surface)}
 body.dark-mode.pattern-on::after{filter:invert(1);opacity:.025}
 body.dark-mode .topbar{background:rgba(22,26,32,.94)}
 body.dark-mode .product-card,
@@ -145,13 +208,13 @@ body.dark-mode .payment-item,
 body.dark-mode .summary-card,
 body.dark-mode .modal,
 body.dark-mode .drawer,
-body.dark-mode .toast{box-shadow:0 10px 30px rgba(0,0,0,.24)}
+body.dark-mode .toast{box-shadow:0 10px 30px rgba(0,0,0,.24)}/* MODIFICADO */ 
 body.dark-mode .input,
 body.dark-mode .textarea,
 body.dark-mode .select,
-body.dark-mode .search-wrap input{background:#11151b;color:#f3f4f6}
-body.dark-mode .hero-card{box-shadow:0 18px 44px rgba(0,0,0,.3)}
-body.dark-mode .leaflet-container{background:#171b21}
+body.dark-mode .search-wrap input{background:var(--ui-surface);color:#f3f4f6}
+body.dark-mode .hero-card{box-shadow:0 18px 44px rgba(0,0,0,.3)}/* MODIFICADO */ 
+body.dark-mode .leaflet-container{background:var(--ui-surface)}
 .theme-switch-label{display:none}
 @media(min-width:720px){.theme-switch-label{display:inline}}
 .icon-pack-tabs{display:flex;gap:7px;overflow:auto;margin:0 0 10px;padding-bottom:3px}
@@ -175,8 +238,8 @@ body.dark-mode .leaflet-container{background:#171b21}
 .review-card-head{display:flex;align-items:flex-start;justify-content:space-between;gap:10px}
 .review-meta{display:flex;flex-wrap:wrap;gap:6px 12px;color:var(--muted);font-size:.78rem;margin-top:7px}
 .review-actions{display:flex;flex-wrap:wrap;gap:8px;margin-top:12px}
-.payment-status{display:inline-flex;align-items:center;gap:6px;border-radius:999px;padding:6px 9px;font-size:.72rem;font-weight:900}
-.ps-WAITING_PAYMENT{background:#eef2f7;color:#4b5563}
+.payment-status{display:inline-flex;align-items:center;gap:6px;border-radius:999px;padding:6px 9px;font-size:.72rem;font-weight:900}/* MODIFICADO */ 
+.ps-WAITING_PAYMENT{background:var(--ui-surface);color:var(--ui-muted)}
 .ps-PROCESSING{background:#fff3cd;color:#7a5700}
 .ps-PENDING_REVIEW{background:#fff1db;color:#92400e}
 .ps-APPROVED{background:#dff4e9;color:#176a43}
@@ -188,16 +251,16 @@ body.dark-mode .leaflet-container{background:#171b21}
 .audit-item{border-left:3px solid var(--primary);padding:9px 11px;background:var(--secondary);border-radius:9px;font-size:.8rem}
 .receipt-thumb{width:56px;height:56px;border-radius:10px;background:var(--secondary);display:grid;place-items:center;color:var(--primary);overflow:hidden}
 .receipt-thumb img{width:100%;height:100%;object-fit:cover}
-@media(min-width:720px){.admin-dashboard{grid-template-columns:repeat(5,minmax(0,1fr))}.integration-grid{grid-template-columns:repeat(2,1fr)}}
+@media(min-width:720px){.admin-dashboard{grid-template-columns:repeat(5,minmax(0,1fr))}.integration-grid{grid-template-columns:repeat(2,1fr)}}/* MODIFICADO */ 
 
-#adminModal{--card:#161a20;--site-bg:#0d1015;--text:#f3f4f6;--muted:#aeb7c5;--line:#303743;--secondary:#242a33;background:var(--card);color:var(--text);height:96dvh;display:flex;flex-direction:column}#adminModal .modal-head{flex-shrink:0}#adminModal .modal-head button{color:var(--primary)}#adminModal .modal-body{flex:1;min-height:0;max-height:none;overflow:hidden}#adminModal .admin-layout{height:100%;min-height:0}#adminModal .admin-tabs{min-height:0;overflow:auto}#adminModal .admin-content{min-height:0;overflow-y:auto}#adminModal .tab-btn.active{color:var(--primary);background:var(--secondary)}#adminModal .input,#adminModal .select{background:#0d1015;color:var(--text)}.faithful-session{display:flex;justify-content:space-between;align-items:center;gap:12px;margin-bottom:14px;flex-wrap:wrap}.faithful-logo-preview{display:flex;align-items:center;gap:12px;margin:12px 0}.faithful-logo-preview img{width:96px;height:96px;object-fit:contain;border-radius:12px;background:#242a33}#adminModal .notice{border-left:4px solid var(--primary)}.faithful-press{animation:faithfulPress .35s ease}@keyframes faithfulPress{50%{transform:scale(.97)}}@media(max-width:1050px){#adminModal .admin-layout{display:flex;flex-direction:column}#adminModal .admin-tabs{flex:0 0 auto;max-height:120px}#adminModal .admin-content{flex:1}}@media(prefers-reduced-motion:reduce){.faithful-press{animation:none}}
-#adminModal .admin-content{padding:20px}#adminModal .admin-tabs{width:220px}#adminModal .tab-btn{white-space:normal;word-break:normal;overflow-wrap:normal}#adminModal .tab-btn span{line-height:1.3}#adminModal .textarea{background:#0d1015;color:#f3f4f6}#adminModal .btn{color:white}#adminModal .btn.ghost,#adminModal .btn.secondary{color:#f3f4f6;background:#242a33}#adminModal .section-card{background:#161a20;border-color:#303743}#adminModal .permission-grid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:10px;margin:14px 0}.permission-option{display:flex;gap:8px;padding:10px;background:#242a33;border-radius:10px}.ticket-preview{max-width:360px;margin:20px auto;padding:20px;background:white;color:#111;border-radius:8px}.ticket-preview img{width:70px;height:70px;object-fit:contain}#adminModal .ticket-preview h3{color:white}@media(min-width:850px){#adminModal .admin-layout{display:grid!important;grid-template-columns:220px minmax(0,1fr)}#adminModal .admin-tabs{display:grid!important;align-content:start;max-height:none!important;border-right:1px solid #303743}}@media(max-width:849px){#adminModal .admin-tabs{width:100%;display:flex;max-height:130px}#adminModal .permission-grid{grid-template-columns:1fr}}
+#adminModal{--card:var(--ui-surface);--site-bg:var(--ui-page);--text:var(--ui-text);--muted:var(--ui-muted);--line:var(--ui-border);--secondary:var(--ui-raised);background:var(--card);color:var(--text);height:96dvh;display:flex;flex-direction:column}#adminModal .modal-head{flex-shrink:0}#adminModal .modal-head button{color:var(--primary)}#adminModal .modal-body{flex:1;min-height:0;max-height:none;overflow:hidden}#adminModal .admin-layout{height:100%;min-height:0}#adminModal .admin-tabs{min-height:0;overflow:auto}#adminModal .admin-content{min-height:0;overflow-y:auto}#adminModal .tab-btn.active{color:var(--primary);background:var(--secondary)}/* MODIFICADO */ #adminModal .input,#adminModal .select{background:var(--ui-surface);color:var(--text)}.faithful-session{display:flex;justify-content:space-between;align-items:center;gap:12px;margin-bottom:14px;flex-wrap:wrap}.faithful-logo-preview{display:flex;align-items:center;gap:12px;margin:12px 0}/* MODIFICADO */ .faithful-logo-preview img{width:96px;height:96px;object-fit:contain;border-radius:12px;background:var(--ui-surface)}#adminModal .notice{border-left:4px solid var(--primary)}.faithful-press{animation:faithfulPress .35s ease}@keyframes faithfulPress{50%{transform:scale(.97)}}@media(max-width:1050px){#adminModal .admin-layout{display:flex;flex-direction:column}#adminModal .admin-tabs{flex:0 0 auto;max-height:120px}#adminModal .admin-content{flex:1}}@media(prefers-reduced-motion:reduce){.faithful-press{animation:none}}
+#adminModal .admin-content{padding:20px}#adminModal .admin-tabs{width:220px}#adminModal .tab-btn{white-space:normal;word-break:normal;overflow-wrap:normal}#adminModal .tab-btn span{line-height:1.3}/* MODIFICADO */ #adminModal .textarea{background:var(--ui-surface);color:#f3f4f6}#adminModal .btn{color:white}/* MODIFICADO */ #adminModal .btn.ghost,#adminModal .btn.secondary{color:#f3f4f6;background:var(--ui-surface)}/* MODIFICADO */ #adminModal .section-card{background:var(--ui-surface);border-color:var(--ui-border)}#adminModal .permission-grid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:10px;margin:14px 0}/* MODIFICADO */ .permission-option{display:flex;gap:8px;padding:10px;background:var(--ui-surface);border-radius:10px}.ticket-preview{max-width:360px;margin:20px auto;padding:20px;background:white;color:#111;border-radius:8px}.ticket-preview img{width:70px;height:70px;object-fit:contain}#adminModal .ticket-preview h3{color:white}@media(min-width:850px){#adminModal .admin-layout{display:grid!important;grid-template-columns:220px minmax(0,1fr)}/* MODIFICADO */ #adminModal .admin-tabs{display:grid!important;align-content:start;max-height:none!important;border-right:1px solid var(--ui-border)}}@media(max-width:849px){#adminModal .admin-tabs{width:100%;display:flex;max-height:130px}#adminModal .permission-grid{grid-template-columns:1fr}}
 
 body.dialog-open{overflow:hidden}.ticket-editor{display:grid;grid-template-columns:minmax(0,1.1fr) minmax(260px,.9fr);gap:16px}.ticket-controls{min-width:0}.ticket-preview-column{align-self:start;position:sticky;top:0}.ticket-canvas-preview{overflow:auto;background:#d9dfe7;padding:16px;border-radius:12px}.ticket-canvas-preview>svg{display:block;max-width:100%;height:auto;margin:auto;box-shadow:0 3px 15px #0003}#tvIconPicker{max-height:240px;overflow:auto}.icon-option[hidden]{display:none!important}@media(max-width:1000px){.ticket-editor{grid-template-columns:1fr}.ticket-preview-column{position:static}}
 </style>
-<style>#adminModal .modal-body{display:block;overflow:hidden;padding:0;min-height:0}#adminModal .admin-layout{display:grid!important;grid-template-columns:220px minmax(0,1fr);height:100%;min-height:0}#adminTabs{overflow-y:auto;min-height:0;padding:14px;max-height:100%}#adminTabs .tab-btn{text-align:left;justify-content:flex-start;gap:10px;padding:12px;line-height:1.35}#adminTabs .tab-btn span{text-align:left;flex:1}#adminTabs .tab-btn svg{flex:0 0 20px;width:20px;height:20px}#adminContent{overflow-y:auto;min-height:0;padding:20px}.faithful-session{display:flex;align-items:center;justify-content:space-between;margin-bottom:14px;gap:12px}.ticket-editor{display:block}.faithful-ticket-main>#tvPreview{max-width:500px;margin:20px auto;background:transparent;padding:0;box-shadow:none;border-radius:0}.faithful-ticket-main>#tvPreview>svg{box-shadow:none}.faithful-ticket-options{margin:12px 0}.faithful-ticket-options .permission-grid{display:grid;grid-template-columns:1fr 1fr}.faithful-ticket-main>.permission-grid{margin:12px 0}.faithful-ticket-main .permission-option{background:transparent;padding:6px 0;border:0}.ticket-editor details>summary{cursor:pointer;font-weight:700;margin-bottom:12px}.ticket-editor details>.section-card{margin-top:14px}.food-delivery-planner{display:grid;grid-template-columns:minmax(0,2fr) minmax(280px,1fr);gap:20px;margin:24px 0}.food-delivery-planner aside{align-self:start}.food-delivery-planner .map{height:370px}.address-picker-row{display:flex;align-items:end;gap:10px;margin:14px 0}.address-picker-row>.field{flex:1;min-width:0;margin:0}.customer-avatar{width:28px;height:28px;object-fit:cover;border-radius:50%}.profile-heading{display:flex;gap:16px;align-items:center;margin-bottom:18px}.profile-heading>svg{width:52px;height:52px}.profile-photo{width:72px;height:72px;object-fit:cover;border-radius:50%}.saved-address{display:flex;align-items:center;justify-content:space-between;gap:10px;padding:14px 0;border-bottom:1px solid var(--border)}.saved-address .toolbar{flex-wrap:nowrap}.auth-intro{text-align:center}.auth-intro>svg{width:52px;height:52px;margin:12px}.auth-tabs{display:flex;gap:10px;margin:15px 0}.auth-tabs button{flex:1}.auth-divider{text-align:center;margin:16px 0}#customerProfileModal,#foodAddressModal{max-width:760px;width:calc(100% - 24px);max-height:92vh}#customerProfileModal .modal-body,#foodAddressModal .modal-body{overflow-y:auto;padding:20px}.address-editor-map{height:320px}.food-map-pin{color:#16324f}.food-map-pin svg{width:44px;height:44px;fill:#fff;stroke-width:2}.food-map-pin span{display:block;padding:3px 7px;background:#16324f;color:white;border-radius:5px;font:bold 12px Arial;white-space:nowrap;width:max-content;position:absolute;bottom:48px;left:-3px}[hidden]{display:none!important}@media(max-width:760px){#adminModal .admin-layout{display:flex!important;flex-direction:column}#adminTabs{display:flex;overflow-x:auto;overflow-y:hidden;max-height:76px;border-bottom:1px solid #303846}#adminTabs .tab-btn{flex:0 0 auto;width:auto;white-space:nowrap}#adminContent{padding:14px}.food-delivery-planner{grid-template-columns:1fr}.address-picker-row{flex-wrap:wrap}.address-picker-row>.field{flex-basis:100%}.saved-address{align-items:flex-start;flex-wrap:wrap}.food-delivery-planner .map{height:300px}.faithful-session{flex-wrap:wrap}}
+<style>#adminModal .modal-body{display:block;overflow:hidden;padding:0;min-height:0}#adminModal .admin-layout{display:grid!important;grid-template-columns:220px minmax(0,1fr);height:100%;min-height:0}#adminTabs{overflow-y:auto;min-height:0;padding:14px;max-height:100%}#adminTabs .tab-btn{text-align:left;justify-content:flex-start;gap:10px;padding:12px;line-height:1.35}#adminTabs .tab-btn span{text-align:left;flex:1}#adminTabs .tab-btn svg{flex:0 0 20px;width:20px;height:20px}#adminContent{overflow-y:auto;min-height:0;padding:20px}.faithful-session{display:flex;align-items:center;justify-content:space-between;margin-bottom:14px;gap:12px}.ticket-editor{display:block}.faithful-ticket-main>#tvPreview{max-width:500px;margin:20px auto;background:transparent;padding:0;box-shadow:none;border-radius:0}.faithful-ticket-main>#tvPreview>svg{box-shadow:none}.faithful-ticket-options{margin:12px 0}.faithful-ticket-options .permission-grid{display:grid;grid-template-columns:1fr 1fr}.faithful-ticket-main>.permission-grid{margin:12px 0}.faithful-ticket-main .permission-option{background:transparent;padding:6px 0;border:0}.ticket-editor details>summary{cursor:pointer;font-weight:700;margin-bottom:12px}.ticket-editor details>.section-card{margin-top:14px}.food-delivery-planner{display:grid;grid-template-columns:minmax(0,2fr) minmax(280px,1fr);gap:20px;margin:24px 0}.food-delivery-planner aside{align-self:start}.food-delivery-planner .map{height:370px}.address-picker-row{display:flex;align-items:end;gap:10px;margin:14px 0}.address-picker-row>.field{flex:1;min-width:0;margin:0}.customer-avatar{width:28px;height:28px;object-fit:cover;border-radius:50%}.profile-heading{display:flex;gap:16px;align-items:center;margin-bottom:18px}.profile-heading>svg{width:52px;height:52px}.profile-photo{width:72px;height:72px;object-fit:cover;border-radius:50%}.saved-address{display:flex;align-items:center;justify-content:space-between;gap:10px;padding:14px 0;border-bottom:1px solid var(--border)}.saved-address .toolbar{flex-wrap:nowrap}.auth-intro{text-align:center}.auth-intro>svg{width:52px;height:52px;margin:12px}.auth-tabs{display:flex;gap:10px;margin:15px 0}.auth-tabs button{flex:1}.auth-divider{text-align:center;margin:16px 0}#customerProfileModal,#foodAddressModal{max-width:760px;width:calc(100% - 24px);max-height:92vh}#customerProfileModal .modal-body,#foodAddressModal .modal-body{overflow-y:auto;padding:20px}.address-editor-map{height:320px}/* MODIFICADO */ .food-map-pin{color:var(--ui-text)}.food-map-pin svg{width:44px;height:44px;fill:#fff;stroke-width:2}/* MODIFICADO */ .food-map-pin span{display:block;padding:3px 7px;background:var(--ui-raised);color:white;border-radius:5px;font:bold 12px Arial;white-space:nowrap;width:max-content;position:absolute;bottom:48px;left:-3px}[hidden]{display:none!important}@media(max-width:760px){#adminModal .admin-layout{display:flex!important;flex-direction:column}/* MODIFICADO */ #adminTabs{display:flex;overflow-x:auto;overflow-y:hidden;max-height:76px;border-bottom:1px solid var(--ui-border)}#adminTabs .tab-btn{flex:0 0 auto;width:auto;white-space:nowrap}#adminContent{padding:14px}.food-delivery-planner{grid-template-columns:1fr}.address-picker-row{flex-wrap:wrap}.address-picker-row>.field{flex-basis:100%}.saved-address{align-items:flex-start;flex-wrap:wrap}.food-delivery-planner .map{height:300px}.faithful-session{flex-wrap:wrap}}
 </style>
-<style>.product-zoom-trigger{width:100%;border:0;cursor:zoom-in;position:relative;color:inherit;background:var(--surface);padding:0;min-height:220px}.product-zoom-trigger img{width:100%;height:240px;object-fit:cover}.product-zoom-trigger>svg{width:120px;height:120px}.product-zoom-label{position:absolute;bottom:12px;right:12px;background:#102135dd;color:white;padding:7px 10px;border-radius:8px;display:flex;gap:6px;align-items:center;font-size:12px}.product-zoom-label svg{width:16px;height:16px}.price del{display:block;font-size:12px;opacity:.6;font-weight:400}.offer-badge{background:#b3263118;border:1px solid #b3263155;color:var(--text);border-radius:8px;padding:8px;font-size:13px;margin:8px 0}.offer-badge small{display:block}.modal.product-viewer{width:min(920px,96vw)}.product-large-view{max-height:65vh;overflow:auto;background:#111827;border-radius:12px;display:block}.product-large-view #productZoomImage{width:100%;display:flex;justify-content:center;min-height:280px}.product-large-view img{width:100%;height:auto;max-height:none;object-fit:contain}/* MODIFICADO: dimensionar solo el SVG que sustituye a la foto del producto. */.product-large-view #productZoomImage svg{width:min(100%,480px);height:400px;padding:24px}.cart-product-photo{border:0;border-radius:12px;background:transparent;padding:0;width:76px;min-width:76px;height:76px;cursor:zoom-in}.cart-product-photo img{width:100%;height:100%;object-fit:cover;border-radius:12px}.cart-product-photo svg{width:64px;height:64px}.payment-options{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:8px}.payment-choice{display:flex;gap:8px;align-items:center;padding:12px;border:1px solid var(--border);border-radius:12px;cursor:pointer}.payment-choice.selected{border-color:#159aa3;background:#159aa319}.payment-choice svg{width:26px;min-width:26px;height:26px}.payment-selected{border-radius:12px;padding:12px;background:#159aa310;margin-top:12px}.payment-data,.payment-reference{overflow-wrap:anywhere;white-space:pre-wrap}.payment-reference{font-weight:700;font-family:monospace}.address-suggestions{display:grid;gap:6px;font-size:13px;margin:8px 0}.address-suggestion{display:flex;text-align:left;align-items:center;gap:9px;padding:12px;border-radius:10px;background:var(--surface);color:var(--text);border:1px solid var(--border);cursor:pointer;line-height:1.4}.address-suggestion svg{width:24px;min-width:24px;height:24px}.address-suggestion small{display:block;opacity:.7}.marketing-products{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:8px;max-height:360px;overflow:auto;margin:12px 0}.marketing-product{display:flex;align-items:center;gap:10px;padding:10px;border:1px solid var(--border);border-radius:10px;cursor:pointer}.marketing-product[hidden]{display:none}.marketing-product small{display:block;opacity:.65}.marketing-thumb img,.marketing-thumb svg{width:46px;height:46px;object-fit:cover;border-radius:6px}@media(max-width:600px){.marketing-products{grid-template-columns:1fr}.product-zoom-trigger{min-height:180px}.product-zoom-trigger img{height:210px}.product-large-view{max-height:55vh}.payment-options{grid-template-columns:1fr}}
+<style>.product-zoom-trigger{width:100%;border:0;cursor:zoom-in;position:relative;color:inherit;background:var(--surface);padding:0;min-height:220px}.product-zoom-trigger img{width:100%;height:240px;object-fit:cover}.product-zoom-trigger>svg{width:120px;height:120px}.product-zoom-label{position:absolute;bottom:12px;right:12px;background:#102135dd;color:white;padding:7px 10px;border-radius:8px;display:flex;gap:6px;align-items:center;font-size:12px}.product-zoom-label svg{width:16px;height:16px}.price del{display:block;font-size:12px;opacity:.6;font-weight:400}.offer-badge{background:#b3263118;border:1px solid #b3263155;color:var(--text);border-radius:8px;padding:8px;font-size:13px;margin:8px 0}.offer-badge small{display:block}.modal.product-viewer{width:min(920px,96vw)}/* MODIFICADO */ .product-large-view{max-height:65vh;overflow:auto;background:var(--ui-surface);border-radius:12px;display:block}.product-large-view #productZoomImage{width:100%;display:flex;justify-content:center;min-height:280px}.product-large-view img{width:100%;height:auto;max-height:none;object-fit:contain}/* MODIFICADO: dimensionar solo el SVG que sustituye a la foto del producto. */.product-large-view #productZoomImage svg{width:min(100%,480px);height:400px;padding:24px}.cart-product-photo{border:0;border-radius:12px;background:transparent;padding:0;width:76px;min-width:76px;height:76px;cursor:zoom-in}.cart-product-photo img{width:100%;height:100%;object-fit:cover;border-radius:12px}.cart-product-photo svg{width:64px;height:64px}.payment-options{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:8px}.payment-choice{display:flex;gap:8px;align-items:center;padding:12px;border:1px solid var(--border);border-radius:12px;cursor:pointer}.payment-choice.selected{border-color:#159aa3;background:#159aa319}.payment-choice svg{width:26px;min-width:26px;height:26px}.payment-selected{border-radius:12px;padding:12px;background:#159aa310;margin-top:12px}.payment-data,.payment-reference{overflow-wrap:anywhere;white-space:pre-wrap}.payment-reference{font-weight:700;font-family:monospace}.address-suggestions{display:grid;gap:6px;font-size:13px;margin:8px 0}.address-suggestion{display:flex;text-align:left;align-items:center;gap:9px;padding:12px;border-radius:10px;background:var(--surface);color:var(--text);border:1px solid var(--border);cursor:pointer;line-height:1.4}.address-suggestion svg{width:24px;min-width:24px;height:24px}.address-suggestion small{display:block;opacity:.7}.marketing-products{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:8px;max-height:360px;overflow:auto;margin:12px 0}.marketing-product{display:flex;align-items:center;gap:10px;padding:10px;border:1px solid var(--border);border-radius:10px;cursor:pointer}.marketing-product[hidden]{display:none}.marketing-product small{display:block;opacity:.65}.marketing-thumb img,.marketing-thumb svg{width:46px;height:46px;object-fit:cover;border-radius:6px}@media(max-width:600px){.marketing-products{grid-template-columns:1fr}.product-zoom-trigger{min-height:180px}.product-zoom-trigger img{height:210px}.product-large-view{max-height:55vh}.payment-options{grid-template-columns:1fr}}
 </style><meta name="vibraerotica-version" content="1.0"><style>/* VibraErótica: tamaños definidos y tarjetas sin desbordamientos. */
 .container{width:min(1680px,calc(100% - 40px))}.grid#catalogGrid{grid-template-columns:repeat(5,minmax(0,1fr));gap:16px;align-items:stretch}#catalogGrid .product-card{display:flex;flex-direction:column;min-width:0;padding:12px;gap:12px;overflow:hidden}#catalogGrid .product-body{min-width:0;flex:1;display:flex;flex-direction:column}#catalogGrid .product-head{align-items:flex-start;gap:10px}#catalogGrid .product-name{min-width:0;overflow-wrap:anywhere;line-height:1.3}#catalogGrid .price{flex-shrink:0;text-align:right;font-size:1rem}#catalogGrid .desc{flex:1;line-height:1.5}#catalogGrid .meta{display:flex;flex-wrap:wrap;gap:8px}#catalogGrid .qty-row{display:flex;flex-wrap:wrap;justify-content:space-between;align-items:center;gap:8px;margin-top:12px}#catalogGrid .qty-row .btn{padding:9px 12px;flex:1}#catalogGrid .qty-control{flex-shrink:0}#catalogGrid .product-zoom-trigger{width:100%;height:176px;min-height:176px;max-height:176px;display:grid;place-items:center;border-radius:12px;overflow:hidden;background:var(--secondary)}#catalogGrid .product-zoom-trigger img{width:100%;height:176px;object-fit:contain}#catalogGrid .product-zoom-trigger>svg{width:92px;height:92px;color:var(--product-icon-color);fill:none}#catalogGrid .product-zoom-label{bottom:8px;right:8px;font-size:11px;padding:6px 8px}.btn>svg,.icon-btn>svg,.toolbar>svg,.row>svg{width:20px;height:20px;flex:0 0 20px;display:block;fill:none;stroke:currentColor}.btn{white-space:normal;text-align:center;line-height:1.25}.icon-btn{flex:0 0 42px;width:42px;height:42px;min-height:42px;padding:9px}.qty-control .icon-btn{flex-basis:32px;width:32px;height:32px;min-height:32px;padding:6px}.qty-control{display:inline-flex;align-items:center;gap:5px}.qty-control>span{min-width:22px;text-align:center}.auth-intro{padding:8px 0 16px}.auth-intro>svg{width:54px;height:54px;fill:none;stroke:currentColor}.modal{max-height:92dvh}.auth-tabs{gap:10px}#customerProfileModal .modal-body{padding:20px}#customerProfileModal .auth-intro h3{margin:12px 0}.drawer{width:min(100%,640px);height:100dvh}.drawer-head{flex:0 0 auto;align-items:center}.drawer-body{flex:1;min-height:0;overflow-y:auto;padding:18px}.drawer-foot{flex:0 0 auto;gap:6px;padding:12px 18px;background:var(--card)}.drawer-foot .btn{min-height:46px}.drawer-foot .total-line{font-size:.9rem}.drawer-foot .grand{font-size:1.1rem}.cart-item{grid-template-columns:76px minmax(0,1fr) 42px;align-items:center;gap:12px}.cart-item>div{min-width:0}.cart-item h4{overflow-wrap:anywhere}.cart-item .qty-control{margin-top:8px}.cart-product-photo{display:grid;place-items:center;overflow:hidden;background:var(--secondary);color:var(--product-icon-color)}.cart-product-photo svg{width:50px;height:50px;fill:none;stroke:currentColor}.radio-card{display:flex;align-items:center;gap:9px;padding:13px;border:1px solid var(--line);border-radius:12px;cursor:pointer;font-size:.9rem}.radio-card input{position:static;opacity:1;pointer-events:auto;accent-color:var(--primary);margin:0;flex:0 0 16px}.radio-card:has(input:checked){border-color:var(--primary);background:var(--secondary)}.payment-choice{min-width:0;line-height:1.35;font-size:.9rem;border-color:var(--line)}.payment-choice input{flex:0 0 16px;margin:0;accent-color:var(--primary)}.payment-choice>svg{fill:none;stroke:currentColor;flex:0 0 24px;width:24px;height:24px}.payment-choice>span{min-width:0;overflow-wrap:anywhere}.field{min-width:0}.field input,.field textarea,.field select{width:100%;min-width:0}.toolbar{display:flex;flex-wrap:wrap;gap:9px;align-items:center}.toolbar>.input{flex:1 1 180px;min-width:0}.checkout-grid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:12px}.checkout-location{border:1px solid var(--line);border-radius:12px;padding:14px;margin:12px 0;line-height:1.55;overflow-wrap:anywhere}.checkout-location h4{margin:0 0 8px}.checkout-location p{margin:5px 0}.checkout-location .small{font-size:.8rem}.summary-table{width:100%;table-layout:fixed}.summary-table th:first-child{width:44%}.summary-table td{overflow-wrap:anywhere;vertical-align:top}.summary-table th:not(:first-child),.summary-table td:not(:first-child){text-align:right}#summaryBody .toolbar .btn{flex:1 1 180px}.checkout-steps{display:flex;flex-wrap:wrap;gap:8px;margin:0 0 16px}.checkout-step{padding:7px 10px;border-radius:8px;background:var(--secondary);font-size:.8rem;font-weight:700}.pending-resume{display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:10px;padding:14px;border:1px solid var(--primary);border-radius:12px;margin:15px auto;background:var(--card)}.catalog-pages{display:flex;align-items:center;justify-content:center;flex-wrap:wrap;gap:8px;padding:20px 0}.catalog-pages .btn{min-width:42px;padding:10px}.catalog-pages .active{background:var(--primary);color:white}.catalog-pages p{width:100%;margin:0;text-align:center;font-size:.85rem;color:var(--muted)}.catalog-enter{animation:catalogEnter .25s ease-out}.offer-countdown{display:block;font-variant-numeric:tabular-nums;font-weight:700;margin-top:5px}.checkout-proof-name{overflow-wrap:anywhere}.checkout-map-link{display:inline-flex;align-items:center;gap:7px;color:var(--primary)}.checkout-map-link svg{width:18px;height:18px;fill:none;stroke:currentColor}@keyframes catalogEnter{from{opacity:.35;transform:translateY(8px)}to{opacity:1;transform:translateY(0)}}@media(max-width:1399px){.grid#catalogGrid{grid-template-columns:repeat(4,minmax(0,1fr))}}@media(max-width:1099px){.grid#catalogGrid{grid-template-columns:repeat(3,minmax(0,1fr))}}@media(max-width:799px){.container{width:calc(100% - 24px)}.grid#catalogGrid{grid-template-columns:repeat(2,minmax(0,1fr));gap:12px}}@media(max-width:499px){.grid#catalogGrid{grid-template-columns:1fr}#catalogGrid .product-zoom-trigger,#catalogGrid .product-zoom-trigger img{height:185px;min-height:185px;max-height:185px}.checkout-grid{grid-template-columns:1fr}.payment-options{grid-template-columns:1fr}.drawer-body{padding:14px}.cart-item{grid-template-columns:62px minmax(0,1fr) 36px;gap:8px}.cart-product-photo{width:62px;min-width:62px;height:62px}.cart-item>.icon-btn{width:36px;flex-basis:36px}.radio-group{grid-template-columns:1fr}.drawer-foot{padding:10px 14px}}@media(prefers-reduced-motion:reduce){.catalog-enter{animation:none}}
 .checkout-location h4{display:flex;align-items:center;gap:8px}.checkout-location h4>svg{width:20px;height:20px;flex:0 0 20px;fill:none;stroke:currentColor}#catalogGrid .product-visual{padding:0}.catalog-pages[hidden]{display:none}.checkout-grid .field{margin:0}.checkout-grid{margin:12px 0}
@@ -209,21 +272,21 @@ body.dialog-open{overflow:hidden}.ticket-editor{display:grid;grid-template-colum
 </style>
 <style>.subscription-notice{margin-top:16px}.billing-method,.billing-payment{padding:16px 0;border-bottom:1px solid var(--line);overflow-wrap:anywhere}.billing-method .toolbar,.billing-payment .toolbar{flex-wrap:wrap}.billing-payment h4{margin:0 0 8px}.subscription-notice p{margin:0 0 12px}</style><style>.date-control{display:flex;align-items:center;gap:6px}.date-control>.input{min-width:0;flex:1}.date-control>.icon-btn{flex:0 0 40px;width:40px;height:40px}.date-control input{color-scheme:light}body.dark-mode .date-control input,#adminModal .date-control input{color-scheme:dark}.date-picker-fields{display:grid;grid-template-columns:1fr 1fr;gap:14px}.flash-offers{margin-top:16px;margin-bottom:18px}.flash-offer-list{display:grid;grid-template-columns:repeat(auto-fit,minmax(260px,1fr));gap:14px}.flash-offer{padding:18px;border:1px solid var(--primary);border-radius:16px;background:var(--card);min-width:0}.flash-offer h3{margin:0 0 10px}.flash-clock{display:flex;align-items:center;gap:8px;font-variant-numeric:tabular-nums;font-size:.9rem;flex-wrap:wrap}.flash-clock svg,.offer-clock-icon{width:20px;height:20px;fill:none;stroke:currentColor;flex:0 0 20px}.combo-products{display:grid;grid-template-columns:repeat(auto-fit,minmax(180px,1fr));gap:12px}.combo-item{border:1px solid var(--line);border-radius:12px;padding:12px;min-width:0}.combo-photo{height:150px;display:grid;place-items:center;overflow:hidden}.combo-photo img{height:100%;width:100%;object-fit:contain}.combo-photo svg{height:90px;width:90px;fill:none;stroke:currentColor}.combo-item .btn{width:100%}.product-card,.icon-btn,.btn,.icon-option{transition:transform .2s ease,box-shadow .2s ease,border-color .2s ease}.product-card:focus-within{border-color:var(--primary)}@media(hover:hover){.product-card:hover{transform:translateY(-4px);box-shadow:0 12px 26px #0002;border-color:var(--primary)}.icon-btn:hover svg,.btn:hover svg{transform:scale(1.12)}}.icon-btn svg,.btn svg{transition:transform .18s ease}.icon-btn:active,.btn:active{transform:scale(.97)}.product-card .product-visual img{transition:transform .3s ease}@media(hover:hover){.product-card:hover .product-visual img{transform:scale(1.025)}}.moderation-order{padding:14px 0;border-bottom:1px solid var(--line)}.moderation-order .toolbar{flex-wrap:wrap}.ticket-footer-options{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:8px}.ticket-footer-options svg{width:24px;height:24px;fill:none;stroke:currentColor}.ticket-image-links{display:grid;gap:12px}.visitor-blocked #catalogGrid,.visitor-blocked #categoryChips,.visitor-blocked #foodDeliveryPlanner,.visitor-blocked #cartBtn,.visitor-blocked #searchWrap,.visitor-blocked #flashOffers,.visitor-blocked #orderChatBubble{display:none!important}@media(max-width:600px){.date-picker-fields{grid-template-columns:1fr}.ticket-footer-options{grid-template-columns:repeat(2,minmax(0,1fr))}}@media(prefers-reduced-motion:reduce){.product-card,.icon-btn,.btn,.icon-option,.icon-btn svg,.btn svg,.product-card .product-visual img{transition:none;transform:none!important}}
 </style><script src="https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js"></script>
-<style id="vibra-refinement-20261010">
-html,body{background:#0d1015}html body{visibility:visible!important}html.vibra-hydrating body>main,html.vibra-hydrating .topbar{opacity:1!important}
+<style id="vibra-refinement-20261010">/* MODIFICADO */ 
+html,body{background:var(--ui-surface)}html body{visibility:visible!important}html.vibra-hydrating body>main,html.vibra-hydrating .topbar{opacity:1!important}
 .hero-card{position:relative;overflow:hidden;padding:clamp(26px,4vw,58px)!important;background:linear-gradient(120deg,color-mix(in srgb,var(--primary) 88%,#171026),color-mix(in srgb,var(--primary) 58%,#1e0630))!important;border:1px solid color-mix(in srgb,var(--primary) 38%,white);box-shadow:0 16px 48px #0003!important}
 .hero-card:after{content:"";position:absolute;width:35%;aspect-ratio:1;border:1px solid #ffffff29;border-radius:50%;right:-9%;top:-90%;box-shadow:0 0 0 45px #ffffff09,0 0 0 90px #ffffff08;pointer-events:none}.hero-card h2{font-family:'Poppins','Nunito',sans-serif;letter-spacing:-.045em;font-weight:800;font-size:clamp(2rem,4.4vw,3.8rem);line-height:1.04;position:relative;z-index:1}.hero-card p{font-family:'Nunito',sans-serif;font-size:clamp(.95rem,1.5vw,1.18rem);letter-spacing:.012em;line-height:1.6;max-width:690px;position:relative;z-index:1}
 #foodRouteInformation #foodCalculate,#foodRouteInformation #foodGoCart,#foodRouteInfo .toolbar:empty{display:none!important}
-.vibra-media-stage{margin:12px 0;padding:14px;border:1px solid var(--line);border-radius:16px;background:var(--secondary)}.vibra-media-head{display:flex;justify-content:space-between;gap:12px;align-items:center;flex-wrap:wrap;margin-bottom:12px}.vibra-media-list{display:grid;grid-template-columns:repeat(auto-fill,minmax(120px,1fr));gap:12px}.vibra-media-tile{position:relative;border:1px solid var(--line);padding:7px;border-radius:13px;background:var(--card);min-width:0}.vibra-media-tile img,.vibra-media-tile video{width:100%;height:120px;object-fit:cover;border-radius:9px;background:#10131a}.vibra-media-tile button{min-height:32px;padding:6px 9px;font-size:.8rem}.vibra-media-tile .vibra-media-controls{display:flex;justify-content:space-between;gap:4px;margin-top:7px}.vibra-media-tile[draggable=true]{cursor:grab}.vibra-media-tile.vibra-drag-over{outline:2px solid var(--primary)}.vibra-media-tile small{display:block;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;margin-top:5px}.vibra-media-stage .vibra-media-note{font-size:.78rem;color:var(--muted);margin:0 0 12px}
-</style><style id="vibra-tema-uniforme-v1">
+.vibra-media-stage{margin:12px 0;padding:14px;border:1px solid var(--line);border-radius:16px;background:var(--secondary)}.vibra-media-head{display:flex;justify-content:space-between;gap:12px;align-items:center;flex-wrap:wrap;margin-bottom:12px}.vibra-media-list{display:grid;grid-template-columns:repeat(auto-fill,minmax(120px,1fr));gap:12px}.vibra-media-tile{position:relative;border:1px solid var(--line);padding:7px;border-radius:13px;background:var(--card);min-width:0}/* MODIFICADO */ .vibra-media-tile img,.vibra-media-tile video{width:100%;height:120px;object-fit:cover;border-radius:9px;background:var(--ui-surface)}.vibra-media-tile button{min-height:32px;padding:6px 9px;font-size:.8rem}.vibra-media-tile .vibra-media-controls{display:flex;justify-content:space-between;gap:4px;margin-top:7px}.vibra-media-tile[draggable=true]{cursor:grab}.vibra-media-tile.vibra-drag-over{outline:2px solid var(--primary)}.vibra-media-tile small{display:block;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;margin-top:5px}.vibra-media-stage .vibra-media-note{font-size:.78rem;color:var(--muted);margin:0 0 12px}
+</style><style id="vibra-tema-uniforme-v1">/* MODIFICADO */ 
 body.dark-mode{
- --text:#f3f4f6!important;--muted:#abb6c7!important;
- --card:#161a20!important;--site-bg:#0d1015!important;
- --secondary:#242a33!important;--line:#303743!important;
- background:#0d1015!important;color:var(--text)!important;color-scheme:dark;
+ --text:var(--ui-text)!important;--muted:var(--ui-muted)!important;
+ --card:var(--ui-surface)!important;--site-bg:var(--ui-page)!important;
+ --secondary:var(--ui-raised)!important;--line:var(--ui-border)!important;
+ background:var(--ui-surface)!important;color:var(--text)!important;color-scheme:dark;
 }
-body:not(.dark-mode){color-scheme:light}
-body.dark-mode::before{background:#0d1015!important}
+body:not(.dark-mode){color-scheme:light}/* MODIFICADO */ 
+body.dark-mode::before{background:var(--ui-surface)!important}
 body.dark-mode .topbar{background:rgba(22,26,32,.96)!important;border-bottom-color:var(--line)!important}
 body.dark-mode .hero-card{color:#fff}
 body.dark-mode .product-card,body.dark-mode .section-card,body.dark-mode .review-card,
@@ -237,13 +300,13 @@ body.dark-mode .textarea,body.dark-mode .address-suggestion{
 body.dark-mode .chip.active,body.dark-mode .btn:not(.secondary):not(.ghost):not(.danger):not(.success){background-color:var(--primary)!important;color:#fff!important}
 body.dark-mode .desc,body.dark-mode .meta,body.dark-mode .muted,body.dark-mode .small.muted{color:var(--muted)!important}
 body.dark-mode .radio-card,body.dark-mode .payment-choice{border-color:var(--line);color:var(--text)}
-body.dark-mode .radio-card:has(input:checked),body.dark-mode .payment-choice.selected{background:var(--secondary)!important}
-body.dark-mode .leaflet-container{background:#171b21!important}
+body.dark-mode .radio-card:has(input:checked),body.dark-mode .payment-choice.selected{background:var(--secondary)!important}/* MODIFICADO */ 
+body.dark-mode .leaflet-container{background:var(--ui-surface)!important}
 #adminModal{color-scheme:dark}
 #adminModal .ticket-preview,#adminModal .ticket-canvas-preview,#adminModal .ticket-preview svg{color-scheme:light}
 @media(prefers-reduced-motion:reduce){.topbar,.product-card{transition:none!important}}
 </style>
-<script id="vibra-prepaint-theme">(function(){try{const dark=localStorage.getItem('vibraerotica.theme.mode')==='dark';document.documentElement.dataset.vibraMode=dark?'dark':'default';if(dark)document.documentElement.classList.add('vibra-dark-first');}catch(e){}})();</script><style id="vibra-prepaint-colors">html.vibra-dark-first,html.vibra-dark-first body{background:#0d1015!important;color:#f3f4f6}html.vibra-dark-first body:not(.dark-mode)>.topbar,html.vibra-dark-first .topbar{background:#161a20!important}</style>
+<script id="vibra-prepaint-theme">(function(){try{const dark=localStorage.getItem('vibraerotica.theme.mode')==='dark';document.documentElement.dataset.vibraMode=dark?'dark':'default';if(dark)document.documentElement.classList.add('vibra-dark-first');}catch(e){}})();</script><style id="vibra-prepaint-colors">/* MODIFICADO */ html.vibra-dark-first,html.vibra-dark-first body{background:var(--ui-surface)!important;color:#f3f4f6}/* MODIFICADO */ html.vibra-dark-first body:not(.dark-mode)>.topbar,html.vibra-dark-first .topbar{background:var(--ui-surface)!important}</style>
 <style id="vibra-refinamiento-servicios-mapa-20261011">
 #vibraServiceCatalog .vsm-media-button{display:flex;justify-content:center;align-items:center;gap:8px;min-height:42px;padding:8px 10px;border:1px solid var(--line);border-radius:12px;background:var(--secondary);color:var(--primary);font-size:.88rem;font-weight:800;line-height:1.1}
 #vibraServiceCatalog .vsm-media-button svg{height:18px;width:18px;flex:none;stroke:currentColor;fill:none}
@@ -271,18 +334,18 @@ body.dark-mode .leaflet-container{background:#171b21!important}
 <script id="vibra-precision-gps">
 window.vibraPrecisePosition=function(){return new Promise((resolve,reject)=>{if(!navigator.geolocation)return reject(Error('GPS no disponible'));if(!window.isSecureContext)return reject(Error('Se requiere conexión HTTPS'));let best=null,watchId=null,finished=false;const done=(e)=>{if(finished)return;finished=true;clearTimeout(timer);if(watchId!==null)navigator.geolocation.clearWatch(watchId);best?resolve(best):reject(e||Error('No se pudo fijar la ubicación'))};const timer=setTimeout(()=>done(),27000);watchId=navigator.geolocation.watchPosition(p=>{if(!best||p.coords.accuracy<best.coords.accuracy)best=p;if(p.coords.accuracy<=15)done()},e=>{if(!best)done(Error(e.message))},{enableHighAccuracy:true,maximumAge:0,timeout:25000})})};
 </script>
-<style id="surgical-seven-points-20261013">
+<style id="surgical-seven-points-20261013">/* MODIFICADO */ 
 /* NUEVO: 1. Superficies y textos uniformes según el tema, sin cambiar panel administrativo */
-body:not(.dark-mode) #v15Experience,body:not(.dark-mode) #v15Experience p,body:not(.dark-mode) #v15Experience h3{color:#1b2030!important}
+body:not(.dark-mode) #v15Experience,body:not(.dark-mode) #v15Experience p,body:not(.dark-mode) #v15Experience h3{color:var(--ui-text)!important}
 body.dark-mode #v15Experience,body.dark-mode #v15Experience p,body.dark-mode #v15Experience h3{color:#f3f4f6!important}
 body:not(.dark-mode) :is(.modal,.drawer,#vibraReserveShell,#vsmGallery,.v12-menu-list){color-scheme:light}
 body.dark-mode :is(.modal,.drawer,#vibraReserveShell,#vsmGallery,.v12-menu-list){color-scheme:dark}
 body:not(.dark-mode) #vibraReserveShell{--card:#fff;--text:#202331;--muted:#596477;--line:#e4e6ed;--secondary:#f0f1f6;background:var(--card)!important;color:var(--text)!important}
-body.dark-mode #vibraReserveShell{--card:#161a20;--text:#f3f4f6;--muted:#b6c0d0;--line:#303743;--secondary:#242a33;background:var(--card)!important;color:var(--text)!important}
-body:not(.dark-mode) #vibraReserveShell :is(input,select,textarea){background:#fff!important;color:#202331!important;border-color:#cbd1de!important}
-body.dark-mode #vibraReserveShell :is(input,select,textarea){background:#11161f!important;color:#f3f4f6!important;border-color:#444c59!important}
-body:not(.dark-mode) #vsmGallery :is(.vsm-viewer-sidebar,.vsm-viewer-header){background:#fff!important;color:#202331!important}
-body.dark-mode #vsmGallery :is(.vsm-viewer-sidebar,.vsm-viewer-header){background:#161a20!important;color:#f3f4f6!important}
+body.dark-mode #vibraReserveShell{--card:#161a20;--text:#f3f4f6;--muted:#b6c0d0;--line:#303743;--secondary:#242a33;background:var(--card)!important;color:var(--text)!important}/* MODIFICADO */ 
+body:not(.dark-mode) #vibraReserveShell :is(input,select,textarea){background:#fff!important;color:var(--ui-text)!important;border-color:var(--ui-border)!important}/* MODIFICADO */ 
+body.dark-mode #vibraReserveShell :is(input,select,textarea){background:var(--ui-surface)!important;color:#f3f4f6!important;border-color:var(--ui-border)!important}/* MODIFICADO */ 
+body:not(.dark-mode) #vsmGallery :is(.vsm-viewer-sidebar,.vsm-viewer-header){background:#fff!important;color:var(--ui-text)!important}/* MODIFICADO */ 
+body.dark-mode #vsmGallery :is(.vsm-viewer-sidebar,.vsm-viewer-header){background:var(--ui-surface)!important;color:#f3f4f6!important}
 /* NUEVO: 2. Visor de producto compacto, sin scroll anidado y con información visible */
 #productViewerModal.product-viewer{width:min(1100px,calc(100vw - 24px));max-height:94dvh;top:3dvh}
 #productViewerModal.product-viewer .modal-body{display:grid;grid-template-columns:minmax(0,1.35fr) minmax(280px,.85fr);align-content:start;gap:12px 20px;max-height:calc(94dvh - 66px);overflow-y:auto;overscroll-behavior:contain}
@@ -306,10 +369,10 @@ body.dark-mode #vsmGallery :is(.vsm-viewer-sidebar,.vsm-viewer-header){backgroun
 @media(max-width:740px){#productViewerModal.product-viewer .modal-body{display:flex;flex-direction:column;gap:12px}#productViewerModal.product-viewer .product-large-view{min-height:180px;max-height:38dvh;width:100%;flex:none}#productViewerModal.product-viewer .product-large-view #productZoomImage,#productViewerModal.product-viewer .product-large-view img{max-height:38dvh}#productViewerModal.product-viewer #v12ProductSocial{max-height:none;overflow:visible}#vibraReserveShell{max-height:96dvh!important}}
 </style>
 
-<style id="vibra-fixes-authorized-20261013">
+<style id="vibra-fixes-authorized-20261013">/* MODIFICADO */ 
 /* NUEVO: colores de alto contraste en superficies públicas de los dos temas */
-body:not(.dark-mode){--vfx-panel:#ffffff;--vfx-ink:#22212d;--vfx-sub:#566074;--vfx-stroke:#d7dce5;--vfx-field:#fff}
-body.dark-mode{--vfx-panel:#161a20;--vfx-ink:#f5f6fb;--vfx-sub:#c1c9d7;--vfx-stroke:#3c4656;--vfx-field:#10141b}
+body:not(.dark-mode){--vfx-panel:var(--ui-surface);--vfx-ink:var(--ui-text);--vfx-sub:var(--ui-muted);--vfx-stroke:var(--ui-border);--vfx-field:var(--ui-field)}/* MODIFICADO */ 
+body.dark-mode{--vfx-panel:var(--ui-surface);--vfx-ink:var(--ui-text);--vfx-sub:var(--ui-muted);--vfx-stroke:var(--ui-border);--vfx-field:var(--ui-field)}
 body:not(.dark-mode) :is(.modal:not(#adminModal),.drawer,.product-card,.section-card,.followup-card){color:var(--vfx-ink)}
 body.dark-mode :is(.modal:not(#adminModal),.drawer,.product-card,.section-card,.followup-card){color:var(--vfx-ink)}
 body :is(.modal:not(#adminModal),.drawer,.product-card,.section-card) :is(p,.muted,.small,.desc,.meta){color:var(--vfx-sub)}
@@ -318,11 +381,11 @@ body :is(.modal:not(#adminModal),.drawer,.section-card) :is(input,textarea)::pla
 body :is(.modal:not(#adminModal),.drawer,.section-card) :is(button,a).btn.secondary,body :is(.modal:not(#adminModal),.drawer,.section-card) button.btn.ghost{color:var(--vfx-ink);border-color:var(--vfx-stroke)}
 body :is(.modal:not(#adminModal),.drawer,.section-card) :is(button,a):focus-visible{outline:3px solid var(--primary);outline-offset:2px}
 body.dark-mode :is(.btn:not(.secondary):not(.ghost):not(.danger):not(.success),.chip.active){color:white;background:var(--primary)}
-body:not(.dark-mode) :is(.btn:not(.secondary):not(.ghost):not(.danger):not(.success),.chip.active){color:white;background:var(--primary)}
-body:not(.dark-mode) #vsmGallery .vsm-viewer-sidebar,body:not(.dark-mode) #vsmGallery #vsmProfileInfo>div{color:#20202d!important;background:#fff!important}
-body.dark-mode #vsmGallery .vsm-viewer-sidebar,body.dark-mode #vsmGallery #vsmProfileInfo>div{color:#f5f6fb!important;background:#1d232d!important}
-body:not(.dark-mode) #vsmGallery .vsm-viewer-sidebar :is(p,small,span){color:#343a49!important}
-body.dark-mode #vsmGallery .vsm-viewer-sidebar :is(p,small,span){color:#e0e5ef!important}
+body:not(.dark-mode) :is(.btn:not(.secondary):not(.ghost):not(.danger):not(.success),.chip.active){color:white;background:var(--primary)}/* MODIFICADO */ 
+body:not(.dark-mode) #vsmGallery .vsm-viewer-sidebar,body:not(.dark-mode) #vsmGallery #vsmProfileInfo>div{color:var(--ui-text)!important;background:#fff!important}/* MODIFICADO */ 
+body.dark-mode #vsmGallery .vsm-viewer-sidebar,body.dark-mode #vsmGallery #vsmProfileInfo>div{color:#f5f6fb!important;background:var(--ui-surface)!important}/* MODIFICADO */ 
+body:not(.dark-mode) #vsmGallery .vsm-viewer-sidebar :is(p,small,span){color:var(--ui-text)!important}/* MODIFICADO */ 
+body.dark-mode #vsmGallery .vsm-viewer-sidebar :is(p,small,span){color:var(--ui-text)!important}
 #vibraCartSuggest{margin-top:16px}
 #vibraCartSuggest .vfx-suggestions{display:grid;grid-template-columns:repeat(auto-fit,minmax(145px,1fr));gap:9px;margin-top:9px}
 #vibraCartSuggest .vfx-product{border:1px solid var(--vfx-stroke);padding:10px;border-radius:12px;background:var(--vfx-panel);min-width:0;color:var(--vfx-ink);text-align:left}
@@ -335,15 +398,15 @@ body.dark-mode #vsmGallery .vsm-viewer-sidebar :is(p,small,span){color:#e0e5ef!i
 <!-- MODIFICADO: contraste contextual claro/oscuro y miniaturas de plantillas aportadas -->
 <style id="vibra-contrast-templates-20261014">
 .vibra-figure-pick img{width:76px;height:78px;object-fit:contain;background:#fff;border-radius:6px}
-.vibra-custom-figure img{display:block;width:100%;height:100%;object-fit:contain;pointer-events:none}
-body:not(.dark-mode) :is(.product-viewer,#productModal,#vsmGallery,#adminModal) :is(.notice,.product-option,.product-option-summary,.status-badge,.vsm-info-row){color:#202839!important}
-body:not(.dark-mode) :is(.product-viewer,#productModal,#vsmGallery) :is(.notice,.product-option,.product-option-summary,.vsm-info-row){background:#f1f3f8!important;border-color:#d5dce7!important}
-body:not(.dark-mode) :is(.product-viewer,#productModal,#vsmGallery) :is(.notice,.product-option,.product-option-summary,.vsm-info-row) :is(span,strong,p,small,label){color:#202839!important}
-body:not(.dark-mode) :is(.product-viewer,#productModal,#vsmGallery) :is(.btn.secondary,.icon-btn){background:var(--primary)!important;color:#fff!important}
-body.dark-mode :is(.product-viewer,#productModal,#vsmGallery) :is(.notice,.product-option,.product-option-summary,.vsm-info-row){background:#242a33!important;color:#f3f4f6!important;border-color:#404a59!important}
-body.dark-mode :is(.product-viewer,#productModal,#vsmGallery) :is(.notice,.product-option,.product-option-summary,.vsm-info-row) :is(span,strong,p,small,label){color:#f3f4f6!important}
-body:not(.dark-mode) :is(.product-viewer,#productModal,#vsmGallery) .muted{color:#526174!important}
-body.dark-mode :is(.product-viewer,#productModal,#vsmGallery) .muted{color:#b4c0d1!important}
+.vibra-custom-figure img{display:block;width:100%;height:100%;object-fit:contain;pointer-events:none}/* MODIFICADO */ 
+body:not(.dark-mode) :is(.product-viewer,#productModal,#vsmGallery,#adminModal) :is(.notice,.product-option,.product-option-summary,.status-badge,.vsm-info-row){color:var(--ui-text)!important}/* MODIFICADO */ 
+body:not(.dark-mode) :is(.product-viewer,#productModal,#vsmGallery) :is(.notice,.product-option,.product-option-summary,.vsm-info-row){background:var(--ui-surface)!important;border-color:var(--ui-border)!important}/* MODIFICADO */ 
+body:not(.dark-mode) :is(.product-viewer,#productModal,#vsmGallery) :is(.notice,.product-option,.product-option-summary,.vsm-info-row) :is(span,strong,p,small,label){color:var(--ui-text)!important}
+body:not(.dark-mode) :is(.product-viewer,#productModal,#vsmGallery) :is(.btn.secondary,.icon-btn){background:var(--primary)!important;color:#fff!important}/* MODIFICADO */ 
+body.dark-mode :is(.product-viewer,#productModal,#vsmGallery) :is(.notice,.product-option,.product-option-summary,.vsm-info-row){background:var(--ui-surface)!important;color:#f3f4f6!important;border-color:var(--ui-border)!important}
+body.dark-mode :is(.product-viewer,#productModal,#vsmGallery) :is(.notice,.product-option,.product-option-summary,.vsm-info-row) :is(span,strong,p,small,label){color:#f3f4f6!important}/* MODIFICADO */ 
+body:not(.dark-mode) :is(.product-viewer,#productModal,#vsmGallery) .muted{color:var(--ui-muted)!important}/* MODIFICADO */ 
+body.dark-mode :is(.product-viewer,#productModal,#vsmGallery) .muted{color:var(--ui-muted)!important}
 </style>
 
 <!-- NUEVO: ubicación, teléfono, botones y contraste de los temas solicitados -->
@@ -359,18 +422,18 @@ body.dark-mode :is(.product-viewer,#productModal,#vsmGallery) .muted{color:#b4c0
 #catalogGrid .status-badge svg,#catalogGrid .meta svg{color:inherit!important;stroke:currentColor!important}
 #vibraServiceCatalog .desc,#vibraServiceCatalog .meta,#vibraServiceCatalog .vsm-media-button small,#vsmGallery .vsm-viewer-header small{color:var(--text)!important;opacity:1!important}
 #vsmGallery .vsm-viewer-social a,#vsmGallery .vsm-viewer-social a svg{color:var(--text)!important;opacity:1!important}
-#adminModal .section-card h2,#adminModal .section-card h3,#adminModal .section-card h4,#adminModal .section-card p,#adminModal .admin-content .muted,#adminModal .admin-content .small{color:#f3f4f6!important;opacity:1!important}
-#adminModal .admin-kpi span,#adminModal .metric span{color:#bdc8d8!important}
-body:not(.dark-mode) .product-card .meta,body:not(.dark-mode) .product-card .desc{color:#394454!important}
-body:not(.dark-mode) #vibraServiceCatalog .desc,body:not(.dark-mode) #vibraServiceCatalog .meta{color:#303948!important}
+#adminModal .section-card h2,#adminModal .section-card h3,#adminModal .section-card h4,#adminModal .section-card p,#adminModal .admin-content .muted,#adminModal .admin-content .small{color:#f3f4f6!important;opacity:1!important}/* MODIFICADO */ 
+#adminModal .admin-kpi span,#adminModal .metric span{color:var(--ui-muted)!important}/* MODIFICADO */ 
+body:not(.dark-mode) .product-card .meta,body:not(.dark-mode) .product-card .desc{color:var(--ui-text)!important}/* MODIFICADO */ 
+body:not(.dark-mode) #vibraServiceCatalog .desc,body:not(.dark-mode) #vibraServiceCatalog .meta{color:var(--ui-text)!important}
 @media(max-width:750px){#viPublicWrap .vi-filter-panel .vi-fields{grid-template-columns:1fr}#customerProfileModal .vi-country-phone{grid-template-columns:minmax(105px,38%) minmax(0,1fr)!important}}
 </style>
 
 <!-- NUEVO: contraste de ficha, servicios y administración en ambos temas -->
 <style id="vibra-surgical-location-theme-20261015">
 body:not(.dark-mode) #catalogGrid .status-badge,body:not(.dark-mode) #catalogGrid .product-card .product-unit,body:not(.dark-mode) #catalogGrid .meta .status-badge{background:#f0e5ed!important;color:#352135!important}
-body:not(.dark-mode) #catalogGrid .v11-unit-badge,body:not(.dark-mode) .product-viewer .v11-unit-badge{background:#f3e3ef!important;color:#3a1734!important;border:1px solid #dfc5d6!important}
-body.dark-mode #catalogGrid .v11-unit-badge,body.dark-mode .product-viewer .v11-unit-badge{background:#32303a!important;color:#fff!important}
+body:not(.dark-mode) #catalogGrid .v11-unit-badge,body:not(.dark-mode) .product-viewer .v11-unit-badge{background:#f3e3ef!important;color:#3a1734!important;border:1px solid #dfc5d6!important}/* MODIFICADO */ 
+body.dark-mode #catalogGrid .v11-unit-badge,body.dark-mode .product-viewer .v11-unit-badge{background:var(--ui-raised)!important;color:#fff!important}
 body:not(.dark-mode) #catalogGrid .status-badge svg,body:not(.dark-mode) #catalogGrid .product-unit svg{stroke:currentColor!important}
 body:not(.dark-mode) #vibraServiceCatalog .vsm-price{color:#b00071!important;font-weight:800!important}
 body.dark-mode #vibraServiceCatalog .vsm-price{color:#ff66bc!important;font-weight:800!important}
@@ -378,9 +441,9 @@ body.dark-mode #vibraServiceCatalog .vsm-price{color:#ff66bc!important;font-weig
 body:not(.dark-mode) #adminModal,body.dark-mode #adminModal{--text:#f3f4f6!important;--muted:#bdc7d5!important;color:#f3f4f6!important}
 #adminModal .section-card,#adminModal .admin-kpi,#adminModal .metric,#adminModal .review-card,#adminModal .vibra-location-admin{color:#f3f4f6!important}
 #adminModal .section-card :is(h1,h2,h3,h4,p,span,strong,label),#adminModal .admin-kpi span,#adminModal .metric span{color:inherit}
-#adminModal .admin-kpi strong,#adminModal .metric strong{color:#ff65ba!important}
-#adminModal .muted,#adminModal .small.muted{color:#bdc7d5!important}
-#adminModal select,#adminModal option,#adminModal input,#adminModal textarea{color:#f3f4f6!important;background:#11151b!important}
+#adminModal .admin-kpi strong,#adminModal .metric strong{color:#ff65ba!important}/* MODIFICADO */ 
+#adminModal .muted,#adminModal .small.muted{color:var(--ui-muted)!important}/* MODIFICADO */ 
+#adminModal select,#adminModal option,#adminModal input,#adminModal textarea{color:#f3f4f6!important;background:var(--ui-surface)!important}
 #viPublicWrap select,#viPublicWrap option{color:var(--text)!important;background:var(--card)!important}
 body:not(.dark-mode) #catalogGrid [style*="background:var(--secondary)"]{color:#fff}
 </style>
@@ -759,7 +822,7 @@ function applyPublicTheme(){
     document.documentElement.style.setProperty('--vibra-on-primary',luminance>.179?'#000':'#fff');
   }else document.documentElement.style.removeProperty('--vibra-on-primary');
   document.documentElement.dataset.vibraMode=publicThemeMode==='dark'?'dark':'default';document.body.classList.toggle('dark-mode',publicThemeMode==='dark');document.documentElement.classList.toggle('vibra-dark-first',publicThemeMode==='dark');
-  /* MODIFICADO: sincronizar el fondo al alternar ambos modos */ if(publicThemeMode==='dark') document.body.style.background='#0d1015'; else if(state?.config?.design){const d=state.config.design;document.body.style.background=d.bgType==='gradient'?`linear-gradient(${d.gradAngle}deg,${d.grad1},${d.grad2}) fixed`:d.bgType==='image'&&d.bgImage?`linear-gradient(rgba(255,255,255,${1-d.bgOpacity}),rgba(255,255,255,${1-d.bgOpacity})),url('${d.bgImage}') center/cover fixed`:(d.siteBg||'#f7f7f9');}
+  /* MODIFICADO: sincronizar el fondo al alternar ambos modos */ if(publicThemeMode==='dark') document.body.style.background='var(--ui-page)'; /* MODIFICADO */ else if(state?.config?.design){const d=state.config.design;document.body.style.background=d.bgType==='gradient'?`linear-gradient(${d.gradAngle}deg,${d.grad1},${d.grad2}) fixed`:d.bgType==='image'&&d.bgImage?`linear-gradient(rgba(255,255,255,${1-d.bgOpacity}),rgba(255,255,255,${1-d.bgOpacity})),url('${d.bgImage}') center/cover fixed`:(d.siteBg||'#f7f7f9');}
   // NUEVO: aplicar la referencia base y respetar los colores y fondos personalizados.
   const design=state?.config?.design;
   document.body.toggleAttribute('data-vibra-ref-background',publicThemeMode==='dark'||!design||(design.bgType==='solid'&&(!design.siteBg||String(design.siteBg).trim().toLowerCase()==='#f7f7f9')));
@@ -3824,15 +3887,15 @@ const oldPane=renderAdminPane;renderAdminPane=async function(k){if(k!=='delivery
 .v14-follow-box{text-align:right}.v14-follow-count{font-size:1.3rem;font-weight:900;color:var(--primary)}
 .v14-goals{display:grid;gap:8px;padding:0 18px 18px}.v14-goal{border:1px solid var(--line);border-radius:12px;padding:10px}
 .v14-goal-head{display:flex;justify-content:space-between;gap:8px;font-size:.8rem;font-weight:800}.v14-goal-bar{height:9px;border-radius:999px;background:var(--secondary);overflow:hidden;margin-top:7px}.v14-goal-bar span{display:block;height:100%;background:var(--primary)}
-.v14-stars{display:flex;gap:5px}.v14-star{border:0;background:transparent;color:#9ca3af;font-size:1.8rem;padding:2px;line-height:1}.v14-star.on{color:#ffb300}
+.v14-stars{display:flex;gap:5px}/* MODIFICADO */ .v14-star{border:0;background:transparent;color:var(--ui-muted);font-size:1.8rem;padding:2px;line-height:1}.v14-star.on{color:#ffb300}
 .v14-review-grid{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:10px}.v14-score{border:1px solid var(--line);border-radius:12px;padding:10px;text-align:center}.v14-score strong{display:block;font-size:1.4rem;color:var(--primary)}
 .v14-notice-card{border:1px solid var(--line);border-radius:13px;padding:13px;background:var(--card);margin-bottom:9px}.v14-notice-card h4{margin:0 0 5px}.v14-notice-card p{margin:0 0 9px;color:var(--muted);font-size:.83rem}
 .v14-category-card{border:1px solid var(--line);border-radius:13px;padding:12px;margin-bottom:10px}.v14-category-head{display:flex;align-items:center;justify-content:space-between;gap:10px}.v14-category-products{display:grid;gap:7px;margin-top:10px}.v14-category-product{display:grid;grid-template-columns:minmax(0,1fr) 220px;gap:8px;align-items:center;padding:8px 0;border-top:1px solid var(--line)}
 .v14-payment-history{margin-top:16px}.v14-reject-form{display:grid;gap:11px}
-.v14-receipt-modal{width:min(980px,96vw);height:min(92dvh,880px);max-height:92dvh}.v14-receipt-modal .modal-body{height:calc(92dvh - 70px);max-height:none;padding:12px;display:grid;place-items:center;overflow:hidden}.v14-receipt-modal img,.v14-receipt-modal iframe{width:100%;height:100%;object-fit:contain;border:0;border-radius:10px;background:#111}
+.v14-receipt-modal{width:min(980px,96vw);height:min(92dvh,880px);max-height:92dvh}.v14-receipt-modal .modal-body{height:calc(92dvh - 70px);max-height:none;padding:12px;display:grid;place-items:center;overflow:hidden}/* MODIFICADO */ .v14-receipt-modal img,.v14-receipt-modal iframe{width:100%;height:100%;object-fit:contain;border:0;border-radius:10px;background:var(--ui-surface)}
 .product-viewer{width:min(1180px,97vw)!important;height:min(94dvh,900px)!important;max-height:94dvh!important}
-.product-viewer .modal-body{max-height:none!important;height:calc(94dvh - 70px);display:grid!important;grid-template-columns:minmax(0,1.35fr) minmax(320px,.65fr);grid-auto-rows:min-content;gap:10px 16px;overflow:hidden!important}
-.product-viewer .product-large-view{grid-column:1;grid-row:1/20;height:100%!important;max-height:none!important;min-height:0!important;overflow:hidden!important;display:grid!important;place-items:center;background:#111827}
+.product-viewer .modal-body{max-height:none!important;height:calc(94dvh - 70px);display:grid!important;grid-template-columns:minmax(0,1.35fr) minmax(320px,.65fr);grid-auto-rows:min-content;gap:10px 16px;overflow:hidden!important}/* MODIFICADO */ 
+.product-viewer .product-large-view{grid-column:1;grid-row:1/20;height:100%!important;max-height:none!important;min-height:0!important;overflow:hidden!important;display:grid!important;place-items:center;background:var(--ui-surface)}
 .product-viewer .product-large-view #productZoomImage{width:100%!important;height:100%!important;min-height:0!important;display:grid!important;place-items:center!important}
 .product-viewer .product-large-view img{max-width:100%!important;max-height:100%!important;width:auto!important;height:auto!important;object-fit:contain!important}
 .product-viewer .product-large-view svg{max-width:80%!important;max-height:70%!important}
@@ -4399,8 +4462,8 @@ window.vibraPaintExperience=paintExperience;cfg();renderHeader();paintExperience
 #v16CropModal{width:min(960px,96vw);max-width:960px;max-height:94vh}
 #v16CropModal .modal-body{overflow:auto}
 .v16-crop-layout{display:grid;grid-template-columns:1fr .88fr;gap:18px;align-items:start}
-.v16-crop-stage-wrap{display:grid;gap:12px}
-.v16-crop-stage{position:relative;border-radius:18px;border:1px solid var(--line);background:#0f1621;overflow:hidden;width:100%;max-width:520px;justify-self:center}
+.v16-crop-stage-wrap{display:grid;gap:12px}/* MODIFICADO */ 
+.v16-crop-stage{position:relative;border-radius:18px;border:1px solid var(--line);background:var(--ui-surface);overflow:hidden;width:100%;max-width:520px;justify-self:center}
 .v16-crop-stage[data-shape="circle"]{border-radius:20px}
 .v16-crop-stage::after{content:"";position:absolute;inset:0;border:1px dashed rgba(255,255,255,.34);pointer-events:none}
 .v16-crop-image{position:absolute;left:50%;top:50%;transform-origin:center center;will-change:transform}
@@ -4651,7 +4714,7 @@ setTimeout(()=>{renderTrackingButtons();ensureBusinessTrigger()},800);
   position:relative!important;
   overflow:visible!important;
   isolation:isolate;
-}
+}/* MODIFICADO */ 
 .topbar .header>#notificationsBtn .followup-count,
 .topbar .header>#cartBtn .badge-count,
 .v17-count-badge{
@@ -4667,7 +4730,7 @@ setTimeout(()=>{renderTrackingButtons();ensureBusinessTrigger()},800);
   border-radius:999px!important;
   background:#e53935!important;
   color:#fff!important;
-  border:2px solid #171c24!important;
+  border:2px solid var(--ui-border)!important;
   box-shadow:0 2px 8px #0007!important;
   font-size:10px!important;
   font-weight:900!important;
@@ -5271,8 +5334,8 @@ setTimeout(reconcileSession,1500);
 .vibra-v7-notice{font-size:13px;color:var(--muted);margin:12px 0}
 .vibra-custom-icons{display:flex;flex-wrap:wrap;gap:7px}
 .vibra-custom-icons label{display:inline-flex;gap:5px;align-items:center;padding:8px;border:1px solid var(--border);border-radius:10px}
-.vibra-custom-icons svg{width:25px;height:25px;color:var(--primary)}
-.vibra-map{height:270px;width:100%;border:0;border-radius:15px;background:#12151d}
+.vibra-custom-icons svg{width:25px;height:25px;color:var(--primary)}/* MODIFICADO */ 
+.vibra-map{height:270px;width:100%;border:0;border-radius:15px;background:var(--ui-surface)}
 </style>
 <script id="vibra-integracion-v7-script">
 (function(){
@@ -5516,7 +5579,7 @@ window.addEventListener('focus',()=>{if(db())load()});
 .v10extra{display:flex;gap:12px;align-items:center;padding:13px;border:1px solid #63435d;background:#231e2b;border-radius:14px}
 .v10extra div{flex:1;min-width:0}.v10extra small{display:block;color:#c5aaba;font-size:12px}
 .v10orderline{display:flex;align-items:center;justify-content:space-between;gap:12px;padding:8px 0;border-bottom:1px solid #5c4157}
-.v10orderline span{display:flex;align-items:center;gap:8px}.v10orderline input{width:75px;background:#111622;border:1px solid #74576b;color:white;border-radius:7px;padding:8px}
+.v10orderline span{display:flex;align-items:center;gap:8px}/* MODIFICADO */ .v10orderline input{width:75px;background:var(--ui-surface);border:1px solid var(--ui-border);color:white;border-radius:7px;padding:8px}
 #v10BookingExtras{background:#211b2a;padding:16px;border-radius:12px;margin-top:20px;border:1px solid #6a3d60}
 #v10Quote{font-weight:750;color:#ff81c0}
 
@@ -5590,7 +5653,7 @@ async function savePromotion(){if(!admin)return;const target=$('#v10PromoTarget'
  const row={title,target_kind:target,product_id:target==='practitioner'?null:product_id,practitioner_id:target==='product'?null:practitioner_id,discount_percent:pct,starts_at:from?new Date(from).toISOString():null,ends_at:to?new Date(to).toISOString():null,active:false};
  const r=await db().from('service_promotions').insert(row);msg(r.error?.message||'Promoción creada inactiva. Puedes activarla en la lista.');if(!r.error)load();}
 function attachBooking(){const form=$('#v9Booking');if(!form||form.dataset.v10Enhanced)return;form.dataset.v10Enhanced='1';
- const host=document.createElement('div');host.id='v10BookingExtras';host.innerHTML='<h3>Productos adicionales (solo dentro del local)</h3><div id="v10BookingList"></div><label class="v9small">Cupón (opcional)<input id="v10Coupon" maxlength="32" placeholder="Código promocional" style="display:block;max-width:340px;width:100%;padding:10px;border-radius:8px;background:#10121c;color:white;border:1px solid #555"></label><p id="v10Quote"></p>';
+ const host=document.createElement('div');host.id='v10BookingExtras';host.innerHTML='<h3>Productos adicionales (solo dentro del local)</h3><div id="v10BookingList"></div><label class="v9small">Cupón (opcional)<!-- MODIFICADO --><input id="v10Coupon" maxlength="32" placeholder="Código promocional" style="display:block;max-width:340px;width:100%;padding:10px;border-radius:8px;background:var(--ui-field);color:var(--ui-text);border:1px solid var(--ui-border)"></label><p id="v10Quote"></p>';
  const btn=$('#v9SubmitBooking');btn?.parentElement?.before(host);
  const wrap=$('#v10BookingList');wrap.innerHTML=items.map(p=>`<label class="v10orderline"><span>${icon(['lingerie','flower','bottle','gift'].includes(p.icon)?p.icon:'gift')} ${esc(p.name)} · ${money(p.price)}</span><input type="number" min="0" max="${Math.min(20,p.stock)}" step="1" value="0" data-v10-qty="${p.id}" aria-label="Cantidad de ${esc(p.name)}"></label>`).join('')||'<p class="v9muted">Sin productos adicionales publicados.</p>';
  const draw=()=>{const dur=Number($('#v9Duration')?.value||0);const extra=[...wrap.querySelectorAll('[data-v10-qty]')].reduce((s,i)=>s+(Number(i.value)||0)*(items.find(p=>p.id===i.dataset.v10Qty)?.price||0),0);$('#v10Quote').textContent='Importe orientativo: '+money(rate*dur/60+extra)+' MXN antes de descuentos. El servidor confirmará el total.'};
@@ -5716,7 +5779,7 @@ window.addEventListener('focus',()=>{if(block()&&db())load().catch(console.warn)
    const pane=q('#adminContent');if(!pane||!q('#adminModal.show')||typeof activeAdmin==='undefined'||activeAdmin!=='products')return;
    const heading=q('#vibraServicesEditor');if(heading)return;
    const section=document.createElement('section');section.id='vibraServicesEditor';section.className='section-card';
-   section.innerHTML=`<div class="toolbar"><button type="button" class="btn secondary" id="vibraNewService">${UI.plus}<span>Nuevo servicio</span></button></div><section id="vibraServiceForm" hidden><h3>Nuevo servicio y profesional</h3><div class="admin-grid two"><label class="field">Nombre profesional<input id="vibraStaffName" class="input" maxlength="100"></label><label class="field">Nombre del servicio<input id="vibraServiceName" class="input" maxlength="120" value="Masaje de bienestar"></label><label class="field">Descripción<textarea id="vibraStaffBio" class="textarea" maxlength="2500"></textarea></label><label class="field">Tarifa del servicio (MXN)<input id="vibraServicePrice" class="input" type="number" min="0" step="0.01"></label><label class="field">Duraciones disponibles (minutos, separadas por comas)<input id="vibraServiceDuration" class="input" value="30,60,90"></label><label class="field">Teléfono (opcional)<input id="vibraStaffPhone" class="input" maxlength="25"></label><label class="field">Instagram (opcional)<input id="vibraInstagram" class="input" type="url" placeholder="https://instagram.com/..."></label><label class="field">Facebook (opcional)<input id="vibraFacebook" class="input" type="url" placeholder="https://facebook.com/..."></label><label class="field">TikTok (opcional)<input id="vibraTiktok" class="input" type="url" placeholder="https://tiktok.com/@..."></label><label class="field">Fotos y videos (hasta 15 fotos y 10 videos; cada video de máximo 3 minutos)<input id="vibraMedia" class="input" type="file" accept="image/jpeg,image/png,image/webp,video/mp4,video/webm" multiple></label></div><div class="section-card"><h3>Horarios de disponibilidad de esta profesional</h3><p class="small muted">Selecciona los días y las horas que atenderá.</p><div id="vibraCreateHours" class="vsm-hours"></div></div><div id="vibraMediaSummary" class="small muted"></div><div class="toolbar"><button type="button" class="btn" id="vibraSaveProfessional">Guardar profesional y servicio</button><button type="button" class="btn secondary" id="vibraCancelService">Cancelar</button></div><p id="vibraServiceStatus" class="small muted" role="status"></p></section>`;
+   section.innerHTML=`<div class="toolbar"><button type="button" class="btn secondary" id="vibraNewService">${UI.plus}<span>Nuevo servicio</span></button></div><section id="vibraServiceForm" hidden><h3>Nuevo servicio y profesional</h3><div class="admin-grid two"><label class="field">Nombre profesional<input id="vibraStaffName" class="input" maxlength="100"></label><label class="field">Nombre del servicio<input id="vibraServiceName" class="input" maxlength="120" value="Masaje de bienestar"></label><label class="field">Descripción<textarea id="vibraStaffBio" class="textarea" maxlength="2500"></textarea></label><label class="field">Tarifa del servicio (MXN)<input id="vibraServicePrice" class="input" type="number" min="0" step="0.01"></label><label class="field">Duraciones disponibles (minutos, separadas por comas)<!-- MODIFICADO --><input id="vibraServiceDuration" class="input" placeholder="Ej. 30"></label><label class="field">Teléfono (opcional)<input id="vibraStaffPhone" class="input" maxlength="25"></label><label class="field">Instagram (opcional)<input id="vibraInstagram" class="input" type="url" placeholder="https://instagram.com/..."></label><label class="field">Facebook (opcional)<input id="vibraFacebook" class="input" type="url" placeholder="https://facebook.com/..."></label><label class="field">TikTok (opcional)<input id="vibraTiktok" class="input" type="url" placeholder="https://tiktok.com/@..."></label><label class="field">Fotos y videos (hasta 15 fotos y 10 videos; cada video de máximo 3 minutos)<input id="vibraMedia" class="input" type="file" accept="image/jpeg,image/png,image/webp,video/mp4,video/webm" multiple></label></div><div class="section-card"><h3>Horarios de disponibilidad de esta profesional</h3><p class="small muted">Selecciona los días y las horas que atenderá.</p><div id="vibraCreateHours" class="vsm-hours"></div></div><div id="vibraMediaSummary" class="small muted"></div><div class="toolbar"><button type="button" class="btn" id="vibraSaveProfessional">Guardar profesional y servicio</button><button type="button" class="btn secondary" id="vibraCancelService">Cancelar</button></div><p id="vibraServiceStatus" class="small muted" role="status"></p></section>`;
    const toolbar=pane.querySelector('.toolbar');(toolbar||pane).after(section);
    q('#vibraCreateHours').innerHTML=['Domingo','Lunes','Martes','Miércoles','Jueves','Viernes','Sábado'].map((d,i)=>`<label class="vsm-hour"><span><input type="checkbox" data-create-day="${i}" ${i>=1&&i<=5?'checked':''}> ${d}</span><div><small>Desde</small><input type="time" data-create-start="${i}" value="09:00"></div><div><small>Hasta</small><input type="time" data-create-end="${i}" value="18:00"></div></label>`).join('');
    q('#vibraNewService').onclick=()=>{editorOpened=!editorOpened;q('#vibraServiceForm').hidden=!editorOpened};
@@ -5818,7 +5881,10 @@ if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',
 })();
 </script>
 <style id="vibra-service-management-v16">
-#vibraServiceManage{margin-top:14px}#vibraServiceManage .vsm-list{display:grid;gap:8px;margin:12px 0}#vibraServiceManage .vsm-entry{border:1px solid var(--line);border-radius:12px;padding:11px;display:flex;justify-content:space-between;align-items:center;gap:12px;flex-wrap:wrap}#vibraServiceManage .vsm-hours{display:grid;grid-template-columns:repeat(auto-fit,minmax(190px,1fr));gap:10px}#vibraServiceManage .vsm-hour{padding:10px;border:1px solid var(--line);border-radius:10px}#vibraServiceManage .vsm-hour input[type=time]{width:100%;min-width:0;background:var(--card);color:var(--text);border:1px solid var(--line);border-radius:8px;padding:7px}#vibraServiceManage .vsm-edit{margin-top:12px}#vibraServiceManage [hidden]{display:none!important}.vsm-view-trigger{border:0;background:transparent;padding:0;cursor:zoom-in;display:block;width:100%}.vsm-view-trigger img{width:100%}.vsm-price{font-weight:800;color:var(--primary)!important}.vsm-media-button{margin-top:6px;width:100%}.vsm-gallery{position:fixed;inset:0;background:rgba(0,0,0,.92);z-index:400;display:none;align-items:center;justify-content:center;flex-direction:column;padding:14px;gap:12px}.vsm-gallery.open{display:flex}.vsm-gallery img,.vsm-gallery video{max-width:min(100%,1050px);max-height:76vh;width:auto;height:auto;object-fit:contain}.vsm-gallery .vsm-actions{display:flex;gap:12px;align-items:center;justify-content:center;flex-wrap:wrap}.vsm-gallery button{color:#fff;background:#252a35;border:1px solid #707886;padding:10px 15px;border-radius:10px;font-weight:700}.vsm-gallery .vsm-close{position:absolute;right:16px;top:14px}.vsm-gallery .vsm-count{color:#fff}#vsmPreviewItems{display:grid;grid-template-columns:repeat(auto-fill,minmax(185px,1fr));gap:10px}#vsmPreviewItems article{border:1px solid var(--line);padding:12px;border-radius:12px;display:grid;gap:6px}#vsmPreviewItems article span{color:var(--primary);font-weight:800}
+#vibraServiceManage{margin-top:14px}#vibraServiceManage .vsm-list{display:grid;gap:8px;margin:12px 0}#vibraServiceManage .vsm-entry{border:1px solid var(--line);border-radius:12px;padding:11px;display:flex;justify-content:space-between;align-items:center;gap:12px;flex-wrap:wrap}#vibraServiceManage .vsm-hours{display:grid;grid-template-columns:repeat(auto-fit,minmax(190px,1fr));gap:10px}#vibraServiceManage .vsm-hour{padding:10px;border:1px solid var(--line);border-radius:10px}#vibraServiceManage .vsm-hour input[type=time]{width:100%;min-width:0;background:var(--card);color:var(--text);border:1px solid var(--line);border-radius:8px;padding:7px}#vibraServiceManage .vsm-edit{margin-top:12px}#vibraServiceManage [hidden]{display:none!important}.vsm-view-trigger{border:0;background:transparent;padding:0;cursor:zoom-in;display:block;width:100%}.vsm-view-trigger img{width:100%}.vsm-price{font-weight:800;color:var(--primary)!important}.vsm-media-button{margin-top:6px;width:100%}.vsm-gallery{position:fixed;inset:0;background:rgba(0,0,0,.92);z-index:400;display:none;align-items:center;justify-content:center;flex-direction:column;padding:14px;gap:12px}.vsm-gallery.open{display:flex}.vsm-gallery img,.vsm-gallery video{max-width:min(100%,1050px);max-height:76vh;width:auto;height:auto;object-fit:contain}.vsm-gallery .vsm-actions{display:flex;gap:12px;align-items:center;justify-content:center;flex-wrap:wrap}/* MODIFICADO */ .vsm-gallery button{color:#fff;background:var(--ui-surface);border:1px solid var(--ui-border);padding:10px 15px;border-radius:10px;font-weight:700}.vsm-gallery .vsm-close{position:absolute;right:16px;top:14px}.vsm-gallery .vsm-count{color:#fff}#vsmPreviewItems{display:grid;grid-template-columns:repeat(auto-fill,minmax(185px,1fr));gap:10px}#vsmPreviewItems article{border:1px solid var(--line);padding:12px;border-radius:12px;display:grid;gap:6px}#vsmPreviewItems article span{color:var(--primary);font-weight:800}
+/* NUEVO: SVG compartidos de reacción y favoritos. */
+#vsmGallery :is(#vsmLike,#vsmFavorite) svg{width:1.1em;height:1.1em;fill:none;stroke:currentColor;stroke-width:1.8;vertical-align:middle;margin-inline-end:6px}
+#vsmGallery :is(#vsmLike,#vsmFavorite)[aria-pressed=true] svg{fill:currentColor}
 </style>
 <script id="vibra-service-management-v16">
 (()=>{'use strict';
@@ -5906,16 +5972,18 @@ const box=q('#vsmProfileInfo');if(box){box.replaceChildren();for(const [label,va
 const social=q('#vsmProfileSocial');if(social){social.replaceChildren();const links=p?.social_links||{};for(const name of ['instagram','facebook','tiktok']){let href=links[name];if(typeof href!=='string'||!/^https:\/\//i.test(href))continue;const a=document.createElement('a');a.href=href;a.rel='noopener noreferrer';a.target='_blank';a.innerHTML='<span>'+name[0].toUpperCase()+name.slice(1)+'</span>'+'<svg aria-hidden="true" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">'+(name==='instagram'?'<rect x="3" y="3" width="18" height="18" rx="5"/><circle cx="12" cy="12" r="4"/><circle cx="17.5" cy="6.5" r="1"/>':name==='facebook'?'<path d="M14 21v-8h3l.5-4H14V7c0-1 .5-1.5 1.5-1.5H18V2h-3c-3 0-5 2-5 5v2H7v4h3v8"/>':'<path d="M14 3v11a5 5 0 1 1-5-5M14 4c1 3 3 5 6 5"/>')+'</svg>';social.append(a)}}
 const like=q('#vsmLike'),fav=q('#vsmFavorite'),count=q('#vsmLikes'),msg=q('#vsmCommentStatus'),textarea=q('#vsmCommentText'),comments=q('#vsmComments');
 const feedback=async(action,payload={})=>{const client=db();if(!client)throw Error('Sin conexión a Supabase');const {data,error}=await client.rpc('vibra_service_feedback',{p_action:action,p_practitioner_id:id,p_payload:payload});if(error)throw error;return data||{}};
-const renderFeedback=async()=>{try{const result=await feedback('read');count.textContent=String(result.likes??0);like.dataset.active=result.liked?'1':'0';fav.dataset.active=result.favorited?'1':'0';like.textContent=result.liked?'♥ Me gusta':'♡ Me gusta';fav.textContent=result.favorited?'★ Favorito':'☆ Favorito';const list=q('#vsmCommentList');if(list){list.replaceChildren();for(const c of result.comments||[]){const item=document.createElement('p');item.className='vsm-comment';item.textContent=c.text||'';list.append(item)}}}catch(e){if(msg)msg.textContent='No se pudieron cargar las interacciones: '+e.message}};
+const renderFeedback=async()=>{try{const result=await feedback('read');count.textContent=String(result.likes??0);like.dataset.active=result.liked?'1':'0';fav.dataset.active=result.favorited?'1':'0';/* MODIFICADO: iconos de reacción y favorito con estado accesible. */like.innerHTML=V12I.heart+'<span>Me gusta</span>';fav.innerHTML=V12I.star+'<span>Favorito</span>';like.setAttribute('aria-pressed',String(!!result.liked));fav.setAttribute('aria-pressed',String(!!result.favorited));const list=q('#vsmCommentList');if(list){list.replaceChildren();for(const c of result.comments||[]){const item=document.createElement('p');item.className='vsm-comment';item.textContent=c.text||'';list.append(item)}}}catch(e){if(msg)msg.textContent='No se pudieron cargar las interacciones: '+e.message}};
 for(const [button,action] of [[like,'like'],[fav,'favorite']]){button.onclick=async()=>{button.disabled=true;try{await feedback(action);await renderFeedback()}catch(e){msg.textContent=/JWT|auth|session|logged/i.test(e.message)?'Inicia sesión para interactuar.':e.message}finally{button.disabled=false}}}
 q('#vsmShowComments').onclick=()=>{comments.hidden=!comments.hidden};q('#vsmSendComment').onclick=async()=>{const text=textarea.value.trim();if(!text)return;const b=q('#vsmSendComment');b.disabled=true;msg.textContent='Publicando…';try{await feedback('comment',{text});textarea.value='';msg.textContent='Opinión publicada';await renderFeedback()}catch(e){msg.textContent=e.message}finally{b.disabled=false}};
 renderFeedback();
 drawGallery();}
-function enhanceCards(){qa('#vibraServiceCatalog .vibra-service-card').forEach(card=>{const id=q('[data-vibra-book]',card)?.dataset.vibraBook;if(!id)return;const s=allServices.find(x=>x.id===serviceLinks.find(y=>y.practitioner_id===id)?.service_id);let price=q('.vsm-price',card);if(s&&!price){price=document.createElement('p');price.className='vsm-price';q('.vibra-service-content',card)?.append(price);}if(price&&s)price.textContent=`${s.name} · Tarifa: $${Number(s.hourly_price).toLocaleString('es-MX',{minimumFractionDigits:2})} MXN`;
+function enhanceCards(){qa('#vibraServiceCatalog .vibra-service-card').forEach(card=>{const id=q('[data-vibra-book]',card)?.dataset.vibraBook;if(!id)return;/* MODIFICADO: usar únicamente servicios activos vinculados a este perfil. */const linkedIds=new Set(serviceLinks.filter(link=>link.practitioner_id===id).map(link=>link.service_id));const s=allServices.find(service=>service.active!==false&&linkedIds.has(service.id));let price=q('.vsm-price',card);if(s&&!price){price=document.createElement('p');price.className='vsm-price';q('.vibra-service-content',card)?.append(price);}if(price&&s)price.textContent=`${s.name} · Tarifa: $${Number(s.hourly_price).toLocaleString('es-MX',{minimumFractionDigits:2})} MXN`;
  // NUEVO: opciones reales de duración y reacción del profesional.
  const book=q('[data-vibra-book]',card), footer=q('.ve-service-actions',card);
- if(footer&&s?.active!==false&&s){
-  const minutes=[...new Set((window.vsmDurations||[]).filter(row=>row.service_id===s.id).map(row=>Number(row.minutes)).filter(n=>Number.isInteger(n)&&n>0))].sort((a,b)=>a-b);
+ // MODIFICADO: eliminar opciones obsoletas si se despublica el servicio.
+ if(footer&&!s)q('.ve-service-times',card)?.remove();
+ if(footer&&s){
+  const minutes=[...new Set((window.vsmDurations||[]).filter(row=>row.service_id===s.id&&row.active!==false&&row.enabled!==false).map(row=>Number(row.minutes)).filter(n=>Number.isInteger(n)&&n>0))].sort((a,b)=>a-b);
   const signature=s.id+':'+minutes.join(',');
   let row=q('.ve-service-times',card);
   if(row?.dataset.times!==signature){
@@ -5982,8 +6050,8 @@ let editor;const admin=document.getElementById('adminContent');const observer=ne
 #adminModal .ticket-footer-icons label svg{flex:0 0 22px}
 #adminModal .food-icon-preview{max-height:120px}
 .leaflet-marker-icon.v23-pin-icon,.v23-pin-icon svg{background:transparent!important;border:none!important;box-shadow:none!important}
-#v23MapControls{position:absolute;top:84px;right:10px;z-index:999;display:flex;flex-direction:column;gap:5px}
-#v23MapControls button{border:1px solid #bbc4d0;background:white;color:#172235;border-radius:6px;font:700 16px Arial;padding:7px;min-width:37px}
+#v23MapControls{position:absolute;top:84px;right:10px;z-index:999;display:flex;flex-direction:column;gap:5px}/* MODIFICADO */ 
+#v23MapControls button{border:1px solid var(--ui-border);background:white;color:var(--ui-text);border-radius:6px;font:700 16px Arial;padding:7px;min-width:37px}
 </style>
 <script id="vibra-v23-repairs">
 (function(){
@@ -6147,37 +6215,37 @@ document.addEventListener('DOMContentLoaded',()=>{
 </script><style id="vibra-ui-refined-20261010">
 .vibra-media-controls{display:none!important}.vibra-media-tile{cursor:grab;touch-action:pan-y;position:relative}.vibra-media-tile:active{cursor:grabbing}.vibra-media-list{gap:12px!important}.vibra-media-tile.vibra-drag-over{outline:3px dashed var(--primary);outline-offset:3px;transform:scale(.97)}
 #vsmSave:disabled{opacity:.7;cursor:progress}#vsmStatus{min-height:1.5em}
-#vsmGallery{padding:clamp(12px,3vw,35px)!important;background:rgba(4,7,12,.94)}#vsmGallery .vsm-dialog{width:min(1100px,100%);max-height:96dvh;display:grid;grid-template-rows:auto minmax(0,1fr) auto;gap:12px;background:#161a20;border:1px solid #414755;border-radius:18px;padding:12px;box-shadow:0 24px 70px #000a}#vsmGallery .vsm-viewer-header{display:flex;align-items:center;justify-content:space-between;gap:16px;color:#f3f4f6;padding:8px 10px}#vsmGallery h2{font-size:clamp(1.05rem,3vw,1.4rem);margin:0}#vsmGallery .vsm-viewer-header p{margin:4px 0 0;color:#c4cbd7;font-size:.84rem}#vsmGallery .vsm-close{position:static!important;border-radius:50%;height:44px;width:44px;font-size:28px;line-height:1;flex-shrink:0;padding:0}#vsmGallery .vsm-viewer-stage{display:grid;place-items:center;overflow:hidden;min-height:170px;background:#050507;border-radius:12px}#vsmGallery img,#vsmGallery video{max-width:100%;max-height:min(68dvh,720px);width:auto;height:auto;object-fit:contain}#vsmGallery .vsm-actions{padding:3px 0 5px}#vsmGallery .vsm-count{min-width:60px;text-align:center}
+#vsmGallery{padding:clamp(12px,3vw,35px)!important;background:rgba(4,7,12,.94)}/* MODIFICADO */ #vsmGallery .vsm-dialog{width:min(1100px,100%);max-height:96dvh;display:grid;grid-template-rows:auto minmax(0,1fr) auto;gap:12px;background:var(--ui-surface);border:1px solid var(--ui-border);border-radius:18px;padding:12px;box-shadow:0 24px 70px #000a}#vsmGallery .vsm-viewer-header{display:flex;align-items:center;justify-content:space-between;gap:16px;color:#f3f4f6;padding:8px 10px}#vsmGallery h2{font-size:clamp(1.05rem,3vw,1.4rem);margin:0}/* MODIFICADO */ #vsmGallery .vsm-viewer-header p{margin:4px 0 0;color:var(--ui-muted);font-size:.84rem}#vsmGallery .vsm-close{position:static!important;border-radius:50%;height:44px;width:44px;font-size:28px;line-height:1;flex-shrink:0;padding:0}#vsmGallery .vsm-viewer-stage{display:grid;place-items:center;overflow:hidden;min-height:170px;background:#050507;border-radius:12px}#vsmGallery img,#vsmGallery video{max-width:100%;max-height:min(68dvh,720px);width:auto;height:auto;object-fit:contain}#vsmGallery .vsm-actions{padding:3px 0 5px}#vsmGallery .vsm-count{min-width:60px;text-align:center}
 #vibraServiceCatalog .vsm-price{color:var(--primary)!important}#vibraServiceCatalog .vibra-service-content{display:flex;flex-direction:column}#vibraServiceCatalog .vsm-media-button{margin-top:auto}#vibraServiceCatalog .vibra-service-photo{cursor:zoom-in}
-body.dark-mode .hero-card{background:linear-gradient(135deg,var(--primary),#4d0a45)!important}body.dark-mode #catalogGrid .product-card,body.dark-mode #vibraServiceCatalog article{color:#f3f4f6;background:#161a20;border-color:#303743}
+body.dark-mode .hero-card{background:linear-gradient(135deg,var(--primary),#4d0a45)!important}/* MODIFICADO */ body.dark-mode #catalogGrid .product-card,body.dark-mode #vibraServiceCatalog article{color:#f3f4f6;background:var(--ui-surface);border-color:var(--ui-border)}
 </style>
 
 <style id="vibra-profile-ux-20261011">
 #vsmGallery .vsm-dialog{width:min(1330px,98vw)!important;max-height:96dvh!important}
 #vsmGallery .vsm-viewer-body{min-height:0;display:grid;grid-template-columns:minmax(0,1.4fr) minmax(270px,.75fr);gap:12px;overflow:hidden}
-#vsmGallery .vsm-viewer-stage{min-width:0;min-height:300px;position:relative}
-#vsmGallery .vsm-viewer-sidebar{overflow-y:auto;padding:18px;background:#20252d;color:#f3f4f6;border-radius:12px;max-height:68dvh}
-#vsmGallery .vsm-viewer-sidebar h3{margin:0 0 10px;font-size:1.05rem}#vsmProfileInfo p{font-size:.86rem;margin:7px 0;line-height:1.5;color:#ced4df}#vsmProfileInfo strong{color:white}
-#vsmProfileSocial{display:flex;flex-wrap:wrap;gap:9px;margin:12px 0}#vsmProfileSocial a{color:#ff68d6;text-decoration:underline;font-size:.83rem}
-#vsmGallery .vsm-viewer-interact{display:flex;gap:6px;flex-wrap:wrap;border-top:1px solid #444d5d;padding-top:14px}
-#vsmGallery .vsm-viewer-interact button,#vsmSendComment{font-size:.82rem;padding:9px 11px;border-radius:9px;background:#353c49;border:1px solid #555e70;color:white}
-#vsmCommentText{display:block;width:100%;background:#101318;color:white;border:1px solid #596174;border-radius:8px;margin:10px 0;padding:10px}
+#vsmGallery .vsm-viewer-stage{min-width:0;min-height:300px;position:relative}/* MODIFICADO */ 
+#vsmGallery .vsm-viewer-sidebar{overflow-y:auto;padding:18px;background:var(--ui-surface);color:#f3f4f6;border-radius:12px;max-height:68dvh}
+#vsmGallery .vsm-viewer-sidebar h3{margin:0 0 10px;font-size:1.05rem}/* MODIFICADO */ #vsmProfileInfo p{font-size:.86rem;margin:7px 0;line-height:1.5;color:var(--ui-muted)}#vsmProfileInfo strong{color:white}
+#vsmProfileSocial{display:flex;flex-wrap:wrap;gap:9px;margin:12px 0}#vsmProfileSocial a{color:#ff68d6;text-decoration:underline;font-size:.83rem}/* MODIFICADO */ 
+#vsmGallery .vsm-viewer-interact{display:flex;gap:6px;flex-wrap:wrap;border-top:1px solid var(--ui-border);padding-top:14px}/* MODIFICADO */ 
+#vsmGallery .vsm-viewer-interact button,#vsmSendComment{font-size:.82rem;padding:9px 11px;border-radius:9px;background:var(--ui-raised);border:1px solid var(--ui-border);color:white}/* MODIFICADO */ 
+#vsmCommentText{display:block;width:100%;background:var(--ui-surface);color:white;border:1px solid var(--ui-border);border-radius:8px;margin:10px 0;padding:10px}
 #vsmGallery .vsm-media-changing:after{content:'Cargando archivo…';position:absolute;bottom:12px;left:12px;padding:6px 10px;border-radius:9px;color:white;background:#1f2731a8;font-size:12px;pointer-events:none}
 #vsmGallery .vsm-viewer-stage video{background:black;max-height:67dvh}#vsmGallery .vsm-viewer-stage img{max-height:67dvh}
-@media(max-width:740px){#vsmGallery .vsm-viewer-body{display:flex;flex-direction:column;overflow:auto}#vsmGallery .vsm-viewer-stage{min-height:220px;flex-shrink:0}#vsmGallery .vsm-viewer-sidebar{max-height:240px;flex-shrink:0}#vsmGallery .vsm-dialog{overflow:hidden}}
+@media(max-width:740px){#vsmGallery .vsm-viewer-body{display:flex;flex-direction:column;overflow:auto}#vsmGallery .vsm-viewer-stage{min-height:220px;flex-shrink:0}#vsmGallery .vsm-viewer-sidebar{max-height:240px;flex-shrink:0}#vsmGallery .vsm-dialog{overflow:hidden}}/* MODIFICADO */ 
 
-#vsmGallery .vsm-comment{border-bottom:1px solid #414755;padding:8px 0;font-size:.82rem;overflow-wrap:anywhere}#vsmGallery .vsm-viewer-interact button:disabled{opacity:.6}
+#vsmGallery .vsm-comment{border-bottom:1px solid var(--ui-border);padding:8px 0;font-size:.82rem;overflow-wrap:anywhere}#vsmGallery .vsm-viewer-interact button:disabled{opacity:.6}
 </style>
 <script id="vibra-product-card-backgrounds-20261011">(()=>{const grid=document.getElementById('catalogGrid');if(!grid)return;let pending=false;const decorate=()=>{if(pending)return;pending=true;requestAnimationFrame(()=>{pending=false;try{const products=typeof state!=='undefined'?state.products:[];for(const card of grid.querySelectorAll('.product-card')){const id=card.querySelector('[data-view-product]')?.dataset.viewProduct;if(!id)continue;const p=products.find(v=>String(v.id)===String(id));const color=p?.backgroundColor;if(color&&/^#[0-9a-fA-F]{6}$/.test(color)){card.style.setProperty('background-color',color,'important');card.style.setProperty('color','#fff','important')}else{card.style.removeProperty('background-color');card.style.removeProperty('color')}}}catch(e){console.warn('Fondo de productos:',e)}})};new MutationObserver(decorate).observe(grid,{childList:true,subtree:true});decorate();})();</script>
 
-<style id="vibra-service-viewer-polish-20261011">
-#vsmGallery .vsm-dialog{box-shadow:0 32px 100px #0009;border:1px solid #3b4352;border-radius:22px;overflow:hidden}
-#vsmGallery .vsm-viewer-sidebar{background:linear-gradient(150deg,#242936,#171a23)!important;border:1px solid #383d4b;padding:24px!important}
+<style id="vibra-service-viewer-polish-20261011">/* MODIFICADO */ 
+#vsmGallery .vsm-dialog{box-shadow:0 32px 100px #0009;border:1px solid var(--ui-border);border-radius:22px;overflow:hidden}/* MODIFICADO */ 
+#vsmGallery .vsm-viewer-sidebar{background:linear-gradient(150deg,#242936,#171a23)!important;border:1px solid var(--ui-border);padding:24px!important}
 #vsmGallery .vsm-viewer-sidebar h3{color:#fff;font-size:1.24rem;letter-spacing:-.02em}
 #vsmGallery #vsmProfileInfo{display:grid;gap:8px}#vsmGallery #vsmProfileInfo p{margin:0!important;padding:9px 11px;border-radius:9px;background:#ffffff08;line-height:1.5}
 #vsmGallery #vsmProfileInfo a{color:#ff80dc;display:inline-block;padding:7px 4px;text-underline-offset:3px}
-#vsmGallery .vsm-viewer-interact{display:flex;flex-wrap:wrap;gap:8px;padding-block:12px;border-top:1px solid #ffffff20}
-#vsmGallery .vsm-viewer-interact button{flex:1 1 95px;min-height:40px;border:1px solid #555e70;background:#303643;color:#fff;border-radius:10px;font-weight:700}
+#vsmGallery .vsm-viewer-interact{display:flex;flex-wrap:wrap;gap:8px;padding-block:12px;border-top:1px solid #ffffff20}/* MODIFICADO */ 
+#vsmGallery .vsm-viewer-interact button{flex:1 1 95px;min-height:40px;border:1px solid var(--ui-border);background:var(--ui-raised);color:#fff;border-radius:10px;font-weight:700}
 #vsmGallery .vsm-viewer-interact button[data-active="1"]{color:#ff65cb;border-color:#f052b5}
 #vsmGallery .vsm-viewer-stage{background:#08090b;border-radius:12px;overflow:hidden}
 #vsmGallery .vsm-viewer-stage img,#vsmGallery .vsm-viewer-stage video{display:block;object-fit:contain;max-width:100%;max-height:67dvh;margin:auto}
@@ -6187,12 +6255,12 @@ body.dark-mode .hero-card{background:linear-gradient(135deg,var(--primary),#4d0a
 #vsmGallery .vsm-viewer-sidebar{background:linear-gradient(145deg,#1c2330,#121720)!important}
 #vsmGallery #vsmProfileInfo p:nth-child(2){border-left:3px solid #ed2eb1;background:#e926a014!important}
 #vsmGallery #vsmProfileInfo p:nth-child(5){border-left:3px solid #32c58a;background:#18ae7820!important}
-#vsmGallery #vsmProfileInfo p[data-vibra-unavailable="true"]{border-left-color:#ef5757;background:#b12a2a28!important}
-#vsmProfileSocial a{display:inline-flex!important;align-items:center;gap:7px;background:#30394b;border:1px solid #4d5c73;border-radius:10px;padding:10px 13px!important;color:#f8d0f3!important;text-decoration:none!important}
+#vsmGallery #vsmProfileInfo p[data-vibra-unavailable="true"]{border-left-color:#ef5757;background:#b12a2a28!important}/* MODIFICADO */ 
+#vsmProfileSocial a{display:inline-flex!important;align-items:center;gap:7px;background:var(--ui-raised);border:1px solid var(--ui-border);border-radius:10px;padding:10px 13px!important;color:#f8d0f3!important;text-decoration:none!important}
 #vsmProfileSocial svg{width:17px;height:17px;stroke:currentColor;fill:none;stroke-width:1.8}
 #vsmGallery .vibra-book-service{display:flex;align-items:center;justify-content:center;gap:9px;width:100%;border:0;border-radius:12px;padding:13px;color:white;font-weight:800;background:var(--primary,#e50091);cursor:pointer;margin:13px 0}
-#vsmGallery .vibra-book-service svg{height:18px;width:18px;stroke:currentColor;fill:none}
-#vsmGallery .vibra-availability-note{font-size:.8rem;color:#c9d2df;line-height:1.5;margin:0 0 8px}
+#vsmGallery .vibra-book-service svg{height:18px;width:18px;stroke:currentColor;fill:none}/* MODIFICADO */ 
+#vsmGallery .vibra-availability-note{font-size:.8rem;color:var(--ui-muted);line-height:1.5;margin:0 0 8px}
 #vsmGallery .vsm-viewer-interact button{cursor:pointer}
 #vsmGallery .vsm-viewer-header .vsm-close{display:grid;place-items:center;line-height:1;font-size:25px;padding:0}
 </style><script id="vibra-final-runtime-20261011">
@@ -6222,7 +6290,7 @@ setTimeout(restore,2800);
 })();
 </script><style id="vibra-reservas-20261012">
 @media(max-width:700px){#vibraServiceCatalog [data-vibra-open-service],#vibraServiceCatalog [data-vibra-gallery],#vibraServiceCatalog [data-vibra-book]{display:flex!important;width:100%;justify-content:center;min-height:43px;align-items:center}#vibraServiceCatalog .vibra-service-card{overflow:visible!important}}
-#vibraReserveOverlay{position:fixed;inset:0;z-index:11000;background:#000b;display:none;align-items:center;justify-content:center;padding:12px}#vibraReserveOverlay.open{display:flex}#vibraReserveShell{position:relative;display:flex;flex-direction:column;max-height:96dvh;width:min(1040px,100%);overflow:auto;background:var(--card,#161a20);color:var(--text,#fff);border:1px solid var(--line,#334155);border-radius:18px;box-shadow:0 24px 75px #0008;padding:18px}#vibraReserveShell .v9fields{grid-template-columns:repeat(auto-fit,minmax(155px,1fr))}#vibraReserveShell #v9Modalities{display:block!important}#vibraReserveShell #v9Booking{scroll-margin:20px}#vibraReserveTop{display:flex;justify-content:space-between;align-items:center;gap:12px;margin-bottom:10px}#vibraReserveClose{min-width:42px;min-height:42px;background:var(--secondary,#252b34);color:var(--text,#fff);border:1px solid var(--line,#444);border-radius:10px}#vibraReserveShell .v9panel{margin:0}#vibraRoomCards,#vibraDestinationCards{display:grid;grid-template-columns:repeat(auto-fill,minmax(160px,1fr));gap:10px;margin:10px 0} .vibra-room-choice{border:1px solid var(--line,#344);border-radius:13px;background:var(--secondary,#262b35);color:var(--text,#fff);padding:9px;text-align:left;cursor:pointer}.vibra-room-choice.selected{outline:2px solid var(--primary,#f09)}.vibra-room-choice:disabled{opacity:.55;cursor:not-allowed}.vibra-room-choice img{width:100%;height:90px;object-fit:cover;border-radius:8px;margin-bottom:6px}.vibra-room-choice strong,.vibra-room-choice small{display:block}.vibra-manage-item{display:flex;flex-wrap:wrap;align-items:center;justify-content:space-between;gap:7px;padding:12px;border:1px solid var(--line,#345);border-radius:12px;margin:7px 0}.vibra-modal-inline{padding:12px;border:1px solid var(--line,#345);border-radius:12px;background:var(--secondary,#292e39)}.vibra-ext-map{height:190px;margin:12px 0;border-radius:12px;overflow:hidden}.vibra-manage-buttons{display:flex;gap:7px;flex-wrap:wrap}.vibra-manage-buttons button{border:1px solid var(--line,#456);border-radius:9px;background:var(--secondary,#222);color:var(--text,#fff);padding:8px}.vibra-manage-buttons button:disabled{opacity:.6}.vibra-feedback{padding:10px 0;color:var(--primary,#fa0);font-size:.88rem}#vibraReserveShell h3{margin:12px 0}.vibra-form-row{display:grid;grid-template-columns:repeat(auto-fit,minmax(170px,1fr));gap:10px}.vibra-form-row label{display:grid;gap:5px;font-size:.82rem}.vibra-form-row input,.vibra-form-row select,.vibra-form-row textarea{width:100%;min-height:40px;background:var(--card,#10151d);color:var(--text,#fff);border:1px solid var(--line,#445);border-radius:9px;padding:8px}.vibra-inline-admin{margin:16px 0;border:1px solid var(--line,#445);padding:14px;border-radius:14px}.vibra-section-action{background:var(--primary,#e09);color:white;padding:10px 13px;border:0;border-radius:9px;font-weight:700;cursor:pointer}.vibra-venue-map{height:180px;border-radius:10px;overflow:hidden;margin-top:8px}
+#vibraReserveOverlay{position:fixed;inset:0;z-index:11000;background:#000b;display:none;align-items:center;justify-content:center;padding:12px}#vibraReserveOverlay.open{display:flex}/* MODIFICADO */ #vibraReserveShell{position:relative;display:flex;flex-direction:column;max-height:96dvh;width:min(1040px,100%);overflow:auto;background:var(--card,var(--ui-surface));color:var(--text,#fff);border:1px solid var(--line,var(--ui-border));border-radius:18px;box-shadow:0 24px 75px #0008;padding:18px}#vibraReserveShell .v9fields{grid-template-columns:repeat(auto-fit,minmax(155px,1fr))}#vibraReserveShell #v9Modalities{display:block!important}#vibraReserveShell #v9Booking{scroll-margin:20px}#vibraReserveTop{display:flex;justify-content:space-between;align-items:center;gap:12px;margin-bottom:10px}/* MODIFICADO */ #vibraReserveClose{min-width:42px;min-height:42px;background:var(--secondary,var(--ui-surface));color:var(--text,#fff);border:1px solid var(--line,var(--ui-border));border-radius:10px}#vibraReserveShell .v9panel{margin:0}#vibraRoomCards,#vibraDestinationCards{display:grid;grid-template-columns:repeat(auto-fill,minmax(160px,1fr));gap:10px;margin:10px 0}/* MODIFICADO */  .vibra-room-choice{border:1px solid var(--line,var(--ui-border));border-radius:13px;background:var(--secondary,var(--ui-surface));color:var(--text,#fff);padding:9px;text-align:left;cursor:pointer}.vibra-room-choice.selected{outline:2px solid var(--primary,#f09)}.vibra-room-choice:disabled{opacity:.55;cursor:not-allowed}.vibra-room-choice img{width:100%;height:90px;object-fit:cover;border-radius:8px;margin-bottom:6px}.vibra-room-choice strong,.vibra-room-choice small{display:block}/* MODIFICADO */ .vibra-manage-item{display:flex;flex-wrap:wrap;align-items:center;justify-content:space-between;gap:7px;padding:12px;border:1px solid var(--line,var(--ui-border));border-radius:12px;margin:7px 0}/* MODIFICADO */ .vibra-modal-inline{padding:12px;border:1px solid var(--line,var(--ui-border));border-radius:12px;background:var(--secondary,var(--ui-raised))}.vibra-ext-map{height:190px;margin:12px 0;border-radius:12px;overflow:hidden}.vibra-manage-buttons{display:flex;gap:7px;flex-wrap:wrap}/* MODIFICADO */ .vibra-manage-buttons button{border:1px solid var(--line,var(--ui-border));border-radius:9px;background:var(--secondary,var(--ui-surface));color:var(--text,#fff);padding:8px}.vibra-manage-buttons button:disabled{opacity:.6}.vibra-feedback{padding:10px 0;color:var(--primary,#fa0);font-size:.88rem}#vibraReserveShell h3{margin:12px 0}.vibra-form-row{display:grid;grid-template-columns:repeat(auto-fit,minmax(170px,1fr));gap:10px}.vibra-form-row label{display:grid;gap:5px;font-size:.82rem}/* MODIFICADO */ .vibra-form-row input,.vibra-form-row select,.vibra-form-row textarea{width:100%;min-height:40px;background:var(--card,var(--ui-surface));color:var(--text,#fff);border:1px solid var(--line,var(--ui-border));border-radius:9px;padding:8px}/* MODIFICADO */ .vibra-inline-admin{margin:16px 0;border:1px solid var(--line,var(--ui-border));padding:14px;border-radius:14px}.vibra-section-action{background:var(--primary,#e09);color:white;padding:10px 13px;border:0;border-radius:9px;font-weight:700;cursor:pointer}.vibra-venue-map{height:180px;border-radius:10px;overflow:hidden;margin-top:8px}
 </style>
 <script id="vibra-reservas-destinos-20261012">
 (()=>{'use strict';
@@ -6261,7 +6329,7 @@ if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',
 
 <style id="vibra-mobile-service-discovery">@media(max-width:760px){#vibraServiceCatalog .vsm-media-button{display:flex!important;align-items:center;justify-content:center;gap:8px;min-height:44px;width:100%;font-size:.87rem}#vibraServiceCatalog .vibra-service-card{display:flex;flex-direction:column!important}#vibraServiceCatalog .vibra-service-card .btn{min-height:44px}}#vibraReserveShell #v9Booking .v9fields{grid-template-columns:repeat(auto-fit,minmax(165px,1fr))}#vibraReserveShell #v9Modalities{margin:0;padding:6px}#vibraReserveShell select,#vibraReserveShell input{max-width:100%}</style>
 <style id="vibra-location-reserve-v2">
-#vibraReserveOverlay{padding:12px!important;align-items:center!important}#vibraReserveShell{width:min(980px,100%)!important;padding:0!important;max-height:94dvh!important;overflow:hidden!important;border-radius:22px!important;background:var(--card,#161a20)!important}#vibraReserveTop{padding:15px 20px!important;margin:0!important;border-bottom:1px solid var(--line,#303743)}#vibraReserveBody{padding:18px 20px;overflow:auto;min-height:0;overscroll-behavior:contain}#vibraReserveShell #v9Modalities{display:block!important}#vibraReserveShell #v9Mode{font:inherit;min-height:42px;min-width:160px;padding:8px;border:1px solid var(--line);border-radius:10px;background:var(--secondary);color:var(--text)}#vibraReserveShell #v9Modalities>label{display:flex;align-items:center;gap:10px;flex-wrap:wrap}#vibraReserveShell #v9Continue{border-radius:12px;margin:10px 0}#vibraDestinationControls{border:1px solid var(--line);border-radius:17px;background:color-mix(in srgb,var(--card) 88%,var(--primary) 12%);padding:16px!important;margin:12px 0}#vibraDestinationControls h3{margin:0 0 12px}#vibraAddressFields{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:10px}#vibraAddressFields label{display:grid;gap:5px;min-width:0;font-size:.84rem}#vibraAddressFields input,#vibraAddressFields select{width:100%;min-width:0;min-height:43px;padding:9px;border:1px solid var(--line);border-radius:10px;background:var(--card);color:var(--text)}#vibraAddressFields .wide{grid-column:1/-1}.vibra-loc-toolbar{display:flex;gap:8px;flex-wrap:wrap;margin:10px 0}.vibra-loc-toolbar button{border:1px solid var(--line);background:var(--secondary);color:var(--text);border-radius:10px;padding:10px 12px;font-weight:700}#vibraClientMap{height:265px;border-radius:14px;overflow:hidden;border:1px solid var(--line);background:#d5e7e9}#vibraGeoStatus{font-size:.8rem;color:var(--muted);padding:8px 0}#vibraVenueMap{height:265px!important}#vibraVenuePins{display:grid;grid-template-columns:repeat(auto-fill,minmax(185px,1fr));gap:8px;margin:12px 0}#vibraVenuePins button{border:1px solid var(--line);background:var(--card);color:var(--text);border-radius:10px;padding:10px;text-align:left;line-height:1.35}#vibraVenuePins button small{display:block;color:var(--muted);margin-top:3px}#vibraVenuePins button.active{border-color:var(--primary)}#vibraVenuePins .vibra-venue-type{display:inline-block;color:var(--primary);font-size:.7rem;font-weight:800;text-transform:uppercase}#vibraReserveBody .v9fields{grid-template-columns:repeat(auto-fit,minmax(160px,1fr))}#vibraReserveBody .v9fields label{min-width:0}#vibraReserveClose{display:grid;place-items:center;font-size:20px}.vibra-address-warning{font-size:.8rem;color:var(--muted)}.vibra-loc-pin{width:26px;height:26px;border:3px solid white;border-radius:50%;background:#e50091;box-shadow:0 2px 10px #0008}#vibraReserveShell .leaflet-container{z-index:0!important}
+#vibraReserveOverlay{padding:12px!important;align-items:center!important}/* MODIFICADO */ #vibraReserveShell{width:min(980px,100%)!important;padding:0!important;max-height:94dvh!important;overflow:hidden!important;border-radius:22px!important;background:var(--card,var(--ui-surface))!important}/* MODIFICADO */ #vibraReserveTop{padding:15px 20px!important;margin:0!important;border-bottom:1px solid var(--line,var(--ui-border))}#vibraReserveBody{padding:18px 20px;overflow:auto;min-height:0;overscroll-behavior:contain}#vibraReserveShell #v9Modalities{display:block!important}#vibraReserveShell #v9Mode{font:inherit;min-height:42px;min-width:160px;padding:8px;border:1px solid var(--line);border-radius:10px;background:var(--secondary);color:var(--text)}#vibraReserveShell #v9Modalities>label{display:flex;align-items:center;gap:10px;flex-wrap:wrap}#vibraReserveShell #v9Continue{border-radius:12px;margin:10px 0}#vibraDestinationControls{border:1px solid var(--line);border-radius:17px;background:color-mix(in srgb,var(--card) 88%,var(--primary) 12%);padding:16px!important;margin:12px 0}#vibraDestinationControls h3{margin:0 0 12px}#vibraAddressFields{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:10px}#vibraAddressFields label{display:grid;gap:5px;min-width:0;font-size:.84rem}#vibraAddressFields input,#vibraAddressFields select{width:100%;min-width:0;min-height:43px;padding:9px;border:1px solid var(--line);border-radius:10px;background:var(--card);color:var(--text)}#vibraAddressFields .wide{grid-column:1/-1}.vibra-loc-toolbar{display:flex;gap:8px;flex-wrap:wrap;margin:10px 0}.vibra-loc-toolbar button{border:1px solid var(--line);background:var(--secondary);color:var(--text);border-radius:10px;padding:10px 12px;font-weight:700}/* MODIFICADO */ #vibraClientMap{height:265px;border-radius:14px;overflow:hidden;border:1px solid var(--line);background:var(--ui-raised)}#vibraGeoStatus{font-size:.8rem;color:var(--muted);padding:8px 0}#vibraVenueMap{height:265px!important}#vibraVenuePins{display:grid;grid-template-columns:repeat(auto-fill,minmax(185px,1fr));gap:8px;margin:12px 0}#vibraVenuePins button{border:1px solid var(--line);background:var(--card);color:var(--text);border-radius:10px;padding:10px;text-align:left;line-height:1.35}#vibraVenuePins button small{display:block;color:var(--muted);margin-top:3px}#vibraVenuePins button.active{border-color:var(--primary)}#vibraVenuePins .vibra-venue-type{display:inline-block;color:var(--primary);font-size:.7rem;font-weight:800;text-transform:uppercase}#vibraReserveBody .v9fields{grid-template-columns:repeat(auto-fit,minmax(160px,1fr))}#vibraReserveBody .v9fields label{min-width:0}#vibraReserveClose{display:grid;place-items:center;font-size:20px}.vibra-address-warning{font-size:.8rem;color:var(--muted)}.vibra-loc-pin{width:26px;height:26px;border:3px solid white;border-radius:50%;background:#e50091;box-shadow:0 2px 10px #0008}#vibraReserveShell .leaflet-container{z-index:0!important}
 .v15-experience-bar,.v15-experience-bar>div,.v17-experience-panel,.v17-experience-inner{min-width:0!important}#v15Experience,#v17Experience,.v15-experience-bar{box-sizing:border-box}#v15Experience .v15-experience-bar{display:flex;align-items:center;justify-content:space-between;gap:16px;padding:15px 18px;flex-wrap:wrap}#v15Experience .v15-experience-bar>div:first-child{flex:1 1 290px}#v15Experience .v15-experience-actions{display:flex;align-items:center;justify-content:center;gap:8px;flex-wrap:wrap;flex:1 1 440px}#v15Experience h3,#v15Experience p{max-width:100%;overflow-wrap:anywhere}#v15Experience p{line-height:1.5;margin:6px 0}
 @media(max-width:600px){#vibraReserveBody{padding:12px}#vibraAddressFields{grid-template-columns:1fr}#vibraClientMap,#vibraVenueMap{height:225px!important}#vibraReserveShell{max-height:96dvh!important}#vibraVenuePins{grid-template-columns:1fr 1fr}}
 </style>
@@ -6311,7 +6379,7 @@ if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',
 <style id="vroom-experience">
 .vroom-thumbs{display:flex;gap:9px;flex-wrap:wrap;margin:10px 0}.vroom-thumbs img{height:94px;width:100px;object-fit:cover;border-radius:11px;border:1px solid var(--line)}
 .vibra-room-choice{position:relative}.vroom-more{display:flex;gap:6px;align-items:center;margin-top:8px;justify-content:center;font-size:.84rem;color:var(--primary)}
-#vroomOverlay{position:fixed;inset:0;background:#000b;z-index:20000;display:none;align-items:center;justify-content:center;padding:12px}#vroomOverlay.open{display:flex}#vroomDialog{width:min(940px,100%);max-height:94dvh;overflow:auto;border:1px solid var(--line);background:var(--card);color:var(--text);border-radius:18px;box-shadow:0 20px 70px #000a;padding:18px}#vroomHead{display:flex;justify-content:space-between;align-items:center;gap:10px}#vroomGrid{display:grid;grid-template-columns:minmax(0,1.3fr) minmax(250px,.7fr);gap:16px;margin-top:14px}#vroomPhoto{width:100%;height:min(55dvh,480px);object-fit:contain;background:#0b0d13;border-radius:12px}#vroomInfo{padding:14px;border-radius:12px;background:var(--secondary);line-height:1.6}.vroom-button{border:1px solid var(--line);background:var(--secondary);color:var(--text);border-radius:10px;padding:10px 12px;cursor:pointer}.vroom-primary{background:var(--primary);color:#fff;border:0}.vroom-controls{display:flex;align-items:center;justify-content:center;gap:10px;margin-top:12px;flex-wrap:wrap}#vibraReserveBody .vibra-room-choice img{cursor:zoom-in}@media(max-width:650px){#vroomGrid{grid-template-columns:1fr}#vroomPhoto{height:38dvh}}
+#vroomOverlay{position:fixed;inset:0;background:#000b;z-index:20000;display:none;align-items:center;justify-content:center;padding:12px}#vroomOverlay.open{display:flex}#vroomDialog{width:min(940px,100%);max-height:94dvh;overflow:auto;border:1px solid var(--line);background:var(--card);color:var(--text);border-radius:18px;box-shadow:0 20px 70px #000a;padding:18px}#vroomHead{display:flex;justify-content:space-between;align-items:center;gap:10px}#vroomGrid{display:grid;grid-template-columns:minmax(0,1.3fr) minmax(250px,.7fr);gap:16px;margin-top:14px}/* MODIFICADO */ #vroomPhoto{width:100%;height:min(55dvh,480px);object-fit:contain;background:var(--ui-surface);border-radius:12px}#vroomInfo{padding:14px;border-radius:12px;background:var(--secondary);line-height:1.6}.vroom-button{border:1px solid var(--line);background:var(--secondary);color:var(--text);border-radius:10px;padding:10px 12px;cursor:pointer}.vroom-primary{background:var(--primary);color:#fff;border:0}.vroom-controls{display:flex;align-items:center;justify-content:center;gap:10px;margin-top:12px;flex-wrap:wrap}#vibraReserveBody .vibra-room-choice img{cursor:zoom-in}@media(max-width:650px){#vroomGrid{grid-template-columns:1fr}#vroomPhoto{height:38dvh}}
 </style>
 <script id="vroom-enhancements">
 (()=>{'use strict';const $=s=>document.querySelector(s);const esc=s=>String(s??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));const svg=(path)=>'<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">'+path+'</svg>';let photos=[],position=0,room=null;const db=()=>typeof supabaseClient!=='undefined'?supabaseClient:null;
@@ -6393,24 +6461,24 @@ if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',
 <!-- NUEVO: opiniones, temas, geolocalización y personalización visual solicitadas -->
 <style id="vibra-ultimo-ajuste-20261013">
 /* MODIFICADO: tonos uniformes y legibilidad sobre los colores configurados */
-body:not(.dark-mode) :is(#adminModal .section-card,#adminModal .section-card h3,#adminModal .section-card p,#adminModal .product-admin,#adminModal .product-admin strong,#adminModal .muted,#adminModal .small,#adminModal .admin-pane,#adminModal .admin-pane h3){color:#f1f5f9!important}
-body:not(.dark-mode) #adminModal :is(.section-card,.product-admin,.admin-pane) .muted{color:#b8c4d7!important}
-body:not(.dark-mode) #adminModal :is(.section-card,.product-admin,.admin-pane) .small{color:#cbd5e1!important}
-body:not(.dark-mode) #adminModal :is(.input,.select,.textarea){color:#f7f8fc!important;background:#10151d!important;border-color:#4d5869!important}
-body:not(.dark-mode) #adminModal :is(.btn.secondary,.btn.ghost){color:#fff!important;background:#303847!important}
-body:not(.dark-mode) #adminModal :is(.tab-btn:not(.active),.tab-btn span){color:#d6e0ee!important}
-body:not(.dark-mode) :is(#vsmGallery .vsm-viewer-sidebar,#v18BusinessModal .v18-business-card,#productModal,.product-viewer) :is(h2,h3,h4,p,strong,span,small,label){color:inherit}
-body:not(.dark-mode) #vsmGallery .vsm-viewer-sidebar{background:#fff!important;color:#202735!important}
-body:not(.dark-mode) #vsmGallery .vsm-viewer-sidebar :is(.vsm-info-row,#vsmProfileInfo>div){color:#293348!important}
+body:not(.dark-mode) :is(#adminModal .section-card,#adminModal .section-card h3,#adminModal .section-card p,#adminModal .product-admin,#adminModal .product-admin strong,#adminModal .muted,#adminModal .small,#adminModal .admin-pane,#adminModal .admin-pane h3){color:#f1f5f9!important}/* MODIFICADO */ 
+body:not(.dark-mode) #adminModal :is(.section-card,.product-admin,.admin-pane) .muted{color:var(--ui-muted)!important}/* MODIFICADO */ 
+body:not(.dark-mode) #adminModal :is(.section-card,.product-admin,.admin-pane) .small{color:var(--ui-muted)!important}/* MODIFICADO */ 
+body:not(.dark-mode) #adminModal :is(.input,.select,.textarea){color:#f7f8fc!important;background:var(--ui-surface)!important;border-color:var(--ui-border)!important}/* MODIFICADO */ 
+body:not(.dark-mode) #adminModal :is(.btn.secondary,.btn.ghost){color:#fff!important;background:var(--ui-raised)!important}/* MODIFICADO */ 
+body:not(.dark-mode) #adminModal :is(.tab-btn:not(.active),.tab-btn span){color:var(--ui-text)!important}
+body:not(.dark-mode) :is(#vsmGallery .vsm-viewer-sidebar,#v18BusinessModal .v18-business-card,#productModal,.product-viewer) :is(h2,h3,h4,p,strong,span,small,label){color:inherit}/* MODIFICADO */ 
+body:not(.dark-mode) #vsmGallery .vsm-viewer-sidebar{background:#fff!important;color:var(--ui-text)!important}/* MODIFICADO */ 
+body:not(.dark-mode) #vsmGallery .vsm-viewer-sidebar :is(.vsm-info-row,#vsmProfileInfo>div){color:var(--ui-text)!important}
 body:not(.dark-mode) #vsmGallery .vsm-viewer-sidebar a{color:var(--primary)!important}
 body.dark-mode :is(.btn.secondary,.btn.ghost,.icon-btn,.vscope-route-box button,.vscope-route-actions button){background:var(--primary)!important;color:#fff!important}
-body:not(.dark-mode) :is(.btn.secondary,.icon-btn,.vscope-route-box button){background:var(--primary)!important;color:#fff!important}
-body:not(.dark-mode) :is(.btn.ghost,.chip:not(.active)){background:#fff!important;color:#1d2635!important;border-color:#d4dbe5!important}
-body.dark-mode :is(.modal,.drawer,.section-card,.vscope-mini-map,.vscope-route-box) :is(h1,h2,h3,h4,strong,label){color:#f5f7fa!important}
-body:not(.dark-mode) :is(.modal,.drawer,.section-card,.vscope-mini-map,.vscope-route-box) :is(h1,h2,h3,h4,strong,label){color:#1b2739}
-body:not(.dark-mode) :is(.modal,.drawer,.section-card) :is(.muted,.small.muted){color:#526174!important}
-body:not(.dark-mode) :is(.modal,.drawer,.section-card) :is(input,textarea,select){color:#1b2739}
-body.dark-mode :is(.modal,.drawer,.section-card) :is(input,textarea,select){color:#f5f7fa;background:#12171f}
+body:not(.dark-mode) :is(.btn.secondary,.icon-btn,.vscope-route-box button){background:var(--primary)!important;color:#fff!important}/* MODIFICADO */ 
+body:not(.dark-mode) :is(.btn.ghost,.chip:not(.active)){background:#fff!important;color:var(--ui-text)!important;border-color:var(--ui-border)!important}
+body.dark-mode :is(.modal,.drawer,.section-card,.vscope-mini-map,.vscope-route-box) :is(h1,h2,h3,h4,strong,label){color:#f5f7fa!important}/* MODIFICADO */ 
+body:not(.dark-mode) :is(.modal,.drawer,.section-card,.vscope-mini-map,.vscope-route-box) :is(h1,h2,h3,h4,strong,label){color:var(--ui-text)}/* MODIFICADO */ 
+body:not(.dark-mode) :is(.modal,.drawer,.section-card) :is(.muted,.small.muted){color:var(--ui-muted)!important}/* MODIFICADO */ 
+body:not(.dark-mode) :is(.modal,.drawer,.section-card) :is(input,textarea,select){color:var(--ui-text)}/* MODIFICADO */ 
+body.dark-mode :is(.modal,.drawer,.section-card) :is(input,textarea,select){color:#f5f7fa;background:var(--ui-surface)}
 :is(.btn,.icon-btn,.vscope-route-box button) svg{vertical-align:middle;flex:none;stroke:currentColor}
 :is(.btn,.icon-btn){align-items:center;justify-content:center}
 button:focus-visible,a:focus-visible{outline:2px solid var(--primary);outline-offset:3px}
@@ -6498,7 +6566,7 @@ if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',
 @media(max-width:600px){.vi-fields{grid-template-columns:1fr}.vi-country-phone{grid-template-columns:42% 1fr}}@media(prefers-reduced-motion:reduce){body.vi-entered main{animation:none}}
 </style>
 <!-- NUEVO: contraste y controles del requisito de categoría de cuenta -->
-<style id="vi-category-style">.vi-category-cover{position:fixed;inset:0;z-index:9999;display:grid;place-items:center;padding:20px;background:rgba(6,6,13,.86)}.vi-category-dialog{width:min(440px,100%);background:#161a20;color:#fff;border:1px solid #596172;border-radius:18px;padding:24px;box-shadow:0 25px 70px #000a;display:grid;gap:13px}.vi-category-dialog h2{margin:0;color:#fff}.vi-category-dialog p{margin:0;color:#e7e7f0;line-height:1.5}.vi-category-dialog label{font-weight:700}.vi-category-dialog select{padding:12px;border:1px solid #778095;background:#242a33;color:white;border-radius:12px}.vi-category-dialog #viCategoryError{color:#ffc2d9}.vi-category-dialog .btn{color:#fff}</style>
+<style id="vi-category-style">.vi-category-cover{position:fixed;inset:0;z-index:9999;display:grid;place-items:center;padding:20px;background:rgba(6,6,13,.86)}/* MODIFICADO */ .vi-category-dialog{width:min(440px,100%);background:var(--ui-surface);color:#fff;border:1px solid var(--ui-border);border-radius:18px;padding:24px;box-shadow:0 25px 70px #000a;display:grid;gap:13px}.vi-category-dialog h2{margin:0;color:#fff}.vi-category-dialog p{margin:0;color:#e7e7f0;line-height:1.5}.vi-category-dialog label{font-weight:700}/* MODIFICADO */ .vi-category-dialog select{padding:12px;border:1px solid var(--ui-border);background:var(--ui-surface);color:white;border-radius:12px}.vi-category-dialog #viCategoryError{color:#ffc2d9}.vi-category-dialog .btn{color:#fff}</style>
 <script id="vi-feature-script">
 (function(){'use strict';
 // NUEVO: anexo aislado; no modifica los identificadores o funciones existentes.
@@ -6795,9 +6863,9 @@ if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',
 })();
 </script>
 </body>
-<style id="vibra-sedes-vinculadas-css">
-#vibraAssignmentPanel{margin:16px 0;padding:16px;border:1px solid var(--line,#374151);border-radius:16px;background:var(--card,#161a20);color:var(--text,#fff)}
-#vibraAssignmentPanel .vab-row{display:grid;grid-template-columns:minmax(90px,1fr) minmax(130px,1.5fr) auto;align-items:center;gap:10px;border-bottom:1px solid var(--line,#374151);padding:9px 0}#vibraAssignmentPanel select{min-width:0;background:var(--secondary,#242a33);border:1px solid var(--line,#374151);border-radius:8px;color:var(--text,#fff);padding:9px;width:100%}#vibraAssignmentPanel button{background:var(--primary,#e50091);border:0;border-radius:8px;color:#fff;padding:9px 12px;font-weight:700}#vibraAssignmentPanel .vab-status{font-size:.8rem;color:var(--muted,#aaa)}@media(max-width:650px){#vibraAssignmentPanel .vab-row{grid-template-columns:1fr}.vab-row button{width:100%}}
+<style id="vibra-sedes-vinculadas-css">/* MODIFICADO */ 
+#vibraAssignmentPanel{margin:16px 0;padding:16px;border:1px solid var(--line,var(--ui-border));border-radius:16px;background:var(--card,var(--ui-surface));color:var(--text,#fff)}/* MODIFICADO */ 
+#vibraAssignmentPanel .vab-row{display:grid;grid-template-columns:minmax(90px,1fr) minmax(130px,1.5fr) auto;align-items:center;gap:10px;border-bottom:1px solid var(--line,var(--ui-border));padding:9px 0}/* MODIFICADO */ #vibraAssignmentPanel select{min-width:0;background:var(--secondary,var(--ui-surface));border:1px solid var(--line,var(--ui-border));border-radius:8px;color:var(--text,#fff);padding:9px;width:100%}#vibraAssignmentPanel button{background:var(--primary,#e50091);border:0;border-radius:8px;color:#fff;padding:9px 12px;font-weight:700}/* MODIFICADO */ #vibraAssignmentPanel .vab-status{font-size:.8rem;color:var(--muted,var(--ui-muted))}@media(max-width:650px){#vibraAssignmentPanel .vab-row{grid-template-columns:1fr}.vab-row button{width:100%}}
 </style>
 <script id="vibra-sedes-vinculadas-js">
 (()=>{'use strict';
@@ -6833,37 +6901,37 @@ async function render(){
 #vibraReserveBody .v9panel{border:0!important;background:transparent!important;box-shadow:none!important;padding:0!important}
 #vibraReserveBody .v9small{line-height:1.45}
 #vibraReserveBody .v9fields{gap:14px!important;align-items:start}
-#vibraReserveBody .v9fields label{display:grid;gap:8px;align-content:start;min-width:0}
-#vibraReserveBody .v9fields label>input,#vibraReserveBody .v9fields label>select,#vibraReserveBody .v9fields label>textarea{min-height:52px;border-radius:14px;border:1px solid rgba(255,255,255,.1);background:#10141c;color:#fff;padding:0 14px;font-weight:600}
+#vibraReserveBody .v9fields label{display:grid;gap:8px;align-content:start;min-width:0}/* MODIFICADO */ 
+#vibraReserveBody .v9fields label>input,#vibraReserveBody .v9fields label>select,#vibraReserveBody .v9fields label>textarea{min-height:52px;border-radius:14px;border:1px solid rgba(255,255,255,.1);background:var(--ui-surface);color:#fff;padding:0 14px;font-weight:600}
 #vibraReserveBody .v9action{min-height:50px;border-radius:14px;font-weight:800;box-shadow:0 12px 22px rgba(229,0,145,.18)}
 #vibraReserveBody #v9Booking{margin-top:20px!important;padding-top:10px!important;display:block!important}
 #vibraReserveBody #v9Booking[hidden]{display:none!important}
 #vibraReserveBody #v9Modalities{display:block!important}
-#vibraReserveBody .vibra-mode-field{display:grid;gap:8px;background:linear-gradient(180deg,rgba(255,255,255,.035),rgba(255,255,255,.02));border:1px solid rgba(255,255,255,.08);border-radius:18px;padding:16px 18px;margin:8px 0 14px;max-width:420px}
-#vibraReserveBody .vibra-mode-title{font-size:.82rem;text-transform:uppercase;letter-spacing:.12em;color:#c6d0e1;font-weight:800}
-#vibraReserveBody .vibra-mode-caption{font-size:.84rem;color:#98a3b7;margin-top:-1px}
+#vibraReserveBody .vibra-mode-field{display:grid;gap:8px;background:linear-gradient(180deg,rgba(255,255,255,.035),rgba(255,255,255,.02));border:1px solid rgba(255,255,255,.08);border-radius:18px;padding:16px 18px;margin:8px 0 14px;max-width:420px}/* MODIFICADO */ 
+#vibraReserveBody .vibra-mode-title{font-size:.82rem;text-transform:uppercase;letter-spacing:.12em;color:var(--ui-muted);font-weight:800}/* MODIFICADO */ 
+#vibraReserveBody .vibra-mode-caption{font-size:.84rem;color:var(--ui-muted);margin-top:-1px}
 #vibraReserveBody #v9Mode{appearance:none;-webkit-appearance:none;background:#242a36 url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='18' height='18' viewBox='0 0 24 24' fill='none' stroke='%23f1f5f9' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='m6 9 6 6 6-6'/%3E%3C/svg%3E") no-repeat right 14px center/16px;border:1px solid rgba(255,255,255,.1);border-radius:14px;color:#fff;font-weight:800;letter-spacing:.01em;padding:0 42px 0 14px;text-transform:none;box-shadow:inset 0 1px 0 rgba(255,255,255,.03)}
 #vibraReserveBody .vibra-mode-shell{display:flex;align-items:center;gap:12px;flex-wrap:wrap;margin-bottom:8px}
 #vibraReserveBody .vibra-mode-badge{display:inline-flex;align-items:center;gap:8px;padding:8px 12px;border-radius:999px;background:rgba(229,0,145,.12);border:1px solid rgba(229,0,145,.3);font-size:.83rem;font-weight:700;color:#ffd3f1}
 #vibraRoomPreviewPanel{margin-top:16px;padding:16px;border-radius:18px;border:1px solid rgba(255,255,255,.08);background:linear-gradient(180deg,rgba(255,255,255,.04),rgba(255,255,255,.025))}
 #vibraRoomPreviewPanel[hidden]{display:none!important}
-#vibraRoomPreviewPanel h3{margin:0 0 4px;font-size:1.02rem}
-#vibraRoomPreviewPanel p{margin:0;color:#d8ddea}
+#vibraRoomPreviewPanel h3{margin:0 0 4px;font-size:1.02rem}/* MODIFICADO */ 
+#vibraRoomPreviewPanel p{margin:0;color:var(--ui-text)}
 .vibra-room-preview-head{display:flex;justify-content:space-between;align-items:flex-start;gap:12px;flex-wrap:wrap;margin-bottom:10px}
-.vibra-room-preview-meta{display:grid;grid-template-columns:repeat(auto-fit,minmax(160px,1fr));gap:10px;margin:12px 0}
-.vibra-room-preview-chip{padding:11px 12px;border-radius:14px;background:#202634;border:1px solid rgba(255,255,255,.08)}
-.vibra-room-preview-chip strong{display:block;margin-bottom:4px;font-size:.78rem;letter-spacing:.05em;text-transform:uppercase;color:#bdc8da}
+.vibra-room-preview-meta{display:grid;grid-template-columns:repeat(auto-fit,minmax(160px,1fr));gap:10px;margin:12px 0}/* MODIFICADO */ 
+.vibra-room-preview-chip{padding:11px 12px;border-radius:14px;background:var(--ui-surface);border:1px solid rgba(255,255,255,.08)}/* MODIFICADO */ 
+.vibra-room-preview-chip strong{display:block;margin-bottom:4px;font-size:.78rem;letter-spacing:.05em;text-transform:uppercase;color:var(--ui-muted)}
 .vibra-room-description{font-size:.92rem;line-height:1.55;color:#eef2ff!important}
-.vibra-room-photo-strip{display:grid;grid-template-columns:repeat(auto-fill,minmax(120px,1fr));gap:10px;margin-top:10px}
-.vibra-room-thumb{padding:0;border:1px solid rgba(255,255,255,.1);border-radius:14px;background:#0c1016;overflow:hidden;cursor:pointer;min-height:110px}
-.vibra-room-thumb img{display:block;width:100%;height:110px;object-fit:cover}
-.vibra-room-empty{padding:14px;border-radius:14px;background:#1e2530;border:1px dashed rgba(255,255,255,.12);color:#c4cede}
-.vibra-ghost-btn{display:inline-flex;align-items:center;gap:8px;min-height:42px;padding:0 14px;border-radius:12px;border:1px solid rgba(255,255,255,.1);background:#242b38;color:#fff;font-weight:700;cursor:pointer}
+.vibra-room-photo-strip{display:grid;grid-template-columns:repeat(auto-fill,minmax(120px,1fr));gap:10px;margin-top:10px}/* MODIFICADO */ 
+.vibra-room-thumb{padding:0;border:1px solid rgba(255,255,255,.1);border-radius:14px;background:var(--ui-surface);overflow:hidden;cursor:pointer;min-height:110px}
+.vibra-room-thumb img{display:block;width:100%;height:110px;object-fit:cover}/* MODIFICADO */ 
+.vibra-room-empty{padding:14px;border-radius:14px;background:var(--ui-surface);border:1px dashed rgba(255,255,255,.12);color:var(--ui-muted)}/* MODIFICADO */ 
+.vibra-ghost-btn{display:inline-flex;align-items:center;gap:8px;min-height:42px;padding:0 14px;border-radius:12px;border:1px solid rgba(255,255,255,.1);background:var(--ui-raised);color:#fff;font-weight:700;cursor:pointer}
 .vibra-ghost-btn svg{width:16px;height:16px;stroke:currentColor;fill:none;stroke-width:2}
 #v10BookingExtras{margin-top:18px;padding:16px;border-radius:18px;border:1px solid rgba(238,92,180,.35);background:linear-gradient(180deg,rgba(74,15,65,.22),rgba(44,13,39,.18))}
 #v10BookingExtras h3{margin:0 0 12px}
-#v10BookingExtras .v10orderline{display:flex;align-items:center;justify-content:space-between;gap:10px;padding:10px 12px;border:1px solid rgba(255,255,255,.08);border-radius:12px;background:rgba(10,12,18,.35);margin-bottom:9px}
-#v10BookingExtras input[type="number"],#v10BookingExtras input[type="text"],#v10BookingExtras input:not([type]){min-height:40px;border-radius:11px;border:1px solid rgba(255,255,255,.08);background:#0d1118;color:#fff;padding:0 12px}
+#v10BookingExtras .v10orderline{display:flex;align-items:center;justify-content:space-between;gap:10px;padding:10px 12px;border:1px solid rgba(255,255,255,.08);border-radius:12px;background:rgba(10,12,18,.35);margin-bottom:9px}/* MODIFICADO */ 
+#v10BookingExtras input[type="number"],#v10BookingExtras input[type="text"],#v10BookingExtras input:not([type]){min-height:40px;border-radius:11px;border:1px solid rgba(255,255,255,.08);background:var(--ui-surface);color:#fff;padding:0 12px}
 #v10Quote{margin-top:14px;color:#ff79d0;font-weight:800}
 #v15Experience.vibra-experience-balanced{grid-template-columns:minmax(0,1.35fr) auto!important;gap:28px!important;padding:18px 30px!important;align-items:center!important}
 #v15Experience.vibra-experience-balanced>div:first-child{display:grid;gap:10px;max-width:780px}
@@ -7020,52 +7088,52 @@ if(document.readyState==='loading') document.addEventListener('DOMContentLoaded'
 </style>
 
 
-<style id="vibra-only-theme-contrast-20261012">
+<style id="vibra-only-theme-contrast-20261012">/* MODIFICADO */ 
 /* Corrección de contraste sin alterar estructura, dimensiones ni distribución. */
 html[data-vibra-mode="default"] #v15Experience.vibra-experience-balanced p,
-body:not(.dark-mode) #v15Experience.vibra-experience-balanced p{color:#374151!important}
+body:not(.dark-mode) #v15Experience.vibra-experience-balanced p{color:var(--ui-text)!important}/* MODIFICADO */ 
 html[data-vibra-mode="dark"] #v15Experience.vibra-experience-balanced p,
-body.dark-mode #v15Experience.vibra-experience-balanced p{color:#d8dfeb!important}
+body.dark-mode #v15Experience.vibra-experience-balanced p{color:var(--ui-text)!important}/* MODIFICADO */ 
 html[data-vibra-mode="default"] #v15Experience .v15-rating-summary,
-body:not(.dark-mode) #v15Experience .v15-rating-summary{color:#374151!important}
+body:not(.dark-mode) #v15Experience .v15-rating-summary{color:var(--ui-text)!important}/* MODIFICADO */ 
 html[data-vibra-mode="dark"] #v15Experience .v15-rating-summary,
-body.dark-mode #v15Experience .v15-rating-summary{color:#d8dfeb!important}
-html[data-vibra-mode="default"] #v15Experience{background:#fff!important;color:#171b23!important;border-color:#e2e5ea!important}
-html[data-vibra-mode="dark"] #v15Experience{background:#161a20!important;color:#f3f4f6!important;border-color:#303743!important}
+body.dark-mode #v15Experience .v15-rating-summary{color:var(--ui-text)!important}/* MODIFICADO */ 
+html[data-vibra-mode="default"] #v15Experience{background:#fff!important;color:var(--ui-text)!important;border-color:var(--ui-border)!important}/* MODIFICADO */ 
+html[data-vibra-mode="dark"] #v15Experience{background:var(--ui-surface)!important;color:#f3f4f6!important;border-color:var(--ui-border)!important}
 body.dark-mode #foodDeliveryPlanner .section-card,
 body.dark-mode #foodDeliveryPlanner .field,
-body.dark-mode #foodDeliveryPlanner .address-picker-row{color:#f2f4f8}
-body:not(.dark-mode) #foodDeliveryPlanner .section-card{color:#17202c}
+body.dark-mode #foodDeliveryPlanner .address-picker-row{color:#f2f4f8}/* MODIFICADO */ 
+body:not(.dark-mode) #foodDeliveryPlanner .section-card{color:var(--ui-text)}
 </style>
 
 <!-- NUEVO: Ocho ajustes autorizados; módulo aislado sin modificar identificadores ni dependencias anteriores. -->
 <style id="vibra-scope-eight-css">
 /* NUEVO: controles y paneles de rutas, administración e información de negocio */
-#v9Section #v9Modalities{display:none!important}
-.vscope-route-box,.vscope-admin-box,.vscope-mini-map{border:1px solid var(--line,#384150);border-radius:15px;padding:13px;margin:12px 0;background:var(--card,#171b24);color:var(--text,#f8fafc)}
-.vscope-route-box button,.vscope-admin-box button,.vscope-mini-map button{min-height:38px;border:1px solid var(--line,#384150);background:var(--secondary,#292d37);color:var(--text,#fff);border-radius:10px;padding:7px 12px;margin:4px;cursor:pointer}
-.vscope-route-box select,.vscope-admin-box select,.vscope-admin-box input,.vscope-admin-box textarea{min-height:39px;max-width:100%;background:var(--card,#171b24);color:var(--text,#f8fafc);border:1px solid var(--line,#485363);border-radius:10px;padding:7px;width:100%}
+#v9Section #v9Modalities{display:none!important}/* MODIFICADO */ 
+.vscope-route-box,.vscope-admin-box,.vscope-mini-map{border:1px solid var(--line,var(--ui-border));border-radius:15px;padding:13px;margin:12px 0;background:var(--card,var(--ui-surface));color:var(--text,#f8fafc)}/* MODIFICADO */ 
+.vscope-route-box button,.vscope-admin-box button,.vscope-mini-map button{min-height:38px;border:1px solid var(--line,var(--ui-border));background:var(--secondary,var(--ui-raised));color:var(--text,#fff);border-radius:10px;padding:7px 12px;margin:4px;cursor:pointer}/* MODIFICADO */ 
+.vscope-route-box select,.vscope-admin-box select,.vscope-admin-box input,.vscope-admin-box textarea{min-height:39px;max-width:100%;background:var(--card,var(--ui-surface));color:var(--text,#f8fafc);border:1px solid var(--line,var(--ui-border));border-radius:10px;padding:7px;width:100%}
 .vscope-admin-box label{display:grid;gap:5px;margin:8px 0;min-width:0}
-.vscope-admin-fields{display:grid;grid-template-columns:repeat(auto-fit,minmax(145px,1fr));gap:10px}
-.vscope-map{height:260px;min-height:220px;border-radius:12px;overflow:hidden;background:#dce8e9;margin:10px 0}
-.vscope-route-actions{display:flex;flex-wrap:wrap;gap:5px;align-items:center}
-.vscope-route-actions a{display:inline-flex;align-items:center;color:var(--primary,#e50091);min-height:38px;text-decoration:none;padding:7px 12px;border-radius:10px;border:1px solid var(--line,#485363)}
-.vscope-route-actions a[hidden],.vscope-route-box[hidden]{display:none!important}
-.vscope-status{font-size:.85rem;color:var(--muted,#98a2b3);margin:8px 0}
-.vscope-admin-toolbar{display:flex;gap:7px;flex-wrap:wrap;margin:10px 0}
-.vscope-admin-entry{border:1px solid var(--line,#384150);border-radius:12px;padding:9px;margin:8px 0}
+.vscope-admin-fields{display:grid;grid-template-columns:repeat(auto-fit,minmax(145px,1fr));gap:10px}/* MODIFICADO */ 
+.vscope-map{height:260px;min-height:220px;border-radius:12px;overflow:hidden;background:var(--ui-raised);margin:10px 0}
+.vscope-route-actions{display:flex;flex-wrap:wrap;gap:5px;align-items:center}/* MODIFICADO */ 
+.vscope-route-actions a{display:inline-flex;align-items:center;color:var(--primary,#e50091);min-height:38px;text-decoration:none;padding:7px 12px;border-radius:10px;border:1px solid var(--line,var(--ui-border))}
+.vscope-route-actions a[hidden],.vscope-route-box[hidden]{display:none!important}/* MODIFICADO */ 
+.vscope-status{font-size:.85rem;color:var(--muted,var(--ui-muted));margin:8px 0}
+.vscope-admin-toolbar{display:flex;gap:7px;flex-wrap:wrap;margin:10px 0}/* MODIFICADO */ 
+.vscope-admin-entry{border:1px solid var(--line,var(--ui-border));border-radius:12px;padding:9px;margin:8px 0}
 .vscope-admin-entry .vscope-admin-toolbar button{margin:0}
 .vscope-courtesies{display:flex;gap:6px;flex-wrap:wrap;margin:8px 0}
-.vscope-courtesies button{font-size:.82rem}
-body:not(.dark-mode) #vsmGallery .vsm-viewer-sidebar,body:not(.dark-mode) #vsmGallery #vsmProfileInfo>div,body:not(.dark-mode) #vsmGallery .vsm-viewer-sidebar .vsm-info-row{color:#172033!important;background:#f3f5f9!important;border-color:#d5dce8!important}
-body:not(.dark-mode) #vsmGallery .vsm-viewer-sidebar :is(p,span,small,a),body:not(.dark-mode) #vsmGallery #vsmProfileInfo :is(p,span,small){color:#293448!important}
-body:not(.dark-mode) #vsmGallery .vsm-viewer-interact button{background:#f3f5f9!important;color:#172033!important}
-body:not(.dark-mode) .vscope-route-box,body:not(.dark-mode) .vscope-admin-box,body:not(.dark-mode) .vscope-mini-map{color:#172033;background:#fff}
-body.dark-mode .vscope-route-box,body.dark-mode .vscope-admin-box,body.dark-mode .vscope-mini-map{color:#f3f4f6;background:#161a20}
-body:not(.dark-mode) #v18BusinessModal .v18-business-card,body:not(.dark-mode) #vibraReserveShell :is(.vibra-modal-inline,.vibra-room-preview-chip){background:#f3f5f9!important;color:#182235!important}
-body:not(.dark-mode) #vibraReserveShell :is(.vibra-mode-field,.vibra-room-preview-meta,.vibra-room-description){color:#182235!important}
-body:not(.dark-mode) #vibraReserveShell :is(select,input,textarea){color:#182235!important;background:#fff!important;border-color:#cbd5e1!important}
-body.dark-mode #vibraReserveShell :is(select,input,textarea){color:#f3f4f6!important;background:#11151b!important;border-color:#465065!important}
+.vscope-courtesies button{font-size:.82rem}/* MODIFICADO */ 
+body:not(.dark-mode) #vsmGallery .vsm-viewer-sidebar,body:not(.dark-mode) #vsmGallery #vsmProfileInfo>div,body:not(.dark-mode) #vsmGallery .vsm-viewer-sidebar .vsm-info-row{color:var(--ui-text)!important;background:var(--ui-surface)!important;border-color:var(--ui-border)!important}/* MODIFICADO */ 
+body:not(.dark-mode) #vsmGallery .vsm-viewer-sidebar :is(p,span,small,a),body:not(.dark-mode) #vsmGallery #vsmProfileInfo :is(p,span,small){color:var(--ui-text)!important}/* MODIFICADO */ 
+body:not(.dark-mode) #vsmGallery .vsm-viewer-interact button{background:var(--ui-surface)!important;color:var(--ui-text)!important}/* MODIFICADO */ 
+body:not(.dark-mode) .vscope-route-box,body:not(.dark-mode) .vscope-admin-box,body:not(.dark-mode) .vscope-mini-map{color:var(--ui-text);background:#fff}/* MODIFICADO */ 
+body.dark-mode .vscope-route-box,body.dark-mode .vscope-admin-box,body.dark-mode .vscope-mini-map{color:#f3f4f6;background:var(--ui-surface)}/* MODIFICADO */ 
+body:not(.dark-mode) #v18BusinessModal .v18-business-card,body:not(.dark-mode) #vibraReserveShell :is(.vibra-modal-inline,.vibra-room-preview-chip){background:var(--ui-surface)!important;color:var(--ui-text)!important}/* MODIFICADO */ 
+body:not(.dark-mode) #vibraReserveShell :is(.vibra-mode-field,.vibra-room-preview-meta,.vibra-room-description){color:var(--ui-text)!important}/* MODIFICADO */ 
+body:not(.dark-mode) #vibraReserveShell :is(select,input,textarea){color:var(--ui-text)!important;background:#fff!important;border-color:var(--ui-border)!important}/* MODIFICADO */ 
+body.dark-mode #vibraReserveShell :is(select,input,textarea){color:#f3f4f6!important;background:var(--ui-surface)!important;border-color:var(--ui-border)!important}
 @media(max-width:700px){.vscope-map{height:220px}.vscope-admin-fields{grid-template-columns:1fr 1fr}.vscope-route-box{padding:10px}}
 </style>
 <script id="vibra-scope-eight-js">
@@ -7176,8 +7244,8 @@ if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',
 /* NUEVO: mapa único, contraste claro/oscuro y controles de rutas */
 #vscopeMainRouteMap{display:none!important}#vscopePrincipalRoute{padding:14px!important}#vscopePrincipalRoute .vscope-route-top{display:flex;gap:12px;align-items:end;justify-content:space-between;flex-wrap:wrap}#vscopePrincipalRoute label{min-width:min(100%,280px);display:grid;gap:6px}#vscopePrincipalRoute button{background:var(--primary)!important;color:white!important;border-radius:11px;min-height:44px;font-weight:700}#vscopePrincipalRoute .vscope-route-actions{display:flex;flex-wrap:wrap;gap:8px;padding-top:10px}#vscopePrincipalRoute .vscope-status{margin:10px 0;color:var(--text)!important}
 body.dark-mode .btn.secondary,body.dark-mode .btn.ghost,body.dark-mode #vscopePrincipalRoute button,body.dark-mode #adminModal .tab-btn.active,body.dark-mode .vscope-route-box button{background:var(--primary)!important;color:white!important;border-color:var(--primary)!important}
-body:not(.dark-mode) .vscope-route-box button{background:#e50091!important;color:white!important}
-body:not(.dark-mode) .vsm-viewer-sidebar :is(p,span,small),body:not(.dark-mode) #vsmGallery #vsmProfileInfo p{color:#253148!important}
+body:not(.dark-mode) .vscope-route-box button{background:#e50091!important;color:white!important}/* MODIFICADO */ 
+body:not(.dark-mode) .vsm-viewer-sidebar :is(p,span,small),body:not(.dark-mode) #vsmGallery #vsmProfileInfo p{color:var(--ui-text)!important}
 body:not(.dark-mode) .vsm-viewer-interact button{background:#351630!important;color:#fff!important}
 /* NUEVO: navegación administrativa y módulos autorizados */
 #vscopeBusinessSubmenu{display:none;grid-column:1/-1;padding:4px 6px 6px 18px;gap:5px}#vscopeBusinessSubmenu.open{display:grid}#vscopeBusinessSubmenu .tab-btn{width:100%;font-size:.87rem;text-align:left;display:flex;gap:9px;justify-content:flex-start}#vscopeBusinessToggle{margin-left:auto;transition:transform .2s}#vscopeBusinessToggle.open{transform:rotate(180deg)}#vscopeBusinessToggle svg{width:17px;height:17px}
@@ -7221,14 +7289,14 @@ function start(){execute();let last='';const run=()=>{const state=[q('#adminModa
 /* MODIFICADO: ambos modos respetan el color --primary definido en Personalización. */
 body:not(.dark-mode) :is(.btn.secondary,.icon-btn,.vsm-media-button,.vscope-route-box button,.vscope-route-actions button){background:var(--primary)!important;color:#fff!important;border-color:var(--primary)!important}
 body.dark-mode :is(.btn.secondary,.icon-btn,.vsm-media-button,.vscope-route-box button,.vscope-route-actions button){background:var(--primary)!important;color:#fff!important;border-color:var(--primary)!important}
-body:not(.dark-mode) :is(#vsmGallery .vsm-viewer-sidebar,#vibraReserveShell,.modal,.drawer,.section-card) :is(p,small,.muted,.desc,span:not(.price):not(.badge-count)){color:inherit}
-body:not(.dark-mode) :is(#vsmGallery .vsm-viewer-sidebar,#vibraReserveShell) :is(.muted,.desc,small){color:#4b5563!important}
-body.dark-mode :is(#vsmGallery .vsm-viewer-sidebar,#vibraReserveShell) :is(.muted,.desc,small){color:#c1cad8!important}
+body:not(.dark-mode) :is(#vsmGallery .vsm-viewer-sidebar,#vibraReserveShell,.modal,.drawer,.section-card) :is(p,small,.muted,.desc,span:not(.price):not(.badge-count)){color:inherit}/* MODIFICADO */ 
+body:not(.dark-mode) :is(#vsmGallery .vsm-viewer-sidebar,#vibraReserveShell) :is(.muted,.desc,small){color:var(--ui-muted)!important}/* MODIFICADO */ 
+body.dark-mode :is(#vsmGallery .vsm-viewer-sidebar,#vibraReserveShell) :is(.muted,.desc,small){color:var(--ui-muted)!important}
 body:not(.dark-mode) :is(.btn,.icon-btn,.chip.active,.vsm-media-button):not(:disabled) svg,body.dark-mode :is(.btn,.icon-btn,.chip.active,.vsm-media-button):not(:disabled) svg{stroke:currentColor}
 body:not(.dark-mode) #foodDeliveryPlanner .btn.secondary,body.dark-mode #foodDeliveryPlanner .btn.secondary{color:#fff!important;background:var(--primary)!important}
-body:not(.dark-mode) #v15Experience .v15-experience-actions .btn.secondary,body.dark-mode #v15Experience .v15-experience-actions .btn.secondary{background:var(--primary)!important;color:white!important}
-body:not(.dark-mode) :is(.input,.select,.textarea,.search-wrap input){color:#18202d;border-color:#8b97a7}
-body.dark-mode :is(.input,.select,.textarea,.search-wrap input){color:#f3f4f6;border-color:#667185}
+body:not(.dark-mode) #v15Experience .v15-experience-actions .btn.secondary,body.dark-mode #v15Experience .v15-experience-actions .btn.secondary{background:var(--primary)!important;color:white!important}/* MODIFICADO */ 
+body:not(.dark-mode) :is(.input,.select,.textarea,.search-wrap input){color:var(--ui-text);border-color:var(--ui-border)}/* MODIFICADO */ 
+body.dark-mode :is(.input,.select,.textarea,.search-wrap input){color:#f3f4f6;border-color:var(--ui-border)}
 /* NUEVO: dos semigiros sin invertir permanentemente el logotipo de WhatsApp. */
 @keyframes vibraWaHalfTurns{0%,100%{transform:rotate(0deg)}48%{transform:rotate(180deg)}96%{transform:rotate(360deg)}}
 #whatsappFab svg{transform-origin:50% 50%;animation:vibraWaHalfTurns 7s ease-in-out infinite}
@@ -7236,17 +7304,17 @@ body.dark-mode :is(.input,.select,.textarea,.search-wrap input){color:#f3f4f6;bo
 </style>
 
 <!-- NUEVO: contraste específico en los módulos afectados, según la personalización vigente -->
-<style id="vibra-contraste-quirurgico-20261014">
-body:not(.dark-mode){--vibra-readable:#182132;--vibra-muted:#4d5b70}
-body.dark-mode{--vibra-readable:#f3f6fb;--vibra-muted:#c8d3e1}
+<style id="vibra-contraste-quirurgico-20261014">/* MODIFICADO */ 
+body:not(.dark-mode){--vibra-readable:var(--ui-text);--vibra-muted:var(--ui-muted)}/* MODIFICADO */ 
+body.dark-mode{--vibra-readable:var(--ui-text);--vibra-muted:var(--ui-muted)}
 body:not(.dark-mode) #catalogGrid :is(.meta,.desc,.product-name,.qty-value),body:not(.dark-mode) #vibraServiceCatalog :is(.meta,.desc,.vsm-pricing,.vsm-rate),body:not(.dark-mode) #adminModal :is(.section-card h3,.admin-pane h3,.section-card p,.product-admin,.muted){color:var(--vibra-readable)!important;opacity:1!important}
 body.dark-mode #catalogGrid :is(.meta,.desc,.product-name,.qty-value),body.dark-mode #vibraServiceCatalog :is(.meta,.desc,.vsm-pricing,.vsm-rate){color:var(--vibra-readable)!important;opacity:1!important}
 #adminModal :is(.section-card h3,.admin-pane h3,.section-card p,.product-admin,.muted,.field label,.admin-kpi span){color:#eff3fa!important;opacity:1!important}
 #adminModal :is(.ticket-preview,.ticket-canvas-preview) :is(p,span,h3){color:inherit!important}
 body:not(.dark-mode) :is(.product-card,.vsm-service-card,.modal,.drawer,.section-card) :is(.status-badge,.unit-label,.vsm-rate,.vsm-pricing){opacity:1!important}
-body:not(.dark-mode) :is(.product-card,.vsm-service-card) .price{color:var(--primary)!important}
-body:not(.dark-mode) :is(.product-card,.vsm-service-card) :is(.status-badge,.unit-label){color:var(--vibra-readable)!important;background:#eef0f5!important}
-body.dark-mode :is(.product-card,.vsm-service-card) :is(.status-badge,.unit-label){color:#f6f7fb!important;background:#303742!important}
+body:not(.dark-mode) :is(.product-card,.vsm-service-card) .price{color:var(--primary)!important}/* MODIFICADO */ 
+body:not(.dark-mode) :is(.product-card,.vsm-service-card) :is(.status-badge,.unit-label){color:var(--vibra-readable)!important;background:var(--ui-surface)!important}/* MODIFICADO */ 
+body.dark-mode :is(.product-card,.vsm-service-card) :is(.status-badge,.unit-label){color:#f6f7fb!important;background:var(--ui-raised)!important}
 :is(.btn,.icon-btn,.tab-btn,.vsm-viewer-social a){gap:8px;align-items:center}
 :is(.btn,.icon-btn,.tab-btn,.vsm-viewer-social a)>svg{flex-shrink:0}
 #vsmProfileSocial a svg{width:18px;height:18px;display:block}
@@ -7295,8 +7363,8 @@ body.vibra-entry-login #overlay{z-index:102!important;background:transparent!imp
 body.vibra-entry-login #customerProfileModal{z-index:104!important;position:fixed!important;top:5vh!important;left:auto!important;right:clamp(190px,20vw,390px)!important;inset-inline-start:auto!important;transform:none!important;opacity:1!important;pointer-events:auto!important;display:block!important;width:min(350px,calc(100vw - 28px))!important;max-height:90dvh!important;background:#180b1eeF!important;color:#fff!important;border:1px solid #805071!important;box-shadow:0 28px 90px #0009!important}
 body.vibra-entry-login #customerProfileModal .modal-head{display:none!important}
 body.vibra-entry-login #customerProfileModal .modal-body{max-height:88dvh!important;overflow-y:auto!important}
-body.vibra-entry-login #customerProfileModal :is(h2,h3,strong,label,p,.muted,.small){color:#fff!important;opacity:1!important}
-body.vibra-entry-login #customerProfileModal :is(input:not([type=checkbox]),select){background:#27192e!important;border:1px solid #916a8b!important;color:white!important}
+body.vibra-entry-login #customerProfileModal :is(h2,h3,strong,label,p,.muted,.small){color:#fff!important;opacity:1!important}/* MODIFICADO */ 
+body.vibra-entry-login #customerProfileModal :is(input:not([type=checkbox]),select){background:#27192e!important;border:1px solid var(--ui-border)!important;color:white!important}
 body.vibra-entry-login #customerProfileModal input::placeholder{color:#e8d1e2!important}
 body.vibra-entry-login #customerProfileModal .btn{background:#d90b82!important;color:#fff!important;border-color:#e2309b!important}
 body.vibra-entry-login #customerProfileModal .btn.ghost{background:#35203b!important}
@@ -7363,17 +7431,17 @@ if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',
 .vibra-password-wrap .vibra-password-toggle svg{stroke:#fff!important}
 /* MODIFICADO: los controles del formulario de cuenta de invitado tienen separación efectiva. */
 #customerProfileModal #foodAuthSubmit{margin-bottom:15px!important}
-#customerProfileModal #authRecover{margin-top:9px!important}
+#customerProfileModal #authRecover{margin-top:9px!important}/* MODIFICADO */ 
 /* MODIFICADO: contraste en superficies oscuras del panel admin sin modificar sus datos ni controles. */
-#adminModal{--text:#f4f6fa!important;--muted:#c4cedb!important;color:#f4f6fa!important}
+#adminModal{--text:var(--ui-text)!important;--muted:var(--ui-muted)!important;color:#f4f6fa!important}
 #adminModal :is(.section-card,.admin-kpi,.review-card,.integration-card,.payment-item,.notice,.audit-item,.metric){color:#f4f6fa!important}
-#adminModal :is(.section-card h2,.section-card h3,.section-card h4,.section-card p,.section-card strong,.section-card span,.admin-kpi strong,.admin-kpi span,.metric strong,.metric span,.notice,.muted,.small,.field label,.product-admin,.review-meta,.summary-table td,.summary-table th){color:#edf2f9!important;opacity:1!important}
-#adminModal .admin-tabs .tab-btn:not(.active){color:#d3dce8!important;opacity:1!important}
-#adminModal .ticket-preview,#adminModal .ticket-preview *{color:#111!important}
+#adminModal :is(.section-card h2,.section-card h3,.section-card h4,.section-card p,.section-card strong,.section-card span,.admin-kpi strong,.admin-kpi span,.metric strong,.metric span,.notice,.muted,.small,.field label,.product-admin,.review-meta,.summary-table td,.summary-table th){color:#edf2f9!important;opacity:1!important}/* MODIFICADO */ 
+#adminModal .admin-tabs .tab-btn:not(.active){color:var(--ui-muted)!important;opacity:1!important}
+#adminModal .ticket-preview,#adminModal .ticket-preview *{color:#111!important}/* MODIFICADO */ 
 /* MODIFICADO: textos y etiquetas publicados bajo ambos modos. */
-body:not(.dark-mode) :is(#catalogGrid,#vibraServiceCatalog) :is(.meta,.desc,.unit-label,.status-badge,.vsm-pricing,.vsm-rate){color:#233047!important;opacity:1!important}
-body.dark-mode :is(#catalogGrid,#vibraServiceCatalog) :is(.meta,.desc,.unit-label,.status-badge,.vsm-pricing,.vsm-rate){color:#e6edf7!important;opacity:1!important}
-#vsmGallery .vsm-viewer-social a{color:#f7f8fd!important;background:#303743!important;opacity:1!important}
+body:not(.dark-mode) :is(#catalogGrid,#vibraServiceCatalog) :is(.meta,.desc,.unit-label,.status-badge,.vsm-pricing,.vsm-rate){color:var(--ui-text)!important;opacity:1!important}
+body.dark-mode :is(#catalogGrid,#vibraServiceCatalog) :is(.meta,.desc,.unit-label,.status-badge,.vsm-pricing,.vsm-rate){color:#e6edf7!important;opacity:1!important}/* MODIFICADO */ 
+#vsmGallery .vsm-viewer-social a{color:#f7f8fd!important;background:var(--ui-raised)!important;opacity:1!important}
 #vsmGallery .vsm-viewer-social a svg{color:inherit!important}
 </style>
 <script id="vibra-single-password-eye-20261015">
@@ -7405,8 +7473,8 @@ if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',
 #v16BusinessModal .v16-meta-chip{background:#261525!important;color:#fff!important;border:1px solid #a8819e}
 #v18BusinessModal .v18-business-meta .v18-business-chip :is(span,svg),
 #v16BusinessModal .v16-meta-chip :is(span,svg){color:inherit!important}
-#v18BusinessModal .v18-business-card .muted{color:var(--muted)}
-body:not(.dark-mode) #v18BusinessModal .v18-business-card .muted{color:#495a70}
+#v18BusinessModal .v18-business-card .muted{color:var(--muted)}/* MODIFICADO */ 
+body:not(.dark-mode) #v18BusinessModal .v18-business-card .muted{color:var(--ui-muted)}
 body:not(.dark-mode) #vsmGallery .vsm-viewer-sidebar .vsm-viewer-social a{color:#fff!important}
 
 /* Los controles neutros se leen sobre su propia superficie y conservan sus estados. */
@@ -7473,12 +7541,12 @@ body.vibra-entry-login #customerProfileModal :is(#authRecover,#vibraGuestAccess)
 </script>
 
 <!-- NUEVO: estilos acotados al panel, la barra de experiencia y la invitación del carrito -->
-<style>
+<style>/* MODIFICADO */ 
 body:not(.dark-mode) #adminModal{
-  --card:#fff!important;--site-bg:#f3f5fa!important;--text:#18243a!important;--muted:#4c5b71!important;--line:#d3dce9!important;--secondary:#edf1f8!important;--admin-accent:#a01456;--admin-active:#f9e7f0;color-scheme:light
-}
+  --card:var(--ui-surface)!important;--site-bg:var(--ui-page)!important;--text:var(--ui-text)!important;--muted:var(--ui-muted)!important;--line:var(--ui-border)!important;--secondary:var(--ui-raised)!important;--admin-accent:var(--ui-link);--admin-active:var(--ui-raised);color-scheme:light
+}/* MODIFICADO */ 
 body.dark-mode #adminModal{
-  --card:#171c26!important;--site-bg:#10151e!important;--text:#f0f4fc!important;--muted:#bcc8da!important;--line:#39465a!important;--secondary:#252e3d!important;--admin-accent:#ff9dce;--admin-active:#43253d;color-scheme:dark
+  --card:var(--ui-surface)!important;--site-bg:var(--ui-page)!important;--text:var(--ui-text)!important;--muted:var(--ui-muted)!important;--line:var(--ui-border)!important;--secondary:var(--ui-raised)!important;--admin-accent:var(--ui-link);--admin-active:var(--ui-raised);color-scheme:dark
 }
 html body #adminModal{background:var(--card)!important;color:var(--text)!important}
 html body #adminModal .modal-head{padding:12px clamp(12px,2vw,22px);min-height:0;background:var(--card);border-color:var(--line)}
@@ -7828,8 +7896,8 @@ body.dark-mode #vibraCartBooking{--booking-bg:#2b2031;--booking-ink:#fff0fa;--bo
 })();
 </script>
 <!-- NUEVO: marco estático y controles de pose del carrito -->
-<style>
-#vibraCartBooking [data-vibra-pose-image]{display:block;width:100%;height:auto;aspect-ratio:44/35;object-fit:contain;background:#e8e8e8;border:1px solid var(--booking-edge);border-radius:10px}
+<style>/* MODIFICADO */ 
+#vibraCartBooking [data-vibra-pose-image]{display:block;width:100%;height:auto;aspect-ratio:44/35;object-fit:contain;background:var(--ui-raised);border:1px solid var(--booking-edge);border-radius:10px}
 #vibraCartBooking .vibra-booking-poses{align-items:center}
 #vibraCartBooking .vibra-booking-poses label{flex-basis:100%;font-size:.85rem;font-weight:700}
 #vibraCartBooking #vibraCartPose{flex-basis:100%;min-width:0}
@@ -7887,8 +7955,8 @@ body.dark-mode .vibra-compact-controls button[aria-pressed=true]{background:#492
 #vsmGallery .vsm-viewer-body{grid-template-columns:minmax(0,1fr) minmax(245px,1fr)}
 #vsmGallery .vsm-viewer-stage{height:clamp(126px,43dvh,370px);min-height:0;display:grid;place-items:center}
 #vsmGallery .vsm-viewer-stage :is(img,video){width:auto;max-width:100%;max-height:clamp(126px,43dvh,370px)}
-#vsmGallery .vsm-viewer-sidebar{padding:10px!important}
-body:not(.dark-mode) #vsmGallery .vsm-viewer-sidebar :is(h3,strong){color:#182235!important}
+#vsmGallery .vsm-viewer-sidebar{padding:10px!important}/* MODIFICADO */ 
+body:not(.dark-mode) #vsmGallery .vsm-viewer-sidebar :is(h3,strong){color:var(--ui-text)!important}
 body.dark-mode #vsmGallery .vsm-viewer-sidebar :is(h3,strong){color:#f0f4fc!important}
 #vsmGallery .vibra-compact-service-tabs{display:none}
 @media(max-width:820px){
@@ -7931,9 +7999,9 @@ function vibraCompactControls(labels,select){
 
 
 <!-- NUEVO: contraste de controles y visores en ambos temas -->
-<style>
-body{--vibra-ui-surface:#fff;--vibra-ui-neutral:#edf1f7;--vibra-ui-text:#19243a;--vibra-ui-muted:#46566d;--vibra-ui-border:#a1aec0;--vibra-ui-stage:#e5eaf2}
-body.dark-mode{--vibra-ui-surface:#181e29;--vibra-ui-neutral:#273242;--vibra-ui-text:#f0f4fc;--vibra-ui-muted:#bdc9da;--vibra-ui-border:#647389;--vibra-ui-stage:#101620}
+<style>/* MODIFICADO */ 
+body{--vibra-ui-surface:var(--ui-surface);--vibra-ui-neutral:var(--ui-raised);--vibra-ui-text:var(--ui-text);--vibra-ui-muted:var(--ui-muted);--vibra-ui-border:var(--ui-border);--vibra-ui-stage:var(--ui-stage)}/* MODIFICADO */ 
+body.dark-mode{--vibra-ui-surface:var(--ui-surface);--vibra-ui-neutral:var(--ui-raised);--vibra-ui-text:var(--ui-text);--vibra-ui-muted:var(--ui-muted);--vibra-ui-border:var(--ui-border);--vibra-ui-stage:var(--ui-stage)}
 html body :is(.vibra-compact-controls button:not([aria-pressed=true]),#vscopeBusinessLinks button,.v18-address-suggestion,.vibra-svg-library button,.ticket-footer-icons label,.vibra-upload-slot){
   background:var(--vibra-ui-neutral)!important;color:var(--vibra-ui-text)!important;border-color:var(--vibra-ui-border)!important
 }
@@ -7948,8 +8016,8 @@ html body :is(.btn:not(.ghost):not(.danger):not(.success),.icon-btn,.vsm-media-b
 html body :is(.btn:not(.secondary):not(.ghost):not(.danger):not(.success),.icon-btn,.vsm-media-button){color:var(--vibra-ui-on-brand)!important}
 body:is(.dark-mode,:not(.dark-mode)) #v15Experience .v15-experience-actions .btn{color:var(--vibra-on-primary,#fff)!important}
 body:is(.dark-mode,:not(.dark-mode)) #vsmGallery #vsmProfileSocial a,
-body:is(.dark-mode,:not(.dark-mode)) #vsmGallery #vsmProfileSocial a :is(span,svg){color:#f7f8fc!important}
-body:is(.dark-mode,:not(.dark-mode)) #vsmGallery #vsmProfileSocial a{background:#303743!important;border-color:#687386}
+body:is(.dark-mode,:not(.dark-mode)) #vsmGallery #vsmProfileSocial a :is(span,svg){color:#f7f8fc!important}/* MODIFICADO */ 
+body:is(.dark-mode,:not(.dark-mode)) #vsmGallery #vsmProfileSocial a{background:var(--ui-raised)!important;border-color:var(--ui-border)}
 body:is(.dark-mode,:not(.dark-mode)) #vsmGallery #vsmViewerDetails{color:var(--vibra-ui-muted)!important;opacity:1}
 body:is(.dark-mode,:not(.dark-mode)) #vsmGallery .vsm-close{background:var(--vibra-ui-neutral)!important;color:var(--vibra-ui-text)!important;border-color:var(--vibra-ui-border)!important}
 #v18BusinessModal .v18-hours-list{gap:0}
@@ -8015,14 +8083,14 @@ body.dark-mode #vsmGallery .vibra-portrait-logos img{opacity:.23}
 #v18BusinessModal .v18-hours-line strong svg{flex:none;color:#851b54}
 body.dark-mode #v18BusinessModal .v18-hours-line strong svg{color:#ff9fd5}
 #customerProfileModal .vibra-account-phone{display:grid;grid-template-columns:minmax(98px,1fr) minmax(100px,1.05fr);gap:6px;width:min(100%,310px);align-items:center}
-#customerProfileModal .vibra-account-phone :is(select,input){min-width:0;width:100%;min-height:36px;padding:6px 8px;background:var(--vibra-ui-surface);color:var(--vibra-ui-text);border:1px solid var(--vibra-ui-border);border-radius:8px;font-size:.85rem}
-body:not(.dark-mode) #adminModal :is(.modal-head,.admin-content,.admin-tabs){color:#18243a}
-body:not(.dark-mode) #adminModal :is(.section-card,.admin-pane,.admin-layout) :is(h2,h3,h4,legend,.field>label,.field>span){color:#18243a!important}
-body:not(.dark-mode) #adminModal :is(.btn.secondary,.btn.ghost,.tab-btn:not(.active),.vscope-admin-toolbar button){background:#edf1f8!important;color:#18243a!important;border-color:#a7b5c8!important}
-body:not(.dark-mode) #adminModal :is(.btn.secondary,.btn.ghost,.tab-btn,.vscope-admin-toolbar button) :is(svg,span,small){color:inherit!important}
-body:not(.dark-mode) #adminModal :is(.admin-content,.section-card) :is(.muted,.review-meta,.small.muted){color:#42546b!important}
-body:not(.dark-mode) #adminModal :is(.vscope-admin-box,.vscope-admin-entry,.vscope-courtesies,.vibra-svg-library,.ticket-footer-icons){color:#18243a;background:#f3f6fb}
-body.dark-mode #adminModal :is(.vscope-admin-box,.vscope-admin-entry,.vscope-courtesies){color:#f0f4fc;background:#273242}
+#customerProfileModal .vibra-account-phone :is(select,input){min-width:0;width:100%;min-height:36px;padding:6px 8px;background:var(--vibra-ui-surface);color:var(--vibra-ui-text);border:1px solid var(--vibra-ui-border);border-radius:8px;font-size:.85rem}/* MODIFICADO */ 
+body:not(.dark-mode) #adminModal :is(.modal-head,.admin-content,.admin-tabs){color:var(--ui-text)}/* MODIFICADO */ 
+body:not(.dark-mode) #adminModal :is(.section-card,.admin-pane,.admin-layout) :is(h2,h3,h4,legend,.field>label,.field>span){color:var(--ui-text)!important}/* MODIFICADO */ 
+body:not(.dark-mode) #adminModal :is(.btn.secondary,.btn.ghost,.tab-btn:not(.active),.vscope-admin-toolbar button){background:var(--ui-surface)!important;color:var(--ui-text)!important;border-color:var(--ui-border)!important}
+body:not(.dark-mode) #adminModal :is(.btn.secondary,.btn.ghost,.tab-btn,.vscope-admin-toolbar button) :is(svg,span,small){color:inherit!important}/* MODIFICADO */ 
+body:not(.dark-mode) #adminModal :is(.admin-content,.section-card) :is(.muted,.review-meta,.small.muted){color:var(--ui-muted)!important}
+body:not(.dark-mode) #adminModal :is(.vscope-admin-box,.vscope-admin-entry,.vscope-courtesies,.vibra-svg-library,.ticket-footer-icons){color:#18243a;background:#f3f6fb}/* MODIFICADO */ 
+body.dark-mode #adminModal :is(.vscope-admin-box,.vscope-admin-entry,.vscope-courtesies){color:#f0f4fc;background:var(--ui-raised)}
 @media(max-width:760px){
   #vsmGallery #vsmGalleryMedia{background-position:center;background-size:cover}
   #vibraCartBooking [data-vibra-pose-image]{height:clamp(175px,32dvh,285px)}
@@ -8113,9 +8181,9 @@ function vibraProfilePhoneValue(id){
 #vibraCartBooking [data-vibra-pose-image]{user-select:none;touch-action:pan-y;transform:translateX(var(--vibra-pose-offset,0px));transition:transform .16s ease}
 #vibraCartBooking [data-vibra-pose-image][data-dragging]{transition:none}
 #vibraCartBooking [data-vibra-pose-image]:focus-visible{outline:2px solid var(--booking-ink);outline-offset:2px}
-@media(prefers-reduced-motion:reduce){#vibraCartBooking [data-vibra-pose-image]{transition:none;transform:none}}
-body:not(.dark-mode) #adminModal{--vibra-admin-ink:#18243a;--vibra-admin-detail:#43546b;--vibra-admin-panel:#f1f5fa;--vibra-admin-edge:#a7b5c8}
-body.dark-mode #adminModal{--vibra-admin-ink:#eef3fc;--vibra-admin-detail:#c2cfe1;--vibra-admin-panel:#252e3d;--vibra-admin-edge:#65738a}
+@media(prefers-reduced-motion:reduce){#vibraCartBooking [data-vibra-pose-image]{transition:none;transform:none}}/* MODIFICADO */ 
+body:not(.dark-mode) #adminModal{--vibra-admin-ink:var(--ui-text);--vibra-admin-detail:var(--ui-muted);--vibra-admin-panel:var(--ui-raised);--vibra-admin-edge:var(--ui-border)}/* MODIFICADO */ 
+body.dark-mode #adminModal{--vibra-admin-ink:var(--ui-text);--vibra-admin-detail:var(--ui-muted);--vibra-admin-panel:var(--ui-raised);--vibra-admin-edge:var(--ui-border)}
 html body #adminModal :is(.ticket-controls,.ticket-preview-column,.saved-address,.permission-option,.vscope-admin-entry,.vscope-admin-box,.summary-table,.payment-item){color:var(--vibra-admin-ink)}
 html body #adminModal :is(.saved-address,.permission-option,.ticket-footer-icons label,.vibra-svg-library button,.vscope-admin-entry){background:var(--vibra-admin-panel)!important;color:var(--vibra-admin-ink)!important;border-color:var(--vibra-admin-edge)!important}
 html body #adminModal :is(.ticket-controls,.ticket-preview-column,#vibraCustomersList) :is(h3,h4,label,strong){color:var(--vibra-admin-ink)!important}
@@ -8132,9 +8200,9 @@ html body #adminModal .ticket-preview-column :is(.ticket-preview,.ticket-preview
 <style>
 #vibraCartBooking .vibra-booking-sign button[hidden]{display:none!important}
 #vibraCartBooking [data-vibra-pose-image]{cursor:pointer}
-#vibraCartBooking [data-vibra-pose-image][data-dragging]{cursor:grabbing}
-body:not(.dark-mode) #adminModal{--vibra-admin-copy:#192438;--vibra-admin-subcopy:#354861;--vibra-admin-control:#edf2f8;--vibra-admin-outline:#8b9ab1}
-body.dark-mode #adminModal{--vibra-admin-copy:#f2f6fd;--vibra-admin-subcopy:#d2ddec;--vibra-admin-control:#293547;--vibra-admin-outline:#71829b}
+#vibraCartBooking [data-vibra-pose-image][data-dragging]{cursor:grabbing}/* MODIFICADO */ 
+body:not(.dark-mode) #adminModal{--vibra-admin-copy:var(--ui-text);--vibra-admin-subcopy:var(--ui-muted);--vibra-admin-control:var(--ui-field);--vibra-admin-outline:var(--ui-border)}/* MODIFICADO */ 
+body.dark-mode #adminModal{--vibra-admin-copy:var(--ui-text);--vibra-admin-subcopy:var(--ui-muted);--vibra-admin-control:var(--ui-field);--vibra-admin-outline:var(--ui-border)}
 html body #adminModal #adminContent :is(.section-card,.admin-pane,.ticket-controls,.saved-address,.summary-table,.admin-kpi,.metric) :is(p,h2,h3,h4,label,legend,dt,dd,th,td){
   color:var(--vibra-admin-copy)!important
 }
@@ -8189,9 +8257,9 @@ body.dark-mode #vibraCartBooking .vibra-scene-frame{fill:#4f3550;stroke:#ae779d}
 </style>
 
 <!-- NUEVO: contraste e interacción de visor, reserva, carrito y filtros -->
-<style>
-body{--vibra-pink:#a81458;--vibra-pink-hover:#851044;--vibra-selected:#fbe4f0;--vibra-selected-text:#71113d}
-body.dark-mode{--vibra-selected:#48243c;--vibra-selected-text:#ffd6ed}
+<style>/* MODIFICADO */ 
+body{--vibra-pink:var(--ui-action);--vibra-pink-hover:var(--ui-hover);--vibra-selected:var(--ui-raised);--vibra-selected-text:var(--ui-text)}/* MODIFICADO */ 
+body.dark-mode{--vibra-selected:var(--ui-raised);--vibra-selected-text:var(--ui-text)}
 body:is(.dark-mode,:not(.dark-mode)) #vsmGallery #vsmProfileSocial a,
 #vsmGallery .vibra-book-service{background:var(--vibra-pink)!important;color:#fff!important;border-color:transparent!important}
 body:is(.dark-mode,:not(.dark-mode)) #vsmGallery #vsmProfileSocial a:hover,
@@ -8444,36 +8512,36 @@ function vibraFilterPicker(select){
 })();
 </script>
 <!-- NUEVO: diseno visual claro y oscuro de las referencias -->
-<style id="vibra-reference-themes">
+<style id="vibra-reference-themes">/* MODIFICADO */ 
 /* NUEVO: paletas y composición de las maquetas sobre los componentes existentes. */
 body{
-  --ref-bg:#f4f6f9;--ref-header:#2d2739;--ref-header-text:#fff5fb;--ref-header-muted:#e9bcd4;
-  --ref-card:#fff;--ref-soft:#f1f5f9;--ref-line:#cbd5e1;--ref-text:#0f172a;--ref-muted:#475569;
-  --ref-action:#9d174d;--ref-on-action:#fff;--ref-hover:#831843;--ref-link:#9d174d;--ref-stage:#f1f5f9;
-  --ref-hero:linear-gradient(105deg,#881337,#9f1239 43%,#4c0519);
-  --ref-shadow:0 10px 25px -16px #33415570,0 2px 5px #3341550e;
-  --ref-focus:#9d174d;--ref-map:#8c9db5;--ref-radius:16px;
-}
+  --ref-bg:var(--ui-page);--ref-header:var(--ui-header);--ref-header-text:var(--ui-text);--ref-header-muted:var(--ui-muted);
+  --ref-card:var(--ui-surface);--ref-soft:var(--ui-raised);--ref-line:var(--ui-border);--ref-text:var(--ui-text);--ref-muted:var(--ui-muted);
+  --ref-action:var(--ui-action);--ref-on-action:var(--ui-on-action);--ref-hover:var(--ui-hover);--ref-link:var(--ui-link);--ref-stage:var(--ui-stage);
+  --ref-hero:var(--ui-hero);
+  --ref-shadow:var(--ui-shadow);
+  --ref-focus:var(--ui-focus);--ref-map:#8c9db5;--ref-radius:16px;
+}/* MODIFICADO */ 
 body.dark-mode{
-  --ref-bg:#0c0814;--ref-header:#160f24;--ref-header-muted:#f3c1de;
-  --ref-card:#1b132c;--ref-soft:#150f22;--ref-line:#57355f;--ref-text:#f5f3ff;--ref-muted:#d1bfdc;
-  --ref-action:#c91865;--ref-on-action:#fff;--ref-hover:#a81353;--ref-link:#ff91c1;--ref-stage:#0e0a18;
-  --ref-hero:linear-gradient(105deg,#3e0b29,#670d3e 47%,#25082e);
-  --ref-shadow:0 12px 30px -16px #000b,0 0 0 1px #ff2a8510;
-  --ref-focus:#ff91c1;--ref-map:#111d35;
+  --ref-bg:var(--ui-page);--ref-header:var(--ui-header);--ref-header-muted:var(--ui-muted);
+  --ref-card:var(--ui-surface);--ref-soft:var(--ui-raised);--ref-line:var(--ui-border);--ref-text:var(--ui-text);--ref-muted:var(--ui-muted);
+  --ref-action:var(--ui-action);--ref-on-action:var(--ui-on-action);--ref-hover:var(--ui-hover);--ref-link:var(--ui-link);--ref-stage:var(--ui-stage);
+  --ref-hero:var(--ui-hero);
+  --ref-shadow:var(--ui-shadow);
+  --ref-focus:var(--ui-focus);--ref-map:#111d35;
 }
 /* NUEVO: fondos de referencia cuando Personalización conserva el fondo base. */
 html body[data-vibra-ref-background]{background:var(--ref-bg)!important}
 html body.dark-mode[data-vibra-ref-background]{background:radial-gradient(ellipse at 18% 14%,#ff2a8514,transparent 45%),radial-gradient(ellipse at 88% 72%,#7928ca20,transparent 50%),var(--ref-bg)!important}
-html body[data-vibra-ref-background]::before{background:var(--ref-bg)}
+html body[data-vibra-ref-background]::before{background:var(--ref-bg)}/* MODIFICADO */ 
 /* NUEVO: variables de la interfaz pública y sus ventanas. */
 html body :is(main,.topbar,#foodDeliveryPlanner,#vibraLegalFooter,.modal:not(#adminModal),#cartDrawer,#vsmGallery,#vibraReserveOverlay,#vibraLegalDialog){
   --primary:var(--ref-custom-primary,var(--ref-action));--vibra-on-primary:var(--ref-custom-on-primary,var(--ref-on-action));
   --card:var(--ref-custom-card,var(--ref-card));--text:var(--ref-custom-text,var(--ref-text));
   --secondary:var(--ref-soft);--surface:var(--ref-soft);--muted:var(--ref-muted);--line:var(--ref-line);
-  --vibra-ui-surface:var(--card);--vibra-ui-neutral:var(--ref-soft);--vibra-ui-text:var(--text);
-  --vibra-ui-muted:var(--ref-muted);--vibra-ui-border:var(--ref-line);--vibra-ui-stage:var(--ref-stage);
-  --vibra-pink:var(--primary);--vibra-pink-hover:var(--ref-hover);
+  --vibra-ui-surface:var(--ui-surface);--vibra-ui-neutral:var(--ui-raised);--vibra-ui-text:var(--ui-text);
+  --vibra-ui-muted:var(--ui-muted);--vibra-ui-border:var(--ui-border);--vibra-ui-stage:var(--ui-stage);
+  --vibra-pink:var(--ui-action);--vibra-pink-hover:var(--ui-hover);
   color:var(--text);
 }
 html body.dark-mode :is(main,.topbar,#foodDeliveryPlanner,#vibraLegalFooter,.modal:not(#adminModal),#cartDrawer,#vsmGallery,#vibraReserveOverlay,#vibraLegalDialog){
@@ -8573,11 +8641,11 @@ html body :is(main,.topbar,#foodDeliveryPlanner,#cartDrawer,.modal:not(#adminMod
   html body main #catalogGrid :is(.product-visual,.product-zoom-trigger,.vibra-service-photo,.product-zoom-trigger img){height:clamp(112px,32vw,180px)!important}
   html body main .hero-card{border-radius:17px!important}
 }
-@media(max-width:360px){html body main #catalogGrid{grid-template-columns:minmax(0,1fr)!important}}
+@media(max-width:360px){html body main #catalogGrid{grid-template-columns:minmax(0,1fr)!important}}/* MODIFICADO */ 
 /* NUEVO: superficies administrativas y contraste sin alterar la navegación. */
 html body #adminModal{
-  --vibra-ui-surface:var(--ref-card);--vibra-ui-neutral:var(--ref-soft);--vibra-ui-text:var(--ref-text);
-  --vibra-ui-muted:var(--ref-muted);--vibra-ui-border:var(--ref-line);
+  --vibra-ui-surface:var(--ui-surface);--vibra-ui-neutral:var(--ui-raised);--vibra-ui-text:var(--ui-text);
+  --vibra-ui-muted:var(--ui-muted);--vibra-ui-border:var(--ui-border);
   background:var(--ref-card)!important;color:var(--ref-text)!important;border-color:var(--ref-line)!important;
 }
 html body #adminModal :is(.modal-head,.admin-tabs,.admin-content,.admin-pane,.section-card){
@@ -8588,8 +8656,8 @@ html body #adminModal :is(input,select,textarea):not([type=radio]):not([type=che
 }
 html body #adminModal :is(.muted,.review-meta,.small.muted){color:var(--ref-muted)!important}
 html body #adminModal .tab-btn.active{border-color:var(--ref-focus)!important;color:var(--ref-link)!important}
-html body #adminModal .tab-btn.active svg{color:inherit!important}
-html body :is(.vibra-cart-feedback,.vibra-magnifier){--vibra-ui-surface:var(--ref-card);--vibra-ui-text:var(--ref-text);--vibra-ui-border:var(--ref-line);--vibra-ui-stage:var(--ref-stage)}
+html body #adminModal .tab-btn.active svg{color:inherit!important}/* MODIFICADO */ 
+html body :is(.vibra-cart-feedback,.vibra-magnifier){--vibra-ui-surface:var(--ui-surface);--vibra-ui-text:var(--ui-text);--vibra-ui-border:var(--ui-border);--vibra-ui-stage:var(--ui-stage)}
 html body .vibra-cart-token{background:var(--ref-action);color:var(--ref-on-action)}
 </style>
 <!-- NUEVO: rediseno exclusivo del visor de servicios -->
@@ -8860,30 +8928,30 @@ html body #vsmGallery .vsm-viewer-interact{padding-block:6px}
 }
 </style>
 <!-- NUEVO: bloques visuales del rediseno Vibra Erotica -->
-<style>
+<style>/* MODIFICADO */ 
 /* NUEVO: paleta de referencia sobre el mecanismo de tema existente. */
 :root{
- --art-bg:#faf5f8;--art-panel:#fffafc;--art-soft:#f8eaf2;--art-ink:#271326;--art-muted:#67445c;
- --art-line:#96667f;--art-main:#961747;--art-action-end:#86113e;--art-link:#87133f;--art-focus:#9e1955;
- --art-header:#fffafc;--art-header-ink:#36162b;--art-hero:linear-gradient(112deg,#791137,#a41d48 47%,#570b29);
- --art-shadow:0 8px 20px #6320411c;--art-gold:#764b12;--art-modal:#fff8f2;
-}
+ --art-bg:var(--ui-page);--art-panel:var(--ui-surface);--art-soft:var(--ui-raised);--art-ink:var(--ui-text);--art-muted:var(--ui-muted);
+ --art-line:var(--ui-border);--art-main:var(--ui-action);--art-action-end:var(--ui-purple);--art-link:var(--ui-link);--art-focus:var(--ui-focus);
+ --art-header:var(--ui-header);--art-header-ink:var(--ui-text);--art-hero:var(--ui-hero);
+ --art-shadow:var(--ui-shadow);--art-gold:#764b12;--art-modal:var(--ui-dialog);
+}/* MODIFICADO */ 
 body.dark-mode{
- --art-bg:#10091a;--art-panel:#1b1127;--art-soft:#271634;--art-ink:#fff0fa;--art-muted:#e2b9d7;
- --art-line:#93658b;--art-main:#c01960;--art-action-end:#7426a9;--art-link:#ff91c7;--art-focus:#ffc2df;
- --art-header:#190f24;--art-header-ink:#fff0fa;--art-hero:linear-gradient(112deg,#370d2c,#671039 47%,#361041);
- --art-shadow:0 8px 24px #090410a0;--art-gold:#f4d391;--art-modal:#241021;
+ --art-bg:var(--ui-page);--art-panel:var(--ui-surface);--art-soft:var(--ui-raised);--art-ink:var(--ui-text);--art-muted:var(--ui-muted);
+ --art-line:var(--ui-border);--art-main:var(--ui-action);--art-action-end:var(--ui-purple);--art-link:var(--ui-link);--art-focus:var(--ui-focus);
+ --art-header:var(--ui-header);--art-header-ink:var(--ui-text);--art-hero:var(--ui-hero);
+ --art-shadow:var(--ui-shadow);--art-gold:#f4d391;--art-modal:var(--ui-dialog);
 }
 html body[data-vibra-ref-background]{background:var(--art-bg)!important}
-html body[data-vibra-ref-background]::before{background:var(--art-bg)}
+html body[data-vibra-ref-background]::before{background:var(--art-bg)}/* MODIFICADO */ 
 html body :is(main,.topbar,#foodDeliveryPlanner,#vibraLegalFooter,.modal,#cartDrawer,#vsmGallery,#vibraReserveOverlay,#vibraLegalDialog){
  --card:var(--art-panel);--surface:var(--art-soft);--secondary:var(--art-soft);--text:var(--art-ink);
- --muted:var(--art-muted);--line:var(--art-line);--primary:var(--art-main);--vibra-on-primary:#fff;
- --vibra-ui-surface:var(--art-panel);--vibra-ui-neutral:var(--art-soft);--vibra-ui-text:var(--art-ink);
- --vibra-ui-muted:var(--art-muted);--vibra-ui-border:var(--art-line);--vibra-ui-stage:var(--art-soft);
- --ref-card:var(--art-panel);--ref-soft:var(--art-soft);--ref-text:var(--art-ink);--ref-muted:var(--art-muted);
- --ref-line:var(--art-line);--ref-focus:var(--art-focus);--ref-link:var(--art-link);--ref-shadow:var(--art-shadow);
- --vibra-pink:var(--art-main);--vibra-pink-hover:var(--art-action-end);
+ --muted:var(--art-muted);--line:var(--art-line);--primary:var(--ref-custom-primary,var(--art-main));--vibra-on-primary:var(--ref-custom-on-primary,var(--ui-on-action)); /* MODIFICADO */
+ --vibra-ui-surface:var(--ui-surface);--vibra-ui-neutral:var(--ui-raised);--vibra-ui-text:var(--ui-text);
+ --vibra-ui-muted:var(--ui-muted);--vibra-ui-border:var(--ui-border);--vibra-ui-stage:var(--ui-stage);
+ --ref-card:var(--ui-surface);--ref-soft:var(--ui-raised);--ref-text:var(--ui-text);--ref-muted:var(--ui-muted);
+ --ref-line:var(--ui-border);--ref-focus:var(--ui-focus);--ref-link:var(--ui-link);--ref-shadow:var(--ui-shadow);
+ --vibra-pink:var(--ui-action);--vibra-pink-hover:var(--ui-hover);
 }
 html body .topbar{background:var(--art-header)!important;color:var(--art-header-ink)!important;box-shadow:none;border-color:var(--art-line)!important}
 html body .topbar[data-art-scrolled]{background:color-mix(in srgb,var(--art-header) 94%,transparent)!important;backdrop-filter:blur(14px);box-shadow:var(--art-shadow)}
@@ -9241,23 +9309,23 @@ function vibraArtZoom(target,setScale,getScale,pan,resetPan){ // MODIFICADO: pan
 }
 </script>
 <!-- NUEVO: ubicacion, capas y estilos de la referencia -->
-<style>
+<style>/* MODIFICADO */ 
 /* NUEVO: panel de ubicación, filtros y catálogo de la referencia. */
 #foodDeliveryPlanner,#viPublicWrap,#v15Experience,#catalogGrid{
-  --panel-rim:#a56a84;--panel-shadow:0 9px 28px #661d4820;
-}
+  --panel-rim:var(--ui-border);--panel-shadow:var(--ui-shadow);
+}/* MODIFICADO */ 
 body.dark-mode :is(#foodDeliveryPlanner,#viPublicWrap,#v15Experience,#catalogGrid){
-  --panel-rim:#91537e;--panel-shadow:0 12px 30px #1004198a;
+  --panel-rim:var(--ui-border);--panel-shadow:var(--ui-shadow);
 }
-html body #foodDeliveryPlanner{margin:8px auto 18px!important}
+html body #foodDeliveryPlanner{margin:8px auto 18px!important}/* MODIFICADO */ 
 html body #foodDeliveryPlanner>.section-card:first-child{
-  --location-ink:#fff3fa;--location-muted:#f8d4e5;--location-field:#fff7fc;--location-field-ink:#38182e;
+  --location-ink:#fff3fa;--location-muted:#f8d4e5;--location-field:var(--ui-field);--location-field-ink:var(--ui-text);
   background:linear-gradient(112deg,#791239,#a51d50 49%,#5c1039)!important;
   color:var(--location-ink)!important;border:1px solid var(--panel-rim)!important;
   border-radius:21px!important;box-shadow:var(--panel-shadow);
-}
+}/* MODIFICADO */ 
 html body.dark-mode #foodDeliveryPlanner>.section-card:first-child{
-  --location-field:#221026;--location-field-ink:#fff1fa;
+  --location-field:var(--ui-field);--location-field-ink:var(--ui-text);
   background:linear-gradient(112deg,#3e0b29,#670d3e 49%,#25082e)!important;
 }
 html body #foodDeliveryPlanner>.section-card:first-child :is(.eyebrow,.field,label){color:var(--location-ink)!important}
@@ -9391,13 +9459,13 @@ html body #productViewerModal.product-viewer .vibra-product-gallery .v12-social-
 html body #productViewerModal.product-viewer .vibra-product-gallery .v12-social-btn{width:auto;min-width:44px;font:700 .83rem var(--font);white-space:nowrap}
 </style>
 <!-- NUEVO: panel y densidad del catalogo -->
-<style>
+<style>/* MODIFICADO */ 
 /* NUEVO: panel compacto en la paleta del sitio. */
 html body #adminModal{
- --au-panel:#fff8fc;--au-bg:#faedf5;--au-ink:#32182a;--au-muted:#69415c;--au-edge:#9f6789;--au-accent:#8d174b;
+ --au-panel:var(--ui-surface);--au-bg:var(--ui-page);--au-ink:var(--ui-text);--au-muted:var(--ui-muted);--au-edge:var(--ui-border);--au-accent:var(--ui-link);
  --card:var(--au-panel);--site-bg:var(--au-bg);--text:var(--au-ink);--muted:var(--au-muted);--line:var(--au-edge);--secondary:var(--au-bg);
-}
-html body.dark-mode #adminModal{--au-panel:#201227;--au-bg:#170d1e;--au-ink:#fff1fb;--au-muted:#e5b9d6;--au-edge:#946181;--au-accent:#ffabd9}
+}/* MODIFICADO */ 
+html body.dark-mode #adminModal{--au-panel:var(--ui-surface);--au-bg:var(--ui-page);--au-ink:var(--ui-text);--au-muted:var(--ui-muted);--au-edge:var(--ui-border);--au-accent:var(--ui-link)}
 #adminModal .admin-ui-sprite{position:absolute;width:0;height:0;overflow:hidden}
 html body #adminModal .modal-head{gap:8px;padding:7px 12px;flex-wrap:wrap;background:var(--au-panel)!important}
 html body #adminModal .modal-head>strong{font-size:1rem}
@@ -9883,21 +9951,21 @@ html body :is(main,.topbar,#foodDeliveryPlanner) :is(.btn,.chip,.v12-social-btn,
 /* MODIFICADO: los estados se definen juntos en el bloque de interaccion de referencia. */
 </style>
 <!-- NUEVO -->
-<style id="ve-reference-composition">
+<style id="ve-reference-composition">/* MODIFICADO */ 
 /* NUEVO: patrón, paneles y proporciones de code.html sobre el tema existente. */
 html body{
  --ve-width:min(1216px,calc(100% - 64px));
  --ve-pattern:url("data:image/svg+xml,%3Csvg width='120' height='120' viewBox='0 0 120 120' xmlns='http://www.w3.org/2000/svg'%3E%3Cg fill='%23ff2a85' fill-opacity='0.035' fill-rule='evenodd'%3E%3C!-- Heart --%3E%3Cpath d='M20 14c-2.8 0-5 2.2-5 5 0 4.2 7 8 7 8s7-3.8 7-8c0-2.8-2.2-5-5-5-1.5 0-2.8.7-3.5 1.8-.7-1.1-2-1.8-3.5-1.8z'/%3E%3C!-- Sparkle / Star --%3E%3Cpath d='M85 22l1.5 4 4 1.5-4 1.5-1.5 4-1.5-4-4-1.5 4-1.5z'/%3E%3C!-- Cocktail glass --%3E%3Cpath d='M30 80l4 6v4h-2v1h6v-1h-2v-4l4-6h-10zm2 2h6l-3 4.2z'/%3E%3C!-- Feather / Whip accent --%3E%3Cpath d='M90 75c3-1 6-4 7-8-3 1-5 3-7 5v3zm-4 4c5 0 8-3 10-7-4 1-8 4-10 7z'/%3E%3C!-- Candle flame --%3E%3Cpath d='M60 40c0 2-1 3.5-2 3.5s-2-1.5-2-3.5c0-1 2-3 2-3s2 2 2 3z'/%3E%3C/g%3E%3C/svg%3E");
  --ve-glass:color-mix(in srgb,var(--art-panel) 88%,transparent);
- --ve-rim:#aa618f;
- --ve-bloom:0 10px 30px -10px #7c255d44,0 0 1px 1px #ae417d26;
- --ve-panel:linear-gradient(105deg,#fff0f7,#ffdeed 52%,#f4e7ff);
-}
+ --ve-rim:var(--ui-border);
+ --ve-bloom:var(--ui-shadow);
+ --ve-panel:var(--ui-feature);
+}/* MODIFICADO */ 
 html body.dark-mode{
- --art-bg:#0b0713;--art-panel:#150f22;--art-soft:#23152c;
- --art-muted:#f1c7df;--art-link:#ffa7d2;--art-main:#b9145d;--art-action-end:#7928ca;
- --ve-rim:#a66798;--ve-bloom:0 10px 30px -10px #000c,0 0 1px 1px #ff2a8526;
- --ve-panel:linear-gradient(105deg,#3e0b29,#670d3e 52%,#25082e);
+ --art-bg:var(--ui-page);--art-panel:var(--ui-surface);--art-soft:var(--ui-raised);
+ --art-muted:var(--ui-muted);--art-link:var(--ui-link);--art-main:var(--ui-action);--art-action-end:var(--ui-purple);
+ --ve-rim:var(--ui-border);--ve-bloom:var(--ui-shadow);
+ --ve-panel:var(--ui-feature);
 }
 html body[data-vibra-ref-background]::before{
  background:radial-gradient(circle at 20% 15%,#ff2a8514,transparent 45%),
@@ -9992,19 +10060,19 @@ html body #vibraLegalFooter .vibra-legal-rights{border-top:1px solid var(--ve-ri
 html body main #catalogGrid .ve-service-actions button{display:flex;align-items:center;justify-content:center;gap:6px}
 </style>
 <!-- NUEVO -->
-<style>
+<style>/* MODIFICADO */ 
 /* NUEVO: equivalentes locales de las utilidades interactivas de code.html. */
 html body{
  --ve-fx-timing:cubic-bezier(.4,0,.2,1);
- --ve-fx-accent:#a51558;
- --ve-fx-bright:#a31857;
- --ve-fx-wash:#f9dcec;
+ --ve-fx-accent:var(--ui-link);
+ --ve-fx-bright:var(--ui-hover);
+ --ve-fx-wash:var(--ui-raised);
  --ve-fx-glow:0 0 20px -2px #a5155860;
-}
+}/* MODIFICADO */ 
 html body.dark-mode{
- --ve-fx-accent:#ff6caf;
- --ve-fx-bright:#c21861;
- --ve-fx-wash:#3c1b3b;
+ --ve-fx-accent:var(--ui-link);
+ --ve-fx-bright:var(--ui-hover);
+ --ve-fx-wash:var(--ui-raised);
  --ve-fx-glow:0 0 20px -2px #ff2a8573;
 }
 html body :is(.topbar,#foodDeliveryPlanner,#v15Experience,#catalogGrid,#viPublicWrap,.controls,#catalogPages,#v12CategoriesModal) :is(button,a[href],input,select):focus-visible{
@@ -10103,13 +10171,13 @@ html body :is(#productViewerModal,#vsmGallery,#v12CategoriesModal,.v12-menu-list
 }
 </style>
 <!-- NUEVO -->
-<style>
+<style>/* MODIFICADO */ 
 /* NUEVO: contraste del buscador y superficies compactas de diálogo. */
 html body #foodDeliveryPlanner>.section-card:first-child{
- --ve-address-bg:#fff7fc;--ve-address-ink:#421032;--ve-address-icon:#961747;
-}
+ --ve-address-bg:var(--ui-field);--ve-address-ink:var(--ui-text);--ve-address-icon:var(--ui-link);
+}/* MODIFICADO */ 
 html body.dark-mode #foodDeliveryPlanner>.section-card:first-child{
- --ve-address-bg:#211129;--ve-address-ink:#fff0fa;--ve-address-icon:#ff9ccd;
+ --ve-address-bg:var(--ui-field);--ve-address-ink:var(--ui-text);--ve-address-icon:var(--ui-link);
 }
 html body #foodDeliveryPlanner .address-picker-row .ve-address-icon{
  position:absolute;inset-inline-start:12px;bottom:13px;width:18px;height:18px;
@@ -10195,30 +10263,30 @@ html body #v16RateBusinessModal .v16-review-stars{color:var(--art-link)}
 html body #vibraReserveBody #v9BookingStatus:not(:empty){padding:8px 12px;border-inline-start:3px solid var(--art-link);background:var(--art-soft)}
 </style>
 <!-- NUEVO -->
-<style>
+<style>/* MODIFICADO */ 
 /* NUEVO: composición del ZIP limitada al modal de reserva y su visor de habitaciones. */
 html body :is(#vibraReserveOverlay,#vroomOverlay[data-reservation-viewer]){
- --res-back:#fff5fb;--res-surface:#fffafd;--res-card:#f9e8f4;--res-field:#fff8fc;
- --res-ink:#301132;--res-muted:#69294f;--res-accent:#9b1856;--res-line:#ad608f;
- --res-action:#a21960;--res-end:#7222a4;--res-focus:#912070;--res-glow:#a2196040;
- --res-header:#f6e0f1;--res-overlay:#210922a6;
+ --res-back:var(--ui-page);--res-surface:var(--ui-surface);--res-card:var(--ui-raised);--res-field:var(--ui-field);
+ --res-ink:var(--ui-text);--res-muted:var(--ui-muted);--res-accent:var(--ui-link);--res-line:var(--ui-border);
+ --res-action:var(--ui-action);--res-end:var(--ui-purple);--res-focus:var(--ui-focus);--res-glow:var(--ui-glow);
+ --res-header:var(--ui-header);--res-overlay:var(--ui-overlay);
  color-scheme:light;
-}
+}/* MODIFICADO */ 
 html body.dark-mode :is(#vibraReserveOverlay,#vroomOverlay[data-reservation-viewer]){
- --res-back:#100516;--res-surface:#1b0826;--res-card:#200e2a;--res-field:#170720;
- --res-ink:#fff1fa;--res-muted:#f0b9dc;--res-accent:#ff91c8;--res-line:#a95a91;
- --res-action:#bb155f;--res-end:#7928ca;--res-focus:#ff8cc9;--res-glow:#ff2a8566;
- --res-header:#170822;--res-overlay:#08030ed9;
+ --res-back:var(--ui-page);--res-surface:var(--ui-surface);--res-card:var(--ui-raised);--res-field:var(--ui-field);
+ --res-ink:var(--ui-text);--res-muted:var(--ui-muted);--res-accent:var(--ui-link);--res-line:var(--ui-border);
+ --res-action:var(--ui-action);--res-end:var(--ui-purple);--res-focus:var(--ui-focus);--res-glow:var(--ui-glow);
+ --res-header:var(--ui-header);--res-overlay:var(--ui-overlay);
  color-scheme:dark;
 }
 html body :is(#vibraReserveOverlay,#vroomOverlay[data-reservation-viewer]){
  background:var(--res-overlay)!important;backdrop-filter:blur(8px);
-}
+}/* MODIFICADO */ 
 html body #vibraReserveOverlay #vibraReserveShell,
 html body #vroomOverlay[data-reservation-viewer] #vroomDialog{
- --art-panel:var(--res-surface);--art-soft:var(--res-card);--art-ink:var(--res-ink);
- --art-muted:var(--res-muted);--art-link:var(--res-accent);--art-line:var(--res-line);
- --art-focus:var(--res-focus);--art-main:var(--res-action);
+ --art-panel:var(--ui-surface);--art-soft:var(--ui-raised);--art-ink:var(--ui-text);
+ --art-muted:var(--ui-muted);--art-link:var(--ui-link);--art-line:var(--ui-border);
+ --art-focus:var(--ui-focus);--art-main:var(--ui-action);
  background:linear-gradient(145deg,var(--res-surface),var(--res-back) 65%,var(--res-card))!important;
  border:1px solid var(--res-line)!important;box-shadow:0 22px 58px -20px var(--res-glow);
  color:var(--res-ink)!important;font:500 .875rem/1.45 "Plus Jakarta Sans",sans-serif;
