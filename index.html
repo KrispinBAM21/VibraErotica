@@ -271,70 +271,117 @@ body.dialog-open{overflow:hidden}.ticket-editor{display:grid;grid-template-colum
 .leaflet-container{position:relative;z-index:0;isolation:isolate}
 </style>
 <style>
-/* NUEVO: composición de Ofertas relámpago con los tokens del panel. */
-#adminModal .flash-admin{display:grid;gap:18px;color:var(--ui-text);min-width:0}
-.flash-admin h2,.flash-admin h3,.flash-admin h4,.flash-admin p{margin:0}
-.flash-admin small,.flash-admin p,.flash-admin del{color:var(--ui-muted)}
-.flash-admin small{display:block}
-.flash-admin .flash-box{min-width:0;display:grid;gap:14px;padding:clamp(12px,2vw,22px);border:1px solid var(--ui-border);border-radius:16px;background:var(--ui-surface);box-shadow:var(--ui-shadow)}
-.flash-admin .flash-head{grid-template-columns:auto minmax(0,1fr) auto;align-items:center;background:var(--ui-hero);color:var(--ui-on-action)}
-html body #adminModal #adminContent .flash-admin .flash-head :is(h2,small,p){color:var(--ui-on-action)!important}
-.flash-icon{display:grid;place-items:center;width:44px;height:44px;border-radius:12px;background:var(--ui-action);color:var(--ui-on-action)}
-.flash-session{display:grid;justify-items:end;gap:5px;overflow-wrap:anywhere}
-.flash-metrics,.flash-editor,.flash-fields,.flash-search{display:grid;gap:12px;min-width:0}
+/* MODIFICADO: composición compacta de Ofertas relámpago, según el ancho del panel. */
+#adminModal #adminContent:has(>.flash-admin){container:flash-panel / inline-size}
+#adminModal #adminContent:has(>.flash-admin)>.admin-workspace-heading{display:none}
+#adminModal .flash-admin{display:grid;gap:18px;color:var(--ui-text);font-size:.8125rem;line-height:1.4;min-width:0}
+.flash-admin :is(h2,h3,h4,p){margin:0}
+.flash-admin h2{font-size:1.25rem;line-height:1.2}
+.flash-admin h3{font-size:.975rem;line-height:1.3}
+.flash-admin h4{font-size:.85rem}
+.flash-admin :is(small,p,del){color:var(--ui-muted)}
+.flash-admin small{display:block;font-size:.72rem}
+.flash-admin .flash-box{min-width:0;display:grid;gap:12px;padding:16px;border:1px solid var(--ui-border);border-radius:14px;background:var(--ui-surface);box-shadow:var(--ui-shadow)}
+.flash-admin .flash-head{grid-template-columns:auto minmax(0,1fr) auto;align-items:center;padding:12px 16px}
+.flash-icon{display:grid;place-items:center;width:40px;height:40px;border-radius:11px;background:linear-gradient(125deg,var(--ui-action),var(--ui-purple));color:var(--ui-on-action);box-shadow:0 4px 12px var(--ui-glow)}
+.flash-session{display:flex;align-items:center;justify-content:end;flex-wrap:wrap;gap:8px;overflow-wrap:anywhere}
+.flash-metrics,.flash-editor,.flash-fields,.flash-dates,.flash-search{display:grid;gap:10px;min-width:0}
 .flash-metrics{grid-template-columns:repeat(2,minmax(0,1fr))}
-.flash-metrics .flash-box{border-inline-start:3px solid var(--ui-link);gap:4px}
-.flash-metrics strong{font-size:1.45rem}
-.flash-editor{grid-template-columns:minmax(0,1.45fr) minmax(240px,1fr);align-items:start;gap:18px}
+.flash-metrics .flash-box{border-inline-start:3px solid var(--ui-link);padding:8px 12px;gap:0;position:relative;padding-inline-end:43px;align-content:center}
+.flash-metrics strong{font-size:1.2rem;line-height:1.2}
+.flash-metrics svg{position:absolute;inset-inline-end:10px;top:50%;translate:0 -50%;box-sizing:content-box;width:16px;height:16px;padding:6px;border-radius:7px;background:var(--ui-raised);color:var(--ui-link)}
+.flash-editor{grid-template-columns:minmax(0,1fr);align-items:start;gap:16px}
 .flash-aside{display:grid;gap:14px;min-width:0}
-.flash-fields{grid-template-columns:repeat(auto-fit,minmax(min(100%,140px),1fr))}
-.flash-search{grid-template-columns:minmax(0,1fr) minmax(0,.65fr);align-items:end}
-.flash-admin :is(.field,label){min-width:0}
+.flash-form-heading,.flash-list-heading{border-bottom:1px solid var(--ui-border);padding-bottom:10px}
+.flash-form-heading{display:flex;align-items:center;gap:9px}
+.flash-form-heading>svg{width:30px;height:30px;padding:6px;border-radius:8px;background:var(--ui-raised);color:var(--ui-link);flex:none}
+.flash-fields{grid-template-columns:minmax(0,1fr)}
+.flash-fields>div,.flash-dates>div,.flash-search>label,.flash-admin .field{min-width:0}
+.flash-fields .flash-actions{margin-top:6px}
+.flash-dates{grid-template-columns:repeat(auto-fit,minmax(min(100%,165px),1fr))}
+.flash-search{grid-template-columns:minmax(0,1.6fr) minmax(0,1fr);align-items:end}
 .flash-admin .field{margin:0}
-.flash-admin .input{width:100%;min-width:0;margin:0;background:var(--ui-field);color:var(--ui-text);border-color:var(--ui-border)}
+.flash-admin :is(.field label,.flash-search>label){font-size:.72rem;font-weight:700;letter-spacing:.025em;color:var(--ui-muted)}
+html body #adminModal #adminContent .flash-admin .input{box-sizing:border-box;width:100%;min-width:0;max-width:100%;height:34px;min-height:34px;margin:0;padding:4px 8px;border-radius:8px;font:inherit;background:var(--ui-field)!important;color:var(--ui-text)!important}
 .flash-admin .input::placeholder{color:var(--ui-muted);opacity:1}
-.flash-admin :is(button,input,select):focus-visible{outline:2px solid var(--ui-focus);outline-offset:2px}
-.flash-admin .btn{min-height:36px;white-space:normal;transition:background .22s ease,border-color .22s ease,box-shadow .22s ease,transform .22s ease}
-.flash-admin .btn.secondary,.flash-admin .btn.ghost{background:var(--ui-raised);color:var(--ui-text);border-color:var(--ui-border)}
-html body #adminModal #adminContent .flash-admin .btn[aria-pressed=true]{background:var(--ui-action)!important;color:var(--ui-on-action)!important;border-color:var(--ui-focus)!important}
-.flash-admin #marketingSave{background:var(--ui-action);color:var(--ui-on-action)}
-.flash-admin .btn:disabled{opacity:1;border-style:dashed;color:var(--ui-text);background:var(--ui-raised)}
 .flash-admin input[type=datetime-local]{color-scheme:light}
 body.dark-mode .flash-admin input[type=datetime-local]{color-scheme:dark}
-.flash-admin .btn:active:not(:disabled){transform:scale(.97)}
-.flash-admin .flash-actions{display:flex;flex-wrap:wrap;gap:6px;align-items:center}
-.flash-admin .flash-products-head{display:flex;flex-wrap:wrap;align-items:end;justify-content:space-between;gap:8px}
-.flash-enabled,.flash-product{display:grid;gap:10px;align-items:center;padding:9px 10px;border-radius:12px;border:1px solid var(--ui-border);background:var(--ui-field);cursor:pointer}
-.flash-enabled{grid-template-columns:auto minmax(0,1fr)}
-.flash-product{grid-template-columns:auto 42px minmax(0,1fr) auto;transition:background .22s ease,border-color .22s ease,box-shadow .22s ease}
+.flash-admin .input::-webkit-datetime-edit{padding:0}
+.flash-admin .input::-webkit-calendar-picker-indicator{margin:0;padding:1px}
+.flash-admin :is(button,input,select):focus-visible{outline:2px solid var(--ui-focus);outline-offset:2px}
+html body #adminModal #adminContent .flash-admin .btn{min-height:32px;padding:4px 9px;border-radius:8px;font-size:.75rem;line-height:1.3;gap:4px;white-space:normal;transition:background .22s,border-color .22s,box-shadow .22s,translate .22s}
+.flash-admin .btn svg{width:14px;height:14px;flex:none}
+html body #adminModal #adminContent .flash-admin .btn[aria-pressed=true]{background:var(--ui-action)!important;color:var(--ui-on-action)!important;border-color:var(--ui-focus)!important}
+html body #adminModal #adminContent .flash-admin #marketingSave{background:linear-gradient(105deg,var(--ui-action),var(--ui-purple))!important;color:var(--ui-on-action)!important;flex:1;min-height:38px}
+.flash-admin .btn:disabled{border-style:dashed;cursor:not-allowed}
+.flash-enabled input{
+ appearance:none;width:36px;height:21px;border:1px solid var(--ui-border);border-radius:20px;
+ background:var(--ui-field);display:grid;align-items:center;padding:2px;cursor:pointer;
+}
+.flash-enabled input::before{content:"";width:14px;height:14px;border-radius:50%;background:var(--ui-muted)}
+.flash-enabled input:checked{background:var(--ui-action);border-color:var(--ui-action)}
+.flash-enabled input:checked::before{justify-self:end;background:var(--ui-on-action)}
+.flash-admin .btn:active:not(:disabled){translate:0 1px}
+.flash-admin .flash-actions,.flash-products-head,.flash-preview-head{display:flex;flex-wrap:wrap;gap:6px;align-items:center}
+.flash-products-head,.flash-preview-head{justify-content:space-between}
+.flash-preview-head small{padding:3px 6px;border-radius:6px;background:var(--ui-raised)}
+.flash-preview-head h3::before{content:"";display:inline-block;width:7px;height:7px;border-radius:50%;background:var(--ui-link);margin-inline-end:7px}
+.flash-enabled,.flash-product{display:grid;gap:8px;align-items:center;padding:7px 9px;border-radius:9px;border:1px solid var(--ui-border);background:var(--ui-field);cursor:pointer}
+.flash-enabled{grid-template-columns:minmax(0,1fr) auto}
+.flash-enabled input{grid-column:2;grid-row:1}
+.flash-enabled>span{grid-column:1;grid-row:1}
+.flash-product{grid-template-columns:auto 34px minmax(0,1fr) auto;transition:background .22s,border-color .22s,box-shadow .22s}
 .flash-product:has(:checked),.flash-enabled:has(:checked){background:var(--ui-raised);border-color:var(--ui-link)}
-.flash-admin input[type=checkbox]{accent-color:var(--ui-action)}
+.flash-product:focus-within,.flash-enabled:focus-within{outline:2px solid var(--ui-focus);outline-offset:2px}
+.flash-admin input[type=checkbox]{accent-color:var(--ui-action);margin:0}
 .flash-admin [hidden]{display:none!important}
 #flashProducts,#flashPreviewProducts{display:grid;gap:6px}
-.flash-thumb{display:grid;place-items:center;width:42px;height:42px;background:var(--ui-stage);border-radius:8px;overflow:hidden}
+.flash-thumb{display:grid;place-items:center;width:34px;height:34px;background:var(--ui-stage);border-radius:7px;overflow:hidden}
 .flash-thumb :is(img,svg){width:100%;height:100%;object-fit:contain}
 .flash-prices{text-align:end}
-.flash-prices strong,.flash-preview-item span{color:var(--ui-link)}
-.flash-preview{display:grid;gap:10px;border:1px solid var(--ui-border);border-radius:14px;background:var(--ui-feature);padding:12px}
-.flash-preview-top,.flash-preview-item{display:flex;flex-wrap:wrap;justify-content:space-between;gap:6px}
-.flash-preview-item{background:var(--ui-field);border-radius:8px;padding:7px}
-.flash-badge,.flash-preview-top strong{border-radius:999px;background:var(--ui-raised);color:var(--ui-link);padding:3px 8px;font-weight:700}
-.flash-footer{padding-top:10px;border-top:1px solid var(--ui-border)}
-.flash-table{border-collapse:collapse;width:100%;font-size:.87rem}
-.flash-table :is(th,td){border-bottom:1px solid var(--ui-border);padding:8px;text-align:start;overflow-wrap:anywhere}
-@media(hover:hover){.flash-admin :is(.btn:not(:disabled),.flash-product):hover{border-color:var(--ui-link);box-shadow:0 0 12px var(--ui-glow)}}
-@media(max-width:1050px){.flash-editor{grid-template-columns:1fr}}
-@media(max-width:760px){
+.flash-prices strong{color:var(--ui-link)}
+.flash-prices small{color:var(--ui-success)}
+.flash-preview{display:grid;gap:8px;border:1px solid var(--ui-border);border-radius:11px;background:var(--ui-feature);padding:10px;min-width:0}
+.flash-preview-top{display:flex;flex-wrap:wrap;justify-content:space-between;align-items:center;gap:6px}
+.flash-preview-item{display:grid;grid-template-columns:34px minmax(0,1fr) auto;align-items:center;gap:8px;background:var(--ui-field);border:1px solid var(--ui-border);border-radius:8px;padding:7px;overflow-wrap:anywhere}
+.flash-preview-empty{padding:12px;border:1px dashed var(--ui-border);border-radius:8px;background:var(--ui-field)}
+.flash-badge,.flash-preview-top strong,#flashClock{border-radius:6px;background:var(--ui-raised);color:var(--ui-link);padding:3px 6px;font-weight:700;font-size:.72rem}
+#flashClock{background:var(--ui-field);color:var(--ui-text);font-variant-numeric:tabular-nums}
+.flash-preview-top strong{background:var(--ui-action);color:var(--ui-on-action)}
+.flash-footer{padding-top:9px;border-top:1px solid var(--ui-border)}
+.flash-table{border-collapse:collapse;width:100%;font-size:.76rem}
+.flash-table :is(th,td){border-bottom:1px solid var(--ui-border);padding:7px 6px;text-align:start;overflow-wrap:anywhere}
+.flash-table th{color:var(--ui-muted);font-size:.69rem;text-transform:uppercase;letter-spacing:.04em}
+@container flash-panel (min-width:760px){
+ .flash-editor{grid-template-columns:minmax(0,7fr) minmax(0,5fr)}
+}
+@container flash-panel (min-width:1040px){
+ .flash-fields{grid-template-columns:minmax(0,1fr) minmax(0,2fr)}
+}
+@container flash-panel (max-width:640px){
  .flash-table,.flash-table tbody,.flash-table tr,.flash-table td{display:block}
  .flash-table thead{position:absolute;clip-path:inset(50%);width:1px;height:1px;overflow:hidden}
- .flash-table tr{border:1px solid var(--ui-border);border-radius:12px;margin-bottom:8px;padding:6px}
- .flash-table td{display:grid;grid-template-columns:minmax(70px,.55fr) minmax(0,1fr);gap:8px;border:0}
+ .flash-table tr{border:1px solid var(--ui-border);border-radius:10px;margin-bottom:8px;padding:6px}
+ .flash-table td{display:grid;grid-template-columns:minmax(75px,.55fr) minmax(0,1fr);gap:6px;border:0}
  .flash-table td::before{content:attr(data-label);color:var(--ui-muted)}
  .flash-admin .flash-head{grid-template-columns:auto minmax(0,1fr)}
- .flash-session{grid-column:1/-1;justify-items:start}
+ .flash-session{grid-column:1/-1;justify-content:start}
 }
-@media(max-width:440px){.flash-search{grid-template-columns:1fr}.flash-prices{grid-column:3;text-align:start}}
-@media(prefers-reduced-motion:reduce){.flash-admin :is(.btn,.flash-product){transition:none;transform:none!important}}
+@container flash-panel (max-width:420px){
+ .flash-admin .flash-box{padding:11px}
+ .flash-search{grid-template-columns:minmax(0,1fr)}
+ :is(.flash-product,.flash-preview-item) .flash-prices{grid-column:3;text-align:start}
+ .flash-preview-item .flash-prices{grid-column:2}
+}
+@media(pointer:coarse){
+ html body #adminModal #adminContent .flash-admin .btn{min-height:44px}
+}
+@media(hover:hover){
+ html body #adminModal #adminContent .flash-admin :is(.btn:not(:disabled),.flash-product):hover{border-color:var(--ui-focus)!important;box-shadow:0 0 12px var(--ui-glow)}
+}
+@media(prefers-reduced-motion:reduce){
+ .flash-admin :is(.btn,.flash-product){transition:none!important;translate:none!important}
+}
 </style>
 <style>
 /* NUEVO: espacio de trabajo de Personalización sobre el tema del panel. */
@@ -2240,15 +2287,20 @@ function renderFlashAdmin(host, rows, epoch, editing) {
   const categories=[...new Set(products.map(p=>p.category).filter(Boolean))];
   const selected=new Set((editing?.product_ids||[]).map(String));
   const button=(label,attrs)=>`<button type="button" class="btn secondary" ${attrs}>${label}</button>`;
-  host.innerHTML=`<!-- NUEVO --><section class="flash-admin" aria-labelledby="flashAdminTitle">
+  host.innerHTML=`<!-- MODIFICADO --><section class="flash-admin" aria-labelledby="flashAdminTitle">
     <header class="flash-box flash-head"><span class="flash-icon"><svg viewBox="0 0 24 24" width="24" height="24" fill="none" stroke="currentColor" stroke-width="1.7" aria-hidden="true"><path d="m13 2-9 12h7l-1 8 10-12h-7z"/></svg></span><div><h2 id="flashAdminTitle">Ofertas relámpago</h2><p>Configura descuentos temporales para productos del catálogo.</p></div><div class="flash-session"><small>${esc(adminSession.user.email)} · Permiso de Productos</small>${panelButton('marketingLogout','Cerrar sesión',UI.lock,'ghost')}</div></header>
-    <div class="flash-metrics"><div class="flash-box">Ofertas en curso <strong id="flashLive"></strong></div><div class="flash-box">Productos con descuento por estas ofertas <strong id="flashDiscounted"></strong></div></div>
+    <div class="flash-metrics"><div class="flash-box">Ofertas en curso <strong id="flashLive"></strong><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" aria-hidden="true"><circle cx="12" cy="12" r="9"/><path d="M12 7v5l3 2"/></svg></div><div class="flash-box">Productos con descuento por estas ofertas <strong id="flashDiscounted"></strong><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" aria-hidden="true"><path d="M4 8h16l1 13H3L4 8Zm4 0V6a4 4 0 0 1 8 0v2"/></svg></div></div>
     <div class="flash-editor"><form class="flash-box flash-form" novalidate>
-      <h3>${editing?'Editar oferta relámpago':'Configurar nueva oferta relámpago'}</h3>
+      <div class="flash-form-heading">${UI.edit}<div><h3>${editing?'Editar oferta relámpago':'Configurar nueva oferta relámpago'}</h3><p>Selecciona los productos a los que se aplicará el descuento.</p></div></div>
       ${panelField('marketingName','Nombre de la promoción',editing?.title||'')}
-      <div class="flash-fields">${panelField('marketingPercent','Descuento %',editing?.percent??10,'number')}${panelField('marketingStart','Inicio opcional',localDateInput(editing?.starts_at),'datetime-local')}${panelField('marketingEnd','Finalización opcional',localDateInput(editing?.ends_at),'datetime-local')}</div>
-      <div class="flash-actions" aria-label="Descuentos rápidos">${[10,15,20,30,50].map(n=>button(n+'%',`data-flash-percent="${n}"`)).join('')}</div>
-      <div class="flash-actions" aria-label="Duraciones desde el inicio">${[2,6,24].map(n=>button('+'+n+' h',`data-flash-hours="${n}"`)).join('')}</div>
+      <div class="flash-fields">
+        <div>${panelField('marketingPercent','Descuento %',editing?.percent??10,'number')}
+          <div class="flash-actions" role="group" aria-label="Descuentos rápidos">${[10,15,20,30,50].map(n=>button(n+'%',`data-flash-percent="${n}"`)).join('')}</div>
+        </div>
+        <div><div class="flash-dates">${panelField('marketingStart','Inicio opcional',localDateInput(editing?.starts_at),'datetime-local')}${panelField('marketingEnd','Finalización opcional',localDateInput(editing?.ends_at),'datetime-local')}</div>
+          <div class="flash-actions" role="group" aria-label="Duraciones desde el inicio"><small>Duración</small>${[2,6,24].map(n=>button('+'+n+' h',`data-flash-hours="${n}"`)).join('')}</div>
+        </div>
+      </div>
       <p class="small">Las duraciones se calculan desde el inicio indicado o desde ahora. Fechas en la zona horaria de este dispositivo. Si omites la finalización, la oferta no vence automáticamente.</p>
       <label class="flash-enabled"><input type="checkbox" id="marketingEnabled" ${editing?.enabled!==false?'checked':''}><span><strong>Activar oferta</strong><small>Respeta el inicio programado.</small></span></label>
       <div class="flash-products-head"><h4>Seleccionar productos <small id="flashSelected"></small></h4><div class="flash-actions">${button('Seleccionar todos los resultados','id="flashSelect"')}${button('Deseleccionar resultados','id="flashClear"')}</div></div>
@@ -2257,10 +2309,10 @@ function renderFlashAdmin(host, rows, epoch, editing) {
       <p id="flashEmptyProducts" hidden>Sin productos disponibles para estos filtros.</p>
       <p id="flashUnavailable" hidden></p>
       <div class="flash-actions flash-footer">${panelButton('marketingSave',editing?'Guardar cambios':'Crear promoción relámpago')}${button(editing?'Cancelar edición':'Nuevo / Limpiar','id="marketingCancel"')}</div>
-    </form><aside class="flash-aside"><section class="flash-box"><h3>Vista previa <small>Simulación · cambios sin guardar</small></h3>
-      <div class="flash-preview"><div class="flash-preview-top"><strong id="flashBenefit"></strong><span id="flashClock"></span></div><h4 id="flashPreviewTitle"></h4><div id="flashPreviewProducts"></div></div>
+    </form><aside class="flash-aside"><section class="flash-box"><div class="flash-preview-head"><h3>Vista previa en vivo</h3><small>Simulación · sin publicar</small></div>
+      <div class="flash-preview"><div class="flash-preview-top"><strong id="flashBenefit"></strong><span id="flashClock"></span></div><h4 id="flashPreviewTitle"></h4><small id="flashPreviewDates"></small><div id="flashPreviewProducts"></div></div>
     </section><section class="flash-box"><h3>Condiciones de la oferta</h3><p>El precio mostrado en la vista previa se calcula sobre el precio base. La disponibilidad y el importe final se confirman por el flujo de compra existente.</p></section></aside></div>
-    <section class="flash-box"><div class="flash-products-head"><h3>Promociones registradas <small id="flashListCount"></small></h3><div class="flash-search">${panelField('flashListSearch','Buscar campaña','','search')}<label>Estado<select class="input" id="flashStatus"><option value="">Todos</option>${['En curso','Programada','Desactivada','Concluida'].map(s=>`<option>${s}</option>`).join('')}</select></label></div></div>
+    <section class="flash-box"><div class="flash-products-head flash-list-heading"><h3>Promociones registradas <small id="flashListCount"></small></h3><div class="flash-search">${panelField('flashListSearch','Buscar campaña','','search')}<label>Estado<select class="input" id="flashStatus"><option value="">Todos</option>${['En curso','Programada','Desactivada','Concluida'].map(s=>`<option>${s}</option>`).join('')}</select></label></div></div>
     <table class="flash-table"><thead><tr><th>Campaña</th><th>Descuento</th><th>Productos</th><th>Vigencia</th><th>Estado</th><th>Acciones</th></tr></thead><tbody id="flashList"></tbody></table><p id="flashEmptyList" hidden>Sin promociones para estos filtros.</p></section>
   </section>`;
   const root=host.querySelector('.flash-admin'),get=id=>root.querySelector('#'+id);
@@ -2308,19 +2360,24 @@ function renderFlashAdmin(host, rows, epoch, editing) {
     const valid=get('marketingPercent').value!==''&&percent>0&&percent<=100;
     const chosen=[];
     get('flashPreviewTitle').textContent=draft.title||'Nombre de la promoción';
-    get('flashBenefit').textContent=valid?`${percent}% de descuento`:'Descuento por configurar';
+    // MODIFICADO: vigencia y desglose por producto de la vista previa.
+    setText('flashBenefit',valid?`Oferta relámpago · −${percent}%`:'Descuento por configurar');
+    setText('flashPreviewDates',[
+      draft.starts_at?'Inicio: '+timeFormat(draft.starts_at):'Sin inicio programado',
+      draft.ends_at?'Fin: '+timeFormat(draft.ends_at):'Sin vencimiento'
+    ].join(' · '));
     inputs.forEach((el,i)=>{
       const p=products[i], price=Math.round(p.price*(1-percent/100)*100)/100;
       const card=el.closest('label');
       card.querySelector('[data-flash-price]').textContent=valid?money(price):'—';
       card.querySelector('[data-flash-saving]').textContent=valid?'Ahorro '+money(p.price-price):'';
-      if(el.checked)chosen.push(`<div class="flash-preview-item"><strong>${esc(p.name)}</strong><span>${valid?money(price):'—'}</span></div>`);
+      if(el.checked)chosen.push(`<div class="flash-preview-item"><span class="flash-thumb">${productVisual(p)}</span><div><strong>${esc(p.name)}</strong><small>${esc(p.stock)} disponibles</small></div><div class="flash-prices"><del>${money(p.price)}</del> <strong>${valid?money(price):'—'}</strong>${valid?`<small>Ahorro ${money(p.price-price)}</small>`:''}</div></div>`);
     });
     const unavailable=selected.size-chosen.length;
     get('flashUnavailable').hidden=!unavailable;
     get('flashUnavailable').textContent=unavailable?`${unavailable} productos asociados ya no están disponibles en el selector. Se conserva su asociación al editar.`:'';
     get('flashSelected').textContent=`(${selected.size} seleccionados)`;
-    get('flashPreviewProducts').innerHTML=chosen.join('')||'<p>Selecciona productos para ver sus precios.</p>';
+    get('flashPreviewProducts').innerHTML=chosen.join('')||'<div class="flash-preview-empty"><strong>Sin productos seleccionados</strong><p>Selecciona productos para ver sus precios y el ahorro.</p></div>';
     root.querySelectorAll('[data-flash-percent]').forEach(el=>el.setAttribute('aria-pressed',String(valid&&Number(el.dataset.flashPercent)===percent)));
     tick();
   }
