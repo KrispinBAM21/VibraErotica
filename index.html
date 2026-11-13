@@ -6751,7 +6751,7 @@ function enhance(){
     if(meta){const stock=[...meta.querySelectorAll('span')].find(e=>e.textContent.trim().startsWith('Stock:')||e.textContent.trim().startsWith('Disponibles:'));
       if(stock){const count='Disponibles: '+Math.max(0,Number(p.stock)||0);if(stock.textContent!==count)stock.textContent=count;stock.dataset.vibraStock='1'}
       if(p.deliveryAvailable===false && !meta.querySelector('[data-vibra-pickup]')){
-        const el=document.createElement('span');el.dataset.vibraPickup='1';el.textContent='Solo recogida en local';meta.append(el);
+        const el=document.createElement('span');el.dataset.vibraPickup='1';el.textContent='Solo disponible en local';meta.append(el);
       }
     }
   });
