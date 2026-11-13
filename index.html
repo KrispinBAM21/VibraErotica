@@ -5403,7 +5403,7 @@ if(el('#v9Section'))return;
 const older=el('#v8Section');if(older)older.remove();
 const n=document.createElement('section');n.id='v9Section';n.innerHTML=`
 <section class="v9panel" id="vibraOldPublicLocations" hidden><div class="v9head">${ic('pin')}<h2>Visítanos · sedes oficiales</h2></div><p class="v9muted">Selecciona la sede que deseas visitar. Solo se muestran ubicaciones publicadas por el negocio.</p><div id="v9Locations" class="v9grid"></div><div id="v9Map" class="v9map"></div><p id="v9PlaceInfo" class="v9muted"></p><button class="v9action" id="v9Directions">${ic('arrow')} Cómo llegar desde mi ubicación</button><a class="v9action secondary" id="v9OpenMap" target="_blank" rel="noopener">Abrir mapa</a><p id="v9GeoState" class="v9small"></p></section>
-<section class="v9panel"><div class="v9head">${ic('spa')}<h2>Profesionales y servicios</h2></div><p class="v9muted">Sesiones de bienestar con opciones según disponibilidad: en el local, a domicilio, hotel o motel.</p><div id="v9Professionals" class="v9grid"></div><div id="v9Modalities" hidden><h3>Opciones de atención</h3><p id="v9ModesText"></p><label class="v9small">Selecciona modalidad<select id="v9Mode" class="v9select"></select></label><!-- MODIFICADO --><button class="v9action ve-reserve-action" id="v9Continue"><svg class="ve-dialog-icon" aria-hidden="true" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M12 3a9 9 0 1 0 0 18 9 9 0 0 0 0-18Zm0 4v5l3 2"/></svg><span>Consultar horarios y reservar</span></button><p class="v9small">Los horarios ocupados se consultan en Supabase. El trayecto externo requiere confirmación.</p><!-- MODIFICADO --><div id="v9Booking" hidden><section class="ve-res-card ve-res-service"><h3>Servicio y habitación</h3><div class="v9fields"><label>Servicio<select id="v9Service"></select></label><label>Habitación<select id="v9Room"></select></label><label>Duración<select id="v9Duration"></select></label></div></section><section class="ve-res-card ve-res-date"><h3>Fecha y disponibilidad</h3><div class="v9fields"><label><!-- MODIFICADO --><span class="ve-booking-label"><svg class="ve-dialog-icon" aria-hidden="true" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M5 6h14v14H5zM8 4v4m8-4v4M5 10h14m-10 5h6"/></svg>Fecha</span><input id="v9Date" type="date"></label><label><!-- MODIFICADO --><span class="ve-booking-label"><svg class="ve-dialog-icon" aria-hidden="true" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M12 3a9 9 0 1 0 0 18 9 9 0 0 0 0-18Zm0 4v5l3 2"/></svg>Horarios disponibles</span><select id="v9Time"></select></label></div><div class="ve-res-options" data-res-options="time"></div></section><section class="ve-res-card ve-res-client"><h3>Tus datos y confirmación</h3><div class="v9fields"><label><!-- MODIFICADO --><span class="ve-booking-label"><svg class="ve-dialog-icon" aria-hidden="true" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M5 21v-2a4 4 0 0 1 4-4h6a4 4 0 0 1 4 4v2M12 11a4 4 0 1 0 0-8 4 4 0 0 0 0 8"/></svg>Nombre</span><input id="v9ClientName" maxlength="90"></label><label>Teléfono<input id="v9ClientPhone" maxlength="25"></label></div><label><input id="v9Terms" type="checkbox"> Acepto las condiciones de reserva: el tiempo inicia a la hora seleccionada y la ausencia o retraso no prolongan el servicio. Consulta las condiciones de cancelación aplicables.</label></section><p><!-- MODIFICADO --><button class="v9action ve-reserve-action" id="v9SubmitBooking"><svg class="ve-dialog-icon" aria-hidden="true" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M5 6h14v14H5zM8 4v4m8-4v4M5 10h14m-10 5h6"/></svg><span>Confirmar reserva local</span></button></p><p id="v9BookingStatus" role="status" class="v9small"></p></div></div></section>
+<section class="v9panel"><div class="v9head">${ic('spa')}<h2>Profesionales y servicios</h2></div><p class="v9muted">Sesiones de bienestar con opciones según disponibilidad: en el local, a domicilio, hotel o motel.</p><div id="v9Professionals" class="v9grid"></div><div id="v9Modalities" hidden><h3>Opciones de atención</h3><p id="v9ModesText"></p><label class="v9small">Selecciona modalidad<select id="v9Mode" class="v9select"></select></label><!-- MODIFICADO --><button class="v9action ve-reserve-action" id="v9Continue"><svg class="ve-dialog-icon" aria-hidden="true" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M12 3a9 9 0 1 0 0 18 9 9 0 0 0 0-18Zm0 4v5l3 2"/></svg><span>Consultar horarios y reservar</span></button><p class="v9small">Los horarios ocupados se consultan en Supabase. El trayecto externo requiere confirmación.</p><!-- MODIFICADO --><div id="v9Booking" hidden><section class="ve-res-card ve-res-service"><h3>Servicio y habitación</h3><div class="v9fields"><label>Servicio<select id="v9Service"></select></label><label>Habitación<select id="v9Room"></select></label><label>Duración<select id="v9Duration"></select></label></div></section><section class="ve-res-card ve-res-date"><h3>Fecha y disponibilidad</h3><div class="v9fields"><label><!-- MODIFICADO --><span class="ve-booking-label"><svg class="ve-dialog-icon" aria-hidden="true" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M5 6h14v14H5zM8 4v4m8-4v4M5 10h14m-10 5h6"/></svg>Fecha</span><input id="v9Date" type="date"></label><label><!-- MODIFICADO --><span class="ve-booking-label"><svg class="ve-dialog-icon" aria-hidden="true" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M12 3a9 9 0 1 0 0 18 9 9 0 0 0 0-18Zm0 4v5l3 2"/></svg>Horarios disponibles</span><select id="v9Time"></select></label></div><div class="ve-res-options" data-res-options="time"></div></section><section class="ve-res-card ve-res-client"><h3>Tus datos y confirmación</h3><div class="v9fields"><label><!-- MODIFICADO --><span class="ve-booking-label"><svg class="ve-dialog-icon" aria-hidden="true" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M5 21v-2a4 4 0 0 1 4-4h6a4 4 0 0 1 4 4v2M12 11a4 4 0 1 0 0-8 4 4 0 0 0 0 8"/></svg>Nombre</span><input id="v9ClientName" maxlength="90"></label><label>Teléfono<input id="v9ClientPhone" maxlength="25"></label></div><label><input id="v9Terms" type="checkbox"> Acepto las condiciones de reserva: el tiempo inicia a la hora seleccionada y la ausencia o retraso no prolongan el servicio. Consulta las condiciones de cancelación aplicables.</label></section><p class="ve-res-confirm"><!-- MODIFICADO --><button class="v9action ve-reserve-action" id="v9SubmitBooking"><svg class="ve-dialog-icon" aria-hidden="true" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M5 6h14v14H5zM8 4v4m8-4v4M5 10h14m-10 5h6"/></svg><span>Confirmar reserva local</span></button></p><p id="v9BookingStatus" role="status" class="v9small"></p></div></div></section>
 <section id="v9Admin" class="v9panel"><div class="v9head">${ic('car')}<h2>Administrar sedes, modalidades y rutas de servicios</h2></div><p class="v9small">Sólo personal autorizado. Hasta 3 sedes. Las direcciones privadas de clientes no aparecen en el mapa público.</p>
 <h3>Sedes autorizadas</h3><div class="v9fields"><label>Nombre de sede<input id="v9LocName" placeholder="Sede Centro"></label><label>Dirección completa<input id="v9LocAddress"></label><label>Latitud<input id="v9LocLat" type="number" step="any"></label><label>Longitud<input id="v9LocLng" type="number" step="any"></label><label>Visible al público<select id="v9LocActive"><option value="true">Sí</option><option value="false">No</option></select></label></div><button class="v9action" id="v9SaveLoc">Guardar nueva sede</button><div id="v9ManageSites"></div>
 <h3>Modalidades por profesional</h3><div class="v9fields"><label>Profesional<select id="v9Practitioner"></select></label><label><span>Local</span><input type="checkbox" data-mode="local" checked></label><label><span>Domicilio</span><input type="checkbox" data-mode="domicilio"></label><label><span>Hotel</span><input type="checkbox" data-mode="hotel"></label><label><span>Motel</span><input type="checkbox" data-mode="motel"></label></div><button class="v9action" id="v9SaveModes">Guardar modalidades</button>
@@ -10332,7 +10332,62 @@ function bindReservationPresentation(root){
  const steps=[...root.querySelectorAll('[data-res-step]')];
  const choices=[['mode','v9Mode'],['duration','v9Duration'],['time','v9Time']];
  const observer=new MutationObserver(schedule);
- let frame=0;
+ let frame=0,activeStep=1;
+ // NUEVO: navegación del asistente, separada de la confirmación real.
+ const actions=document.createElement('div');
+ actions.className='ve-res-navigation';
+ actions.innerHTML='<p class="ve-res-step-message" role="status"></p><div><button type="button" data-res-back>Volver</button><button type="button" data-res-next>Continuar</button></div>';
+ get('vibraReserveBody').append(actions);
+ const message=actions.querySelector('[role="status"]');
+ const icons={
+  local:'M3 11 12 4l9 7M5 10v10h14V10M10 20v-5h4v5',
+  domicilio:'M3 7h11v10H3zM14 10h4l3 4v3h-7M7 19h.01m11 0h.01',
+  hotel:'M3 20V5h14v15M17 10h4v10M7 9h.01M12 9h.01M7 13h.01M12 13h.01M9 20v-3h3v3',
+  motel:'M3 18V8m0 8h18m0 2v-5H9v3M5 13h2',
+  done:'m5 12 4 4L19 6',
+  service:'M5 7h14M5 12h14M5 17h14M8 5v4m7 1v4m-5 1v4',
+  summary:'M6 3h9l4 4v14H6zM14 3v5h5M9 12h7m-7 4h7',
+  schedule:'M5 6h14v14H5zM8 4v4m8-4v4M5 10h14m-10 5h6',
+  client:'M5 21v-2a4 4 0 0 1 4-4h6a4 4 0 0 1 4 4v2M12 11a4 4 0 1 0 0-8 4 4 0 0 0 0 8'
+ };
+ function glyph(path){
+  const svg=document.createElementNS('http://www.w3.org/2000/svg','svg');
+  svg.setAttribute('viewBox','0 0 24 24');svg.setAttribute('aria-hidden','true');
+  const shape=document.createElementNS(svg.namespaceURI,'path');shape.setAttribute('d',path);svg.append(shape);return svg;
+ }
+ function paintSteps(){
+  root.dataset.resStage=String(activeStep);
+  for(const [i,button] of steps.entries()){
+   const number=i+1, circle=button.querySelector('b'), done=number<activeStep;
+   if(done&&!circle.firstElementChild)circle.replaceChildren(glyph(icons.done));
+   if(!done&&circle.textContent!==String(number))circle.textContent=number;
+   button.classList.toggle('ve-res-done',done);
+   if(number===activeStep)button.setAttribute('aria-current','step');else button.removeAttribute('aria-current');
+  }
+  actions.querySelector('[data-res-back]').hidden=activeStep===1;
+  actions.querySelector('[data-res-next]').hidden=activeStep===3;
+ }
+ function go(step){
+  const local=root.classList.contains('ve-res-local');
+  message.textContent='';
+  if(step>1&&!local)return;
+  if(step>1&&(!get('v9Service')?.value||!get('v9Room')?.value||!get('v9Duration')?.value)){
+   message.textContent='Selecciona el servicio, la habitación y la duración.';return;
+  }
+  if(step===3&&(!get('v9Date')?.value||!get('v9Time')?.value)){
+   if(activeStep===1)go(2);
+   message.textContent='Selecciona una fecha y un horario disponible.';return;
+  }
+  activeStep=step;paintSteps();
+  const body=get('vibraReserveBody');body.scrollTop=0;
+  const title=root.querySelector(['.vibra-mode-field','.ve-res-date h3','.ve-res-client h3'][step-1]);
+  if(title){title.tabIndex=-1;title.focus({preventScroll:true})}
+  if(!matchMedia('(prefers-reduced-motion: reduce)').matches){
+   const panel=root.querySelector(['.ve-res-service','.ve-res-date','.ve-res-client'][step-1]);
+   panel?.animate?.([{opacity:0,transform:'translateY(7px)'},{opacity:1,transform:'none'}],{duration:220,easing:'ease-out'});
+  }
+ }
+
  function schedule(){if(!frame)frame=requestAnimationFrame(update)}
  function renderChoices(kind,select){
   const host=root.querySelector('[data-res-options="'+kind+'"]');
@@ -10344,7 +10399,8 @@ function bindReservationPresentation(root){
    host.replaceChildren(...options.map(option=>{
     const button=document.createElement('button');
     button.type='button';button.dataset.resValue=option.value;
-    button.textContent=option.textContent;button.disabled=option.disabled;
+    if(kind==='mode'&&Object.hasOwn(icons,option.value))button.append(glyph(icons[option.value]));
+    button.append(document.createTextNode(option.textContent));button.disabled=option.disabled;
     return button;
    }));
   }
@@ -10388,23 +10444,19 @@ function bindReservationPresentation(root){
   if(estimate.hidden===!!quote)estimate.hidden=!quote;
   if(estimate.textContent!==quote)estimate.textContent=quote;
   steps.slice(1).forEach(button=>{if(button.disabled===local)button.disabled=!local});
-  if(!local){steps.slice(1).forEach(button=>button.removeAttribute('aria-current'));steps[0].setAttribute('aria-current','step')}
+  if(!local)activeStep=1;
+  actions.hidden=!local;
+  paintSteps();
   for(const card of root.querySelectorAll('.vibra-room-choice[data-room]')){
    const selected=card.dataset.room===get('v9Room')?.value;
    card.classList.toggle('selected',selected);card.setAttribute('aria-pressed',String(selected));
   }
  }
  root.addEventListener('click',event=>{
+  if(event.target.closest('[data-res-back]')){go(activeStep-1);return}
+  if(event.target.closest('[data-res-next]')){go(activeStep+1);return}
   const step=event.target.closest('[data-res-step]');
-  if(step){
-   const section=root.querySelector(['.vibra-mode-field','.ve-res-date','.ve-res-client'][Number(step.dataset.resStep)-1]);
-   if(section){
-    section.tabIndex=-1;section.focus({preventScroll:true});
-    section.scrollIntoView({block:'start',behavior:matchMedia('(prefers-reduced-motion: reduce)').matches?'instant':'smooth'});
-    steps.forEach(button=>button.removeAttribute('aria-current'));step.setAttribute('aria-current','step');
-   }
-   return;
-  }
+  if(step){if(!step.disabled)go(Number(step.dataset.resStep));return}
   const button=event.target.closest('[data-res-value]');
   if(!button)return;
   const kind=button.parentElement.dataset.resOptions;
@@ -10419,8 +10471,11 @@ function bindReservationPresentation(root){
  root.addEventListener('change',schedule);
  root.addEventListener('input',schedule);
  observer.observe(root,{attributes:true,attributeFilter:['class']});
+ new MutationObserver(()=>{
+  if(!root.classList.contains('open')){activeStep=1;message.textContent='';paintSteps()}
+ }).observe(root,{attributes:true,attributeFilter:['class']});
  observer.observe(get('vibraReserveBody'),{subtree:true,childList:true,characterData:true,attributes:true,attributeFilter:['hidden','disabled']});
- steps[0].setAttribute('aria-current','step');
+ paintSteps();
 }
 // NUEVO: foco del visor secundario durante la reserva, sin interceptar otros visores.
 function bindReservationRoomViewer(wrap){
@@ -10442,4 +10497,57 @@ function bindReservationRoomViewer(wrap){
  wrap.querySelector('#vroomClose').focus({preventScroll:true});
 }
 </script>
+<!-- NUEVO -->
+<style>
+/* NUEVO: paneles exclusivos y progreso visual del asistente de reserva. */
+#vibraReserveOverlay[data-res-stage] #v9Modalities>:is(.vibra-mode-field,.ve-res-options,.v9small,#vibraDestinationControls){min-width:0}
+html body #vibraReserveOverlay[data-res-stage]:not([data-res-stage="1"]) #v9Modalities>:not(#v9Booking),
+html body #vibraReserveOverlay[data-res-stage]:not([data-res-stage="1"]) .ve-res-service,
+html body #vibraReserveOverlay[data-res-stage]:not([data-res-stage="1"]) #vibraRoomPreviewPanel,
+html body #vibraReserveOverlay[data-res-stage]:not([data-res-stage="2"]) .ve-res-date,
+html body #vibraReserveOverlay[data-res-stage]:not([data-res-stage="3"]) :is(.ve-res-client,#v10BookingExtras,.ve-res-confirm,#v9BookingStatus){
+ display:none!important;
+}
+#vibraReserveOverlay[data-res-stage] .ve-res-steps::after{
+ content:"";position:absolute;top:24px;left:21%;height:2px;width:var(--ve-res-progress,0%);
+ background:linear-gradient(90deg,var(--res-action),var(--res-accent));pointer-events:none;
+}
+#vibraReserveOverlay[data-res-stage="2"]{--ve-res-progress:29%}
+#vibraReserveOverlay[data-res-stage="3"]{--ve-res-progress:58%}
+#vibraReserveOverlay[data-res-stage] .ve-res-steps button{z-index:1}
+#vibraReserveOverlay .ve-res-steps .ve-res-done b{background:#087254;color:#fff;border-color:#087254}
+#vibraReserveOverlay :is(.ve-res-steps,.ve-res-options) svg{
+ width:19px;height:19px;flex:none;fill:none;stroke:currentColor;stroke-width:2;
+ stroke-linecap:round;stroke-linejoin:round;
+}
+#vibraReserveBody [data-res-options="mode"] button{display:flex;align-items:center;gap:10px;text-align:start;padding:12px}
+#vibraReserveBody [data-res-options="mode"] svg{box-sizing:content-box;padding:7px;border-radius:8px;background:var(--res-card);color:var(--res-accent)}
+#vibraReserveBody .ve-res-navigation{grid-area:2/1;min-width:0}
+#vibraReserveBody .ve-res-navigation[hidden],#vibraReserveBody .ve-res-navigation button[hidden]{display:none!important}
+#vibraReserveBody .ve-res-navigation>div{display:flex;flex-wrap:wrap;gap:8px;justify-content:flex-end}
+#vibraReserveBody .ve-res-navigation button{min-height:44px;padding:8px 16px;border-radius:11px;border:1px solid var(--res-line);color:var(--res-ink);background:var(--res-card);font-weight:800}
+#vibraReserveBody .ve-res-navigation [data-res-next]{color:white;background:linear-gradient(105deg,var(--res-action),var(--res-end));box-shadow:0 0 14px -3px var(--res-glow)}
+#vibraReserveBody .ve-res-navigation [data-res-next]::after{content:"";display:inline-block;width:7px;height:7px;margin-inline-start:10px;border-top:2px solid;border-right:2px solid;transform:rotate(45deg)}
+#vibraReserveBody .ve-res-step-message{margin:0 0 8px;color:var(--res-muted)}
+#vibraReserveBody .ve-res-step-message:empty,#vibraReserveOverlay[data-res-stage="3"] .ve-res-navigation button[data-res-next]{display:none}
+#vibraReserveBody :is(.ve-res-date,.ve-res-client) h3:focus-visible{outline:2px solid var(--res-focus);outline-offset:4px}
+@media(prefers-reduced-motion:no-preference){
+ #vibraReserveOverlay[data-res-stage] .ve-res-steps::after{transition:width 300ms cubic-bezier(.4,0,.2,1)}
+}
+@media(max-width:760px){
+ #vibraReserveBody .ve-res-navigation{grid-area:2/1}
+ #vibraReserveBody .ve-res-summary{grid-area:3/1}
+}
+#vibraReserveOverlay .ve-res-summary{grid-row:1 / span 2}
+#vibraReserveOverlay .ve-res-navigation [data-res-next]:hover{filter:brightness(1.1)}
+#vibraReserveOverlay .ve-res-navigation [data-res-back]:hover{border-color:var(--res-focus)}
+@media(max-width:760px){
+ #vibraReserveOverlay .ve-res-summary{grid-row:3}
+}
+#vibraReserveBody :is(.ve-res-card h3,.ve-res-summary h2){display:flex;align-items:center;gap:7px}
+#vibraReserveBody :is(.ve-res-card h3,.ve-res-summary h2)>svg{
+ width:17px;height:17px;flex:none;fill:none;stroke:var(--res-accent);stroke-width:1.8;
+ stroke-linecap:round;stroke-linejoin:round;
+}
+</style>
 </html>
