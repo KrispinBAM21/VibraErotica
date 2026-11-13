@@ -4990,41 +4990,158 @@ renderProductsAdmin=function(c){
  });
 };
 
+// MODIFICADO: composición, filtros y confirmación de persistencia de Categorías.
 async function v15CategoriesAdmin(c){
- cfg();const cats=categoryNames();
- c.innerHTML=`<section class="section-card">
-   <h3>Categorías y filtros</h3>
-   <p class="small muted">Crea o elimina categorías y decide exactamente qué productos pertenecen a cada una. Inicio muestra todo; Más vendidos se ordena por ventas; Por tiempo sólo muestra productos con oferta activa.</p>
-   <div class="toolbar"><input class="input" id="v15NewCategory" placeholder="Nombre de nueva categoría"><button class="btn" id="v15AddCategory">${UI.plus}<span>Crear categoría</span></button></div>
- </section>
- <section class="section-card"><h3>Categorías actuales</h3><div class="v15-category-table">
- ${cats.map(cat=>{
-   const members=state.products.filter(p=>p.category===cat&&!String(p.category||'').startsWith('_'));
-   return `<div class="v15-category-row"><div><strong>${esc(cat)}</strong><div class="v15-category-members">${members.length?members.map(p=>esc(p.name)).join(' · '):'Sin productos'}</div></div><button class="btn secondary" data-v15-rename="${esc(cat)}">${UI.edit}<span>Renombrar</span></button><button class="btn ghost" data-v15-delete="${esc(cat)}">${UI.trash}<span>Eliminar</span></button></div>`;
- }).join('')||'<p>No hay categorías.</p>'}
- </div></section>
- <section class="section-card"><h3>Asignar productos</h3>
- ${state.products.filter(p=>!String(p.category||'').startsWith('_')).map(p=>`<div class="product-admin"><div class="product-visual" style="width:50px;height:50px">${productVisual(p)}</div><div><strong>${esc(p.name)}</strong><div class="small muted">${money(p.price)}</div></div><select class="select v15-product-category" data-v15-product-cat="${esc(p.id)}">${['Sin categoría',...cats].map(x=>`<option value="${esc(x)}" ${x===p.category?'selected':''}>${esc(x)}</option>`).join('')}</select></div>`).join('')}
- </section>`;
- document.getElementById('v15AddCategory').onclick=async()=>{
-   const n=document.getElementById('v15NewCategory').value.trim();if(!n)return toast('Escribe una categoría.','info');
-   const previous=[...state.config.catalogCategories];if(!state.config.catalogCategories.includes(n))state.config.catalogCategories.push(n);
-   saveLocal();renderCategories();renderCatalog();try{await syncAdminStateToCloud();toast('Categoría guardada en Supabase.','ok');renderAdminPane('categories')}catch(e){state.config.catalogCategories=previous;saveLocal();renderCategories();renderCatalog();toast('No se guardó en Supabase: '+(e.message||e),'error');renderAdminPane('categories');document.getElementById('v15NewCategory').value=n;}
+ const root=document.createElement('section');root.className='ve-cat';
+ const icon=path=>`<svg viewBox="0 0 24 24" aria-hidden="true" width="17" height="17" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><path d="${path}"/></svg>`;
+ const pending=p=>norm(p.description).includes('emparejamiento por confirmar');
+ const tag=icon('M3 3h8l10 10-8 8L3 11zM7 7h.01'), map=icon('M4 6h16M4 12h10m-10 6h7m6 0 2 2 3-4');
+ const norm=x=>String(x||'').normalize('NFD').replace(/[\u0300-\u036f]/g,'').trim().toLocaleLowerCase('es');
+ const special=new Set(['todos','inicio','mas vendidos','por tiempo','por tiempo / citas','promociones','masajes independientes','sin categoria']);
+ const protectedCategory=name=>special.has(norm(name))||name.startsWith('_');
+ const products=()=>state.products.filter(p=>!String(p.category||'').startsWith('_')&&!state.config.internalExtraIds?.includes(p.id));
+ const unassigned=p=>!p.category||norm(p.category)==='sin categoria';
+ let type='all', category=null, busy=false;
+ root.innerHTML=`<!-- MODIFICADO --><header class="ve-cat-head">${tag}<div><h2>Categorías y filtros</h2><p>Organiza los productos del catálogo.</p></div><button type="button" class="btn secondary" data-cat-preview>${UI.search}<span>Vista previa de tienda</span></button></header>
+ <div class="ve-cat-metrics"></div>
+ <div class="ve-cat-layout"><div class="ve-cat-sidebar">
+ <section class="ve-cat-box"><h3>${UI.plus} Crear categoría</h3><label for="v15NewCategory">Nombre de la categoría</label><input class="input" id="v15NewCategory" placeholder="Nombre de la categoría" aria-describedby="veCatHelp"><p id="veCatHelp">Cada producto admite una categoría.</p><div class="ve-cat-suggestions"></div><button type="button" class="btn" id="v15AddCategory">${UI.plus}<span>Crear categoría</span></button></section>
+ <section class="ve-cat-box"><div class="ve-cat-heading"><h3>Categorías existentes</h3><label>Filtrar categorías<input class="input" type="search" data-cat-find></label></div><div class="v15-category-table"></div></section></div>
+ <section class="ve-cat-box"><div class="ve-cat-heading"><h3>${map} Asignación de catálogo</h3><div class="ve-cat-actions" role="group" aria-label="Tipo de publicación"><button type="button" class="btn secondary" data-cat-type="all">Todos</button><button type="button" class="btn secondary" data-cat-type="product">Productos</button><button type="button" class="btn secondary" data-cat-type="service">Servicios</button></div></div>
+ <label>Buscar por nombre, categoría o identificador<input class="input" type="search" data-cat-search></label><div class="ve-cat-heading"><span data-cat-results aria-live="polite"></span><button type="button" class="btn secondary" data-cat-reset hidden>${UI.close}<span>Quitar filtro de categoría</span></button></div>
+ <p>Las asignaciones se guardan por producto al seleccionar una categoría.</p><div class="ve-cat-records"></div></section></div>
+ <p class="ve-cat-status" role="status"></p>`;
+ c.replaceChildren(root);
+ const q=selector=>root.querySelector(selector), current=()=>activeAdmin==='categories'&&root.isConnected;
+ const writeStatus=(message,error=false)=>{const el=q('.ve-cat-status');el.textContent=message;el.dataset.error=String(error);};
+ const nameField=q('#v15NewCategory');
+ function draw(){
+   const cats=categoryNames().filter(cat=>!protectedCategory(cat));
+   const list=products();
+   const metrics=[['Categorías editables',cats.length],['Productos asignados',list.filter(p=>!unassigned(p)).length],['Productos sin categoría',list.filter(unassigned).length]];
+   q('.ve-cat-metrics').innerHTML=metrics.map(([label,value])=>`<article><span>${label}</span><strong>${value}</strong></article>`).join('');
+   q('.ve-cat-suggestions').innerHTML=cats.slice(0,4).map(cat=>`<button type="button" class="btn secondary" data-cat-name="${esc(cat)}">${esc(cat)}</button>`).join('');
+   const found=cats.filter(cat=>norm(cat).includes(norm(q('[data-cat-find]').value)));
+   q('.v15-category-table').innerHTML=found.map(cat=>{
+     const count=list.filter(p=>p.category===cat).length;
+     return `<article class="v15-category-row"><div><strong>${esc(cat)}</strong><small>${count} productos</small></div><div class="ve-cat-actions"><button type="button" class="btn secondary" data-cat-manage="${esc(cat)}">${map}<span>Administrar</span></button><button type="button" class="btn secondary" data-v15-rename="${esc(cat)}">${UI.edit}<span>Renombrar</span></button><button type="button" class="btn danger" data-v15-delete="${esc(cat)}">${UI.trash}<span>Eliminar</span></button></div></article>`;
+   }).join('')||'<p>Sin categorías para mostrar.</p>';
+   drawRecords();
+ }
+ function drawRecords(){
+   const term=norm(q('[data-cat-search]').value);
+   const list=type==='service'?[]:products().filter(p=>(category===null||p.category===category)&&norm([p.name,p.category,p.id].join(' ')).includes(term));
+   const services=type==='product'||category!==null?[]:(window.vibraCategoryServiceRecords||[]).filter(s=>norm(s.name).includes(term));
+   q('[data-cat-results]').textContent=`${list.length+services.length} resultados${category===null?'':' · '+category}`;
+   q('[data-cat-reset]').hidden=category===null;
+   root.querySelectorAll('[data-cat-type]').forEach(b=>b.setAttribute('aria-pressed',String(b.dataset.catType===type)));
+   const cats=categoryNames().filter(cat=>!protectedCategory(cat));
+   q('.ve-cat-records').innerHTML=list.map(p=>{
+     const options=[...new Set(['Sin categoría',...(p.category?[p.category]:[]),...cats])];
+     const image=productVisual(p).replace('<img ','<img loading="lazy" decoding="async" ');
+     return `<article class="product-admin ve-cat-record"><div class="ve-cat-thumb">${image}</div><div><strong>${esc(p.name)}</strong><small>Producto · ${money(p.price)} · ${esc(p.stock)} disponibles</small>${pending(p)?'<small class="ve-cat-pending">Emparejamiento por confirmar</small>':''}</div><select class="select v15-product-category" aria-label="Categoría de ${esc(p.name)}" data-v15-product-cat="${esc(p.id)}">${options.map(cat=>`<option value="${esc(cat)}" ${cat===(p.category||'Sin categoría')?'selected':''}>${esc(cat)}</option>`).join('')}</select></article>`;
+   }).concat(services.map(s=>`<article class="ve-cat-record"><div class="ve-cat-thumb">${tag}</div><div><strong>${esc(s.name)}</strong><small>Servicio · ${s.hourly_price==null?'Tarifa sin configurar':money(s.hourly_price)}</small></div><small>Clasificación administrada en Productos y servicios</small></article>`)).join('')||(type==='service'&&!window.vibraCategoryServiceRecords?'<p>La lista de servicios todavía no está disponible.</p>':'<p>No hay publicaciones para estos filtros.</p>');
+ }
+ const validName=(name,old)=>{
+   if(!name)throw Error('Escribe un nombre para la categoría.');
+   if(protectedCategory(name))throw Error('Ese nombre está reservado para un filtro o una categoría del sistema.');
+   if(categoryNames().some(cat=>cat!==old&&norm(cat)===norm(name)))throw Error('Ya existe una categoría con ese nombre.');
  };
- c.querySelectorAll('[data-v15-product-cat]').forEach(s=>s.onchange=async()=>{
-   const p=state.products.find(x=>x.id===s.dataset.v15ProductCat);if(!p)return;p.category=s.value;
-   saveLocal();renderCategories();renderCatalog();try{await syncAdminStateToCloud()}catch{};toast('Producto movido.','ok');
+ async function persist(operation){
+   if(busy)return;
+   busy=true;
+   const controls=[...root.querySelectorAll('button,input,select')].filter(el=>!el.disabled);
+   controls.forEach(el=>el.disabled=true);
+   writeStatus('Guardando…');
+   try{
+     if(!supabaseClient||!panelCan('categories'))throw Error('La sesión no tiene acceso para guardar categorías.');
+     if(cloudSaving)await cloudSaving;
+     if(pendingCloudModules.size){clearTimeout(cloudSyncTimer);await syncAdminStateToCloud();}
+     const message=await operation();
+     saveLocal();renderCategories();renderCatalog();
+     if(current()){draw();writeStatus(message);}
+   }catch(error){if(current())writeStatus(error.message||'No se pudo guardar.',true);}
+   finally{controls.forEach(el=>el.disabled=false);busy=false;}
+ }
+ async function storeNames(names){
+   // NUEVO: misma tabla y formato público; la cola anterior omite el módulo categories.
+   const {error}=await supabaseClient.from('catalog_settings').upsert({id:1,data:{...publicConfigForCloud(),catalogCategories:names},updated_at:new Date().toISOString()},{onConflict:'id'});
+   if(error)throw Error(error.message);
+   state.config.catalogCategories=names;
+ }
+ async function move(ids,from,to){
+   if(!ids.length||from===to)return;
+   let query=supabaseClient.from('products').update({category:to}).in('id',ids);
+   query=from===''?query.or('category.is.null,category.eq.'):query.eq('category',from);
+   const {data,error}=await query.select('id');
+   if(error)throw Error(error.message);
+   const confirmed=new Set((data||[]).map(row=>String(row.id)));
+   state.products.forEach(p=>{if(confirmed.has(String(p.id)))p.category=to;});
+   if(confirmed.size!==ids.length){
+     saveLocal();renderCategories();renderCatalog();
+     throw Error(`Se guardaron ${confirmed.size} de ${ids.length} asignaciones. Revisa las asociaciones antes de reintentar.`);
+   }
+ }
+ root.addEventListener('input',e=>{
+   if(e.target.matches('[data-cat-find]'))draw();
+   if(e.target.matches('[data-cat-search]'))drawRecords();
  });
- c.querySelectorAll('[data-v15-rename]').forEach(b=>b.onclick=()=>{
-   const old=b.dataset.v15Rename,name=prompt('Nuevo nombre para la categoría:',old);if(name===null)return;const nn=name.trim();if(!nn)return;
-   state.products.forEach(p=>{if(p.category===old)p.category=nn});state.config.catalogCategories=state.config.catalogCategories.map(x=>x===old?nn:x);if(!state.config.catalogCategories.includes(nn))state.config.catalogCategories.push(nn);
-   saveLocal();syncAdminStateToCloud().then(()=>toast('Categorías guardadas en Supabase.','ok')).catch(e=>toast('Error al guardar categoría: '+e.message,'error'));renderCategories();renderCatalog();renderAdminPane('categories');
+ root.addEventListener('change',e=>{
+   if(!e.target.matches('[data-v15-product-cat]'))return;
+   const p=products().find(x=>String(x.id)===e.target.dataset.v15ProductCat),value=e.target.value;
+   if(p)persist(async()=>{await move([String(p.id)],p.category||'',value);return 'Asignación guardada.';});
  });
- c.querySelectorAll('[data-v15-delete]').forEach(b=>b.onclick=()=>{
-   const cat=b.dataset.v15Delete;if(!confirm(`¿Eliminar “${cat}”? Los productos pasarán a “Sin categoría”.`))return;
-   state.products.forEach(p=>{if(p.category===cat)p.category='Sin categoría'});state.config.catalogCategories=state.config.catalogCategories.filter(x=>x!==cat);
-   saveLocal();syncAdminStateToCloud().then(()=>toast('Categorías guardadas en Supabase.','ok')).catch(e=>toast('Error al guardar categoría: '+e.message,'error'));renderCategories();renderCatalog();renderAdminPane('categories');
+ root.addEventListener('click',e=>{
+   const b=e.target.closest('button');if(!b||busy)return;
+   const d=b.dataset;
+   if(d.catName!==undefined){nameField.value=d.catName;nameField.focus();}
+   if(d.catType){type=d.catType;category=null;drawRecords();}
+   if(d.catManage!==undefined){type='product';category=d.catManage;drawRecords();q('[data-cat-search]').focus();}
+   if(d.catReset!==undefined){category=null;drawRecords();}
+   if(d.catPreview!==undefined){
+     const grid=document.getElementById('catalogGrid');
+     const dialog=document.createElement('dialog');dialog.className='ve-cat-dialog';dialog.setAttribute('aria-label','Vista previa de tienda');
+     dialog.innerHTML=`<div class="ve-cat-heading"><h3>Vista previa del catálogo publicado</h3><button type="button" class="btn secondary">${UI.close}<span>Cerrar</span></button></div><div class="ve-cat-preview"></div>`;
+     const preview=dialog.querySelector('.ve-cat-preview');
+     grid?.querySelectorAll('.product-card,.vibra-service-card').forEach(node=>{
+       if(node.hidden||getComputedStyle(node).display==='none')return;
+       const clone=node.cloneNode(true);clone.removeAttribute('id');clone.querySelectorAll('[id]').forEach(el=>el.removeAttribute('id'));clone.inert=true;preview.append(clone);
+     });
+     if(!preview.children.length)preview.textContent='No hay publicaciones visibles con los filtros actuales de la tienda.';
+     root.append(dialog);dialog.querySelector('button').onclick=()=>dialog.close();dialog.addEventListener('close',()=>dialog.remove(),{once:true});dialog.showModal();
+   }
+   if(b.id==='v15AddCategory')persist(async()=>{
+     const name=nameField.value.trim();validName(name);
+     await storeNames([...state.config.catalogCategories,name]);nameField.value='';return 'Categoría guardada.';
+   });
+   if(d.v15Rename!==undefined){
+     const old=d.v15Rename,answer=prompt('Nuevo nombre para la categoría:',old);
+     if(answer===null||answer.trim()===old)return;
+     persist(async()=>{
+       const name=answer.trim();validName(name,old);
+       await move(products().filter(p=>p.category===old).map(p=>String(p.id)),old,name);
+       try{await storeNames([...new Set([...state.config.catalogCategories.map(x=>x===old?name:x),name])]);}
+       catch(error){saveLocal();renderCategories();renderCatalog();throw Error('No se confirmó el nombre en el menú. Las asociaciones de productos ya procesadas se conservaron. '+error.message);}
+       if(category===old)category=name;
+       return 'Categoría renombrada.';
+     });
+   }
+   if(d.v15Delete!==undefined){
+     const old=d.v15Delete,members=products().filter(p=>p.category===old);
+     const info=members.length?`\n\n${members.map(p=>p.name).join(', ')}\n\nEstos productos pasarán a “Sin categoría”.`:'\n\nSin productos asociados.';
+     if(!confirm(`¿Eliminar “${old}”?${info}`))return;
+     persist(async()=>{
+       await move(members.map(p=>String(p.id)),old,'Sin categoría');
+       try{await storeNames(state.config.catalogCategories.filter(x=>x!==old));}
+       catch(error){saveLocal();renderCategories();renderCatalog();throw Error('No se confirmó la eliminación del menú. Las reasignaciones ya procesadas se conservaron. '+error.message);}
+       if(category===old)category=null;
+       return 'Categoría eliminada.';
+     });
+   }
  });
+ nameField.onkeydown=e=>{if(e.key==='Enter'){e.preventDefault();q('#v15AddCategory').click();}};
+ root.addEventListener('vibra-category-services',()=>{if(current()&&!busy)drawRecords();});
+ draw();
 }
 
 /* -------- Calificación: bloque público siempre visible -------- */
@@ -5110,7 +5227,8 @@ const paneBase=renderAdminPane;
 renderAdminPane=async function(id){
  ensureAdminTabs();
  if(id==='categories'){
-   activeAdmin=id;document.querySelectorAll('.tab-btn').forEach(b=>b.classList.toggle('active',b.dataset.tab===id));const c=document.getElementById('adminContent');return v15CategoriesAdmin(c);
+   if(!panelCan(id))return toast('No tienes acceso a este módulo.','error'); // NUEVO
+   ++panelEpoch;activeAdmin=id;document.querySelectorAll('.tab-btn').forEach(b=>b.classList.toggle('active',b.dataset.tab===id));const c=document.getElementById('adminContent');return v15CategoriesAdmin(c);
  }
  return paneBase(id);
 };
@@ -6921,6 +7039,9 @@ async function load(){const client=db();if(!client)return status('No está dispo
  const res=await Promise.all(tables.map(t=>client.from(t).select('*')));
  const issue=res.find(x=>x.error);if(issue)throw issue.error;
  [cache,serviceLinks,allServices,window.vsmHours,window.vsmDurations,allMedia]=res.map(x=>x.data||[]);
+ // NUEVO: compartir solo los campos públicos necesarios para el filtro de Categorías.
+ window.vibraCategoryServiceRecords=allServices.map(({name,hourly_price})=>({name,hourly_price}));
+ document.querySelector('#adminContent > .ve-cat')?.dispatchEvent(new Event('vibra-category-services'));
  if(currentPanel()){renderList();status('Datos actualizados desde Supabase.');}enhanceCards();
 }catch(e){if(currentPanel())status('Error al consultar servicios: '+e.message)}finally{loading=false;if(!currentPanel()&&activeAdmin==='products'&&q('#vibraServiceManage'))queueMicrotask(load)}}
 function renderList(){const host=q('#vsmList');if(!host)return;
@@ -10819,7 +10940,7 @@ html body main #catalogGrid :is(.desc,.meta,.vibra-service-content p){font-size:
   content.dataset.adminView=id;
   content.dataset.adminKind=viewInfo[id]?.[0]||'';
   let title=content.querySelector(':scope > .admin-workspace-heading');
-  if(!id||id==='ticket'||(id==='products'&&content.querySelector('#veCatalogAdmin'))){title?.remove();return} /* MODIFICADO: el catálogo ya tiene cabecera propia. */
+  if(!id||id==='ticket'||(id==='categories'&&content.querySelector('.ve-cat'))||(id==='products'&&content.querySelector('#veCatalogAdmin'))){title?.remove();return} /* MODIFICADO: el catálogo ya tiene cabecera propia. */
   if(!title){
    title=document.createElement('header');title.className='admin-workspace-heading';
    title.innerHTML='<h2></h2><p></p>';
@@ -12033,6 +12154,48 @@ body.dark-mode #veCatalogAdmin .date-control>input{color-scheme:dark}
  #veCatalogAdmin .vsm-hour{grid-template-columns:repeat(2,minmax(0,1fr))}
  #veCatalogAdmin .vsm-hour>span{grid-column:1/-1}
 }
+/* NUEVO: presentación de Categorías delimitada a su espacio administrativo. */
+#adminContent:has(>.ve-cat){container:ve-categories / inline-size}
+#adminModal .ve-cat{display:grid;gap:15px;min-width:0;color:var(--ui-text);font-size:.82rem}
+.ve-cat :is(h2,h3,p){margin:0}
+.ve-cat h2{font-size:1.2rem}.ve-cat h3{font-size:.94rem}
+.ve-cat :is(p,small){color:var(--ui-muted)}
+.ve-cat small{display:block}
+.ve-cat-head,.ve-cat-heading,.ve-cat-actions,.ve-cat-suggestions{display:flex;flex-wrap:wrap;align-items:center;gap:8px}
+.ve-cat-head>div,.ve-cat-heading>h3{margin-inline-end:auto}
+.ve-cat-head,.ve-cat-box,.ve-cat-metrics article{padding:12px;border:1px solid var(--ui-border);border-radius:13px;background:var(--ui-surface);box-shadow:var(--ui-shadow);min-width:0}
+.ve-cat-head>svg{color:var(--ui-link);flex:none}
+.ve-cat-metrics{display:grid;grid-template-columns:repeat(auto-fit,minmax(min(100%,140px),1fr));gap:9px}
+.ve-cat-metrics article{padding:9px 12px;border-inline-start:3px solid var(--ui-link)}
+.ve-cat-metrics strong{display:block;font-size:1.3rem;line-height:1.2}
+.ve-cat-layout,.ve-cat-sidebar,.ve-cat-box,.ve-cat-records{display:grid;gap:12px;min-width:0;align-content:start}
+.ve-cat-layout{grid-template-columns:minmax(0,1fr);align-items:start}
+.ve-cat-heading{justify-content:space-between;border-bottom:1px solid var(--ui-border);padding-bottom:8px}
+.ve-cat label{display:grid;gap:4px}
+.ve-cat .v15-category-row,.ve-cat .ve-cat-record{display:grid;gap:8px;align-items:center;min-width:0;padding:9px;border:1px solid var(--ui-border);border-radius:10px;background:var(--ui-field);overflow-wrap:anywhere}
+.ve-cat .ve-cat-record{grid-template-columns:42px minmax(0,1fr)}
+.ve-cat-record>:last-child{grid-column:2}
+.ve-cat-thumb{display:grid;place-items:center;width:42px;height:42px;border-radius:8px;background:var(--ui-raised);color:var(--ui-link)}
+.ve-cat-thumb :is(img,svg){width:100%;height:100%;object-fit:contain}
+html body #adminModal #adminContent .ve-cat :is(.input,.select){width:100%;max-width:100%;min-width:0;min-height:34px;padding:5px 8px;font:inherit}
+html body #adminModal #adminContent .ve-cat .btn{min-height:34px;padding:5px 8px;gap:5px;font-size:.75rem;white-space:normal;transition:border-color .2s,box-shadow .2s,translate .2s}
+.ve-cat :is(button,h3)>svg{display:inline-block;width:16px;height:16px;flex:0 0 16px;vertical-align:middle;opacity:1}
+html body #adminModal #adminContent .ve-cat .btn[aria-pressed=true]{background:var(--ui-action)!important;color:var(--ui-on-action)!important}
+.ve-cat button:active:not(:disabled){translate:0 1px}
+.ve-cat :is(button,input,select):focus-visible{outline:2px solid var(--ui-focus);outline-offset:2px}
+.ve-cat [hidden]{display:none!important}
+.ve-cat-status:empty{display:none}
+.ve-cat-status[data-error=true]{color:var(--ui-danger)}
+.ve-cat-dialog{width:min(850px,calc(100% - 20px));max-height:90dvh;border:1px solid var(--ui-border);border-radius:14px;color:var(--ui-text);background:var(--ui-dialog);padding:13px}
+.ve-cat-dialog::backdrop{background:var(--ui-overlay)}
+.ve-cat-preview{display:grid;grid-template-columns:repeat(auto-fit,minmax(min(100%,200px),1fr));gap:10px;margin-top:10px}
+.ve-cat-preview img{max-width:100%;max-height:180px;object-fit:contain}
+@container ve-categories (min-width:680px){.ve-cat-layout{grid-template-columns:minmax(0,5fr) minmax(0,7fr)}}
+@container ve-categories (min-width:940px){.ve-cat .ve-cat-record{grid-template-columns:42px minmax(0,1fr) minmax(110px,.75fr)}.ve-cat-record>:last-child{grid-column:auto}}
+@media(hover:hover){.ve-cat .btn:hover:not(:disabled){border-color:var(--ui-focus)!important;box-shadow:0 0 10px var(--ui-glow)}}
+@media(pointer:coarse){html body #adminModal #adminContent .ve-cat .btn{min-height:44px}}
+@media(prefers-reduced-motion:reduce){.ve-cat .btn{transition:none!important;translate:none!important}}
+.ve-cat .ve-cat-pending{color:var(--ui-warning);font-weight:700}
 </style>
 <script>
 // MODIFICADO: iconos propios y puntos de montaje estables del catálogo.
