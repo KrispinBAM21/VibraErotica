@@ -1702,8 +1702,78 @@ function renderFoodSocials(){const c=document.getElementById('foodSocials');if(c
 const v4LoadSocial=loadPublicCloudState;loadPublicCloudState=async function(){await v4LoadSocial();renderFoodSocials()};
 // Conserva las opciones ampliadas dentro de la estructura vertical de la referencia.
 const faithfulPanelCall=panelCall;panelCall=async function(action,payload={}){if(action==='ticket_save'&&document.getElementById('foodTicketQrSource'))payload={...payload,qrSource:document.getElementById('foodTicketQrSource').value};return faithfulPanelCall(action,payload)};
-const v4TicketEditor=panelTicket;panelTicket=async function(c,epoch,initialDraft){await v4TicketEditor(c,epoch,initialDraft);if(epoch!==panelEpoch)return;const controls=c.querySelector('.ticket-controls'),preview=c.querySelector('.ticket-preview-column'),root=c.querySelector('.ticket-editor');if(!controls||!preview)return;const cards=[...controls.children],logo=cards.find(x=>x.textContent.includes('Logo, imagen y QR')),heading=cards.find(x=>x.textContent.includes('Encabezado y formato'));const main=document.createElement('div');main.className='section-card faithful-ticket-main';main.innerHTML='<h3>Diseño y vista previa de ticket</h3><p class="small">El folio, detalle, total y aviso para aclaraciones siempre aparecen. El nombre y logo se toman de la identidad del negocio.</p>';if(logo){main.append(logo);logo.className='faithful-ticket-options';logo.querySelector('h3').remove();const options=logo.querySelector('.permission-grid');main.insertBefore(options,main.children[2]);const qr=document.createElement('label');qr.className='field';qr.innerHTML=`QR de red social o sitio<select class="select" id="foodTicketQrSource"><option value="none">Sin QR</option>${Object.entries(SOCIAL_NAMES).map(([k,v])=>`<option value="${k}">${v}</option>`).join('')}<option value="custom">Enlace personalizado</option></select>`;logo.querySelector('#tvQrUrl').closest('.field').before(qr);logo.querySelector('#tvQrUrl').previousElementSibling.textContent='Enlace personalizado del QR';const source=main.querySelector('#foodTicketQrSource');source.value=(initialDraft||state.config.ticket)?.qrSource||((initialDraft||state.config.ticket)?.showQR?'custom':'none');source.onchange=()=>{const show=c.querySelector('[data-ticket-show="showQR"]'),url=document.getElementById('tvQrUrl');show.checked=source.value!=='none';if(source.value!=='custom')url.value=state.config.socials?.[source.value]||'';url.dispatchEvent(new Event('input'));show.dispatchEvent(new Event('change'))};const oldSave=document.getElementById('tvSave').onclick;document.getElementById('tvSave').onclick=async e=>{await oldSave(e);if(document.getElementById('tvStatus')?.textContent.includes('guardado')){state.config.ticket.qrSource=source.value;saveLocal()}};}
- if(heading){const title=document.getElementById('tvTitle').closest('.field'),footer=document.getElementById('tvFooter').closest('.field');title.querySelector('label').textContent='Título del ticket';footer.querySelector('label').textContent='Mensaje adicional';main.insertBefore(title,main.querySelector('.faithful-ticket-options'));main.append(footer);heading.querySelector('h3').textContent='Formato y tipografía'}const tools=preview.querySelector('.toolbar');if(tools){main.append(tools);tools.querySelector('#tvSave').querySelector('span').textContent='Guardar diseño';tools.querySelector('#tvPdf').querySelector('span').textContent='PDF de ejemplo';tools.querySelector('#tvJpg').querySelector('span').textContent='JPEG de ejemplo';const update=document.createElement('button');update.className='btn secondary';update.innerHTML=UI.file+'<span>Actualizar vista previa</span>';update.onclick=()=>document.getElementById('tvTitle').dispatchEvent(new Event('input'));tools.prepend(update)}const note=document.createElement('p');note.className='small muted';note.textContent='Vista previa de ejemplo; no representa un pedido real.';main.append(note);main.append(preview.querySelector('#tvPreview'));main.append(preview.querySelector('#tvStatus'));preview.remove();root.replaceChildren(main);const more=document.createElement('details');more.className='section-card';more.innerHTML='<summary>Colores, formatos e iconos del ticket</summary>';cards.filter(x=>x!==logo).forEach(x=>more.append(x));root.append(more)};
+// MODIFICADO: agrupar los controles existentes sin recrear sus eventos ni el borrador.
+const v4TicketEditor=panelTicket;
+panelTicket=async function(c,epoch,initialDraft){
+ const ready=v4TicketEditor(c,epoch,initialDraft);
+ if(epoch!==panelEpoch)return ready;
+ const root=c.querySelector('.ticket-editor'),controls=root?.querySelector('.ticket-controls'),preview=root?.querySelector('.ticket-preview-column');
+ if(!controls||!preview)return ready;
+ root.classList.add('ve-ticket-design');
+ const [palette,format,colors,icons,identity]=controls.children;
+ function card(title,icon,...nodes){
+  const section=document.createElement('section');
+  section.className='section-card ve-ticket-card';
+  section.innerHTML='<h3>'+icon+'<span>'+title+'</span></h3>';
+  section.append(...nodes);return section;
+ }
+ const options=identity.querySelector('.permission-grid');
+ const toggle=document.createElement('button');toggle.type='button';toggle.className='btn secondary';
+ toggle.innerHTML=UI.settings+'<span>Alternar todos</span>';
+ toggle.onclick=()=>{
+  const fields=[...options.querySelectorAll('[data-ticket-show]')];
+  const enabled=fields.some(field=>!field.checked);
+  for(const field of fields)if(field.checked!==enabled){field.checked=enabled;field.dispatchEvent(new Event('change'))}
+ };
+ const visible=card('Elementos visibles en el ticket',UI.settings,options);
+ visible.querySelector('h3').after(toggle);
+ const required=document.createElement('p');required.className='small muted';
+ required.textContent='El folio, el detalle, el total y el aviso para aclaraciones siempre aparecen.';
+ toggle.after(required);
+ const title=format.querySelector('#tvTitle').closest('.field'),footer=format.querySelector('#tvFooter').closest('.field');
+ title.querySelector('label').textContent='Título del ticket';footer.querySelector('label').textContent='Mensaje adicional';
+ const texts=card('Títulos y textos del ticket',UI.edit,title,footer);
+ identity.querySelector('h3').innerHTML=UI.attach+'<span>Identidad e imagen del ticket</span>';
+ const url=identity.querySelector('#tvQrUrl'),source=document.createElement('label');
+ source.className='field';
+ source.innerHTML=`Origen del QR<select class="select" id="foodTicketQrSource"><option value="none">Sin QR</option>${Object.entries(SOCIAL_NAMES).map(([k,v])=>`<option value="${k}">${v}</option>`).join('')}<option value="custom">Enlace personalizado</option></select>`;
+ const qr=card('Destino del código QR',UI.receipt,source,url.closest('.field'));
+ const select=source.querySelector('select'),config=initialDraft||state.config.ticket;
+ select.value=config?.qrSource||(config?.showQR?'custom':'none');
+ select.onchange=()=>{
+  const show=options.querySelector('[data-ticket-show="showQR"]');
+  show.checked=select.value!=='none';
+  if(select.value!=='custom')url.value=state.config.socials?.[select.value]||'';
+  url.dispatchEvent(new Event('input'));show.dispatchEvent(new Event('change'));
+ };
+ const width=format.querySelector('#tvWidth'),widthChoices=document.createElement('div');
+ widthChoices.className='ve-ticket-formats';widthChoices.setAttribute('role','group');widthChoices.setAttribute('aria-label','Formato de impresión');
+ const buttons=[...width.options].map(option=>{
+  const button=document.createElement('button');button.type='button';button.className='btn secondary';button.textContent=option.textContent;
+  button.dataset.format=option.value;button.onclick=()=>{width.value=option.value;width.dispatchEvent(new Event('input'));syncFormat()};
+  return button;
+ });
+ function syncFormat(){for(const button of buttons)button.setAttribute('aria-pressed',String(button.dataset.format===width.value))}
+ widthChoices.append(...buttons);width.closest('label').after(widthChoices);width.closest('label').hidden=true;syncFormat();
+ format.querySelector('h3').innerHTML=UI.settings+'<span>Formato y tipografía</span>';
+ const tools=preview.querySelector('.toolbar');
+ const save=tools.querySelector('#tvSave'),oldSave=save.onclick;
+ save.onclick=async e=>{await oldSave(e);if(root.querySelector('#tvStatus')?.textContent.includes('guardado')){state.config.ticket.qrSource=select.value;saveLocal()}};
+ save.querySelector('span').textContent='Guardar diseño';
+ tools.querySelector('#tvPdf span').textContent='PDF de ejemplo';
+ tools.querySelector('#tvJpg span').textContent='JPEG digital';
+ const update=document.createElement('button');update.type='button';update.className='btn secondary';
+ update.innerHTML=UI.refresh+'<span>Actualizar vista previa</span>';update.onclick=()=>title.querySelector('input').dispatchEvent(new Event('input'));
+ tools.prepend(update);
+ const heading=preview.querySelector('h3');
+ heading.innerHTML=UI.receipt+'<span>Vista previa en vivo</span>';
+ const actions=card('Acciones del diseño',UI.save,tools);
+ const details=document.createElement('details');details.className='section-card ve-ticket-advanced';
+ details.innerHTML='<summary>Paletas, colores e iconografía</summary>';details.append(palette,colors,icons);
+ const extra=[...controls.children].filter(node=>![palette,format,colors,icons,identity].includes(node));
+ controls.replaceChildren(visible,texts,identity,qr,format,details,...extra,actions);
+ return ready;
+};
 // SVG fiel a la composición de la referencia, adaptable a papel de 58/80 mm o A4.
 ticketSvg=function(order,value,qr=''){const d=ticketConfig(value),w=1000,m=44,u=912,fs=24*(d.fontSize/9),lh=fs*1.35,navy=d.color,accent=d.accentColor,pale=d.borderColor+'45',font=d.font==='times'?'Georgia,serif':d.font==='courier'?'monospace':'Arial,DejaVu Sans,sans-serif';let y=0,out=[];const rect=(x,y,w,h,fill,r=0)=>out.push(`<rect x="${x}" y="${y}" width="${w}" height="${h}" rx="${r}" fill="${fill}"/>`);const text=(v,x,y,size=fs,color=d.textColor,bold=false,anchor='start')=>out.push(`<text x="${x}" y="${y}" font-family="${font}" font-size="${size}" fill="${color}" font-weight="${bold?700:400}" text-anchor="${anchor}">${esc(v)}</text>`);const icon=(key,x,y,size=42,color=navy)=>out.push(ticketIconSvg(key).replace('<svg ',`<svg x="${x}" y="${y}" width="${size}" height="${size}" style="color:${color}" `));const lines=(str,max,size=fs)=>ticketLines(str,Math.max(10,Math.floor(max/(size*.56))));const block=(str,x,yy,max,size=fs,color=d.textColor,bold=false)=>{const rows=lines(str,max,size);rows.forEach((v,i)=>text(v,x,yy+size+i*size*1.35,size,color,bold));return rows.length*size*1.35};
  rect(580,0,420,204,pale);out.push(`<path d="M530 204L660 0h40L570 204z" fill="${d.borderColor}"/>`);if(d.showLogo&&state.config.logo)out.push(`<image href="${esc(state.config.logo)}" x="44" y="24" width="430" height="114" preserveAspectRatio="xMidYMid meet"/>`);if(d.image)out.push(`<image href="${esc(d.image)}" x="635" y="12" width="320" height="177" preserveAspectRatio="xMidYMid meet"/>`);text(state.config.businessName,m,d.showLogo&&state.config.logo?172:107,Math.min(d.showLogo&&state.config.logo?26:40,430/Math.max(1,String(state.config.businessName).length*.56)),navy,true);rect(m,184,76,4,accent);
@@ -4612,20 +4682,109 @@ async function openBusinessShowcase(){
 async function submitBusinessReview(payload){return v16Community('review',payload)}
 // MODIFICADO: estrella SVG y nombre accesible por puntuación.
 function starPicker(host,initial,onchange){let value=initial;const draw=()=>{host.innerHTML=[1,2,3,4,5].map(i=>`<button type="button" class="v14-star ${i<=value?'on':''}" data-star="${i}" aria-label="${i} de 5" aria-pressed="${i<=value}"><svg class="ve-dialog-icon" aria-hidden="true" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="m12 3 2.8 5.8 6.4.9-4.6 4.5 1.1 6.4-5.7-3-5.7 3 1.1-6.4-4.6-4.5 6.4-.9Z"/></svg></button>`).join('');host.querySelectorAll('button').forEach(b=>b.onclick=()=>{value=Number(b.dataset.star);draw();onchange(value)})};draw();}
+// MODIFICADO: editor y listado de opiniones con los componentes del sitio.
+let businessReviewDraft={owner:null,overall:5,service:5,food:5,comment:''};
 async function openRateBusinessModal(viewOnly=false){
-  const m=v4Modal('v16RateBusinessModal',viewOnly?'Opiniones del negocio':'Calificar negocio');
-  // MODIFICADO: actualizar el título al alternar entre ambas vistas.
-  m.querySelector(".modal-head strong").textContent=viewOnly?"Quiénes calificaron el sitio":"Calificar negocio";
-  const body=m.querySelector('.modal-body'); let overall=5,service=5,food=5;
-  const composeCard=viewOnly?'':'<section class="section-card"><h3>Califica tu experiencia</h3><div class="v14-review-grid"><div class="v14-score"><strong>Negocio</strong><div id="v16Overall" class="v14-stars"></div></div><div class="v14-score"><strong>Servicio</strong><div id="v16Service" class="v14-stars"></div></div><div class="v14-score"><strong>Experiencia</strong><div id="v16Food" class="v14-stars"></div></div></div><textarea class="textarea" id="v16Comment" maxlength="1000" placeholder="Escribe tu comentario"></textarea><div class="toolbar"><button class="btn v16-glow-btn" id="v16PublishReview">Publicar opinión</button><button class="btn ghost" id="v16OpenBusinessBack">Volver al perfil del negocio</button></div></section>';
-  body.innerHTML=composeCard+'<section class="section-card"><!-- MODIFICADO --><h3>Calificaciones y opiniones</h3><p class="small muted">Se muestra el nombre público disponible en cada opinión.</p><div id="v16ReviewRows" aria-live="polite">Cargando…</div></section>';
-  if(!viewOnly){starPicker(document.getElementById('v16Overall'),5,v=>overall=v);starPicker(document.getElementById('v16Service'),5,v=>service=v);starPicker(document.getElementById('v16Food'),5,v=>food=v);
-    document.getElementById('v16OpenBusinessBack').onclick=()=>{closeModal(m.id);openBusinessShowcase()};
-    document.getElementById('v16PublishReview').onclick=async e=>panelRun(e.currentTarget,async()=>{if(!customerSession){closeModal(m.id);renderCustomerProfile();openModal('customerProfileModal');return toast('Inicia sesión para publicar tu opinión.','info')} const comment=document.getElementById('v16Comment').value.trim(); if(comment.length<3)throw Error('Escribe un comentario.'); await submitBusinessReview({overall,service,food,comment}); setRatedDone(); renderTrackingButtons(); await loadV16Reviews();},'Opinión publicada.');
+ const trigger=document.activeElement;
+ const m=v4Modal('v16RateBusinessModal','Opiniones del negocio');
+ const title=m.querySelector('.modal-head strong');
+ title.id='veBusinessReviewTitle';
+ title.innerHTML=V12I.heart+'<span>'+(viewOnly?'Opiniones del negocio':'Calificar negocio')+'</span>';
+ m.setAttribute('role','dialog');m.setAttribute('aria-modal','true');m.setAttribute('aria-labelledby',title.id);
+ const body=m.querySelector('.modal-body');
+ const owner=customerSession?.user?.id??null;
+ if(businessReviewDraft.owner!==owner){
+  businessReviewDraft=businessReviewDraft.owner===null?{...businessReviewDraft,owner}:{owner,overall:5,service:5,food:5,comment:''};
+ }
+ const draft=businessReviewDraft;
+ const criteria=[['v16Overall','Negocio','overall'],['v16Service','Servicio','service'],['v16Food','Experiencia','food']];
+ body.innerHTML=`<!-- MODIFICADO --><section class="ve-review-summary section-card" aria-live="polite" hidden></section>
+ ${viewOnly?'':`<section class="section-card ve-review-compose"><h3>¿Cómo fue tu experiencia?</h3>
+ <div class="v14-review-grid">${criteria.map(([id,label])=>`<div class="v14-score"><strong>${label}</strong><div id="${id}" class="v14-stars" role="group" aria-label="${label}"></div><output class="ve-review-score"></output></div>`).join('')}</div>
+ <label class="field" for="v16Comment">Tu comentario</label><textarea class="textarea" id="v16Comment" maxlength="1000" placeholder="Escribe tu comentario" aria-describedby="veReviewCount"></textarea>
+ <div class="ve-review-compose-footer"><small id="veReviewCount"></small><div class="toolbar"><button type="button" class="btn ghost" id="v16OpenBusinessBack">${UI.arrowLeft}<span>Volver al perfil del negocio</span></button><button type="button" class="btn" id="v16PublishReview">${UI.edit}<span>Publicar opinión</span></button></div></div></section>`}
+ <section class="ve-review-list"><div class="ve-review-list-head"><div><h3>Opiniones recientes</h3><p class="small muted">Se muestra el nombre público disponible en cada opinión.</p></div><div class="ve-review-filters" role="group" aria-label="Filtrar opiniones">${[['','Todas'],['5','5 estrellas'],['4','4 estrellas']].map(([value,label])=>`<button type="button" class="chip" data-review-score="${value}" aria-pressed="${!value}">${label}</button>`).join('')}</div></div><div id="v16ReviewRows" aria-live="polite"></div></section>`;
+ const rows=body.querySelector('#v16ReviewRows'),summary=body.querySelector('.ve-review-summary');
+ const filters=[...body.querySelectorAll('[data-review-score]')];
+ let reviews=[],filter='';
+ function drawReviews(){
+  const visible=reviews.filter(row=>!filter||Number(row.overall_rating)===Number(filter));
+  rows.innerHTML=visible.map(row=>{
+   const name=String(row.display_name??'').trim();
+   const rating=Number(row.overall_rating);
+   return `<article class="section-card v16-review-card"><header><div class="ve-review-author"><span class="ve-review-avatar" aria-hidden="true">${name?esc(name.split(/\s+/).slice(0,2).map(x=>Array.from(x)[0]).join('').toLocaleUpperCase('es-MX')):V12I.heart}</span><strong>${esc(name||'Nombre no publicado')}</strong></div><span class="ve-review-result">${V12I.star} ${rating>0?esc(rating.toFixed(1))+'/5':'Sin dato'}</span></header><p>${esc(row.comment||'')}</p><small class="muted">Servicio ${row.service_rating==null?'Sin dato':esc(row.service_rating)+'/5'} · Experiencia ${row.food_rating==null?'Sin dato':esc(row.food_rating)+'/5'}</small></article>`;
+  }).join('')||`<p class="section-card">${filter?'No hay opiniones con esta calificación.':'Aún no hay opiniones.'}</p>`;
+ }
+ async function loadV16Reviews(){
+  rows.textContent='Cargando opiniones…';
+  filters.forEach(button=>button.disabled=true);
+  try{
+   const result=await v16Community('reviews',{});
+   if(!rows.isConnected)return;
+   reviews=result.reviews||[];
+   const ratings=reviews.map(row=>Number(row.overall_rating)).filter(n=>n>=1&&n<=5);
+   summary.hidden=false;
+   summary.innerHTML=`<div class="ve-review-average">${V12I.star}<strong>${ratings.length?(ratings.reduce((a,b)=>a+b,0)/ratings.length).toFixed(1)+'/5':'Sin calificaciones'}</strong></div><span class="small muted">${reviews.length} ${reviews.length===1?'opinión mostrada':'opiniones mostradas'}</span>`;
+   filters.forEach(button=>button.disabled=false);
+   drawReviews();
+  }catch(e){
+   if(!rows.isConnected)return;
+   rows.innerHTML=`<p role="alert">${esc(e.message||'No se pudieron cargar las opiniones.')}</p><button class="btn secondary" type="button">${UI.refresh}<span>Reintentar</span></button>`;
+   rows.querySelector('button').onclick=loadV16Reviews;
   }
-  // MODIFICADO: mostrar únicamente el nombre público devuelto por la consulta existente.
-  async function loadV16Reviews(){try{const r=await v16Community('reviews',{});document.getElementById('v16ReviewRows').innerHTML=(r.reviews||[]).map(x=>`<article class="v16-review-card"><div class="row between"><strong class="ve-review-author"><svg class="ve-dialog-icon" aria-hidden="true" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M5 21v-2a4 4 0 0 1 4-4h6a4 4 0 0 1 4 4v2M12 11a4 4 0 1 0 0-8 4 4 0 0 0 0 8"/></svg>${esc(String(x.display_name??'').trim()||'Nombre no publicado')}</strong><span class="v16-review-stars">${statStars(x.overall_rating)}</span></div><small class="muted">Servicio ${esc(x.service_rating??'Sin dato')}/5 · Experiencia ${esc(x.food_rating??'Sin dato')}/5</small><p>${esc(x.comment||'')}</p></article>`).join('')||'<p class="small muted">Aún no hay opiniones.</p>'}catch(e){document.getElementById('v16ReviewRows').innerHTML=`<p class="small muted">${esc(e.message||'No se pudieron cargar las opiniones.')}</p>`}}
-  openModal(m.id); await loadV16Reviews();
+ }
+ for(const button of filters)button.onclick=()=>{
+  filter=button.dataset.reviewScore;
+  for(const chip of filters)chip.setAttribute('aria-pressed',String(chip===button));
+  drawReviews();
+ };
+ if(!viewOnly){
+  for(const [id,,key] of criteria){
+   const host=body.querySelector('#'+id),output=host.nextElementSibling;
+   const buttons=Array.from({length:5},(_,i)=>{
+    const button=document.createElement('button');button.type='button';button.className='v14-star';button.dataset.star=i+1;
+    button.setAttribute('aria-label',(i+1)+' de 5');button.innerHTML=V12I.star;return button;
+   });
+   function draw(){
+    for(const button of buttons){
+     const score=Number(button.dataset.star);
+     button.classList.toggle('on',score<=draft[key]);
+     button.setAttribute('aria-pressed',String(score===draft[key]));
+    }
+    output.textContent=draft[key].toFixed(1)+' de 5';
+   }
+   for(const button of buttons)button.onclick=()=>{draft[key]=Number(button.dataset.star);draw()};
+   host.replaceChildren(...buttons);draw();
+  }
+  const comment=body.querySelector('#v16Comment'),count=body.querySelector('#veReviewCount');
+  comment.value=draft.comment;
+  const updateCount=()=>{draft.comment=comment.value;count.textContent=comment.value.length+' / '+comment.maxLength};
+  comment.oninput=updateCount;updateCount();
+  body.querySelector('#v16OpenBusinessBack').onclick=()=>{closeModal(m.id);openBusinessShowcase()};
+  body.querySelector('#v16PublishReview').onclick=e=>panelRun(e.currentTarget,async()=>{
+   if(!customerSession){closeModal(m.id);renderCustomerProfile();openModal('customerProfileModal');return toast('Inicia sesión para publicar tu opinión.','info')}
+   const text=comment.value.trim();
+   if(text.length<3){comment.focus();throw Error('Escribe un comentario.')}
+   await submitBusinessReview({overall:draft.overall,service:draft.service,food:draft.food,comment:text});
+   draft.comment='';if(comment.isConnected){comment.value='';updateCount()}
+   setRatedDone();renderTrackingButtons();await loadV16Reviews();
+  },'Opinión publicada.');
+ }
+ m.onkeydown=e=>{
+  if(e.key==='Escape'){e.preventDefault();e.stopPropagation();closeModal(m.id);return}
+  if(e.key!=='Tab')return;
+  const controls=[...m.querySelectorAll('button:not(:disabled),textarea')].filter(el=>el.getClientRects().length);
+  const first=controls[0],last=controls.at(-1);
+  if(first&&(e.shiftKey?document.activeElement===first:document.activeElement===last)){e.preventDefault();(e.shiftKey?last:first).focus()}
+ };
+ const closeWatcher=new MutationObserver(()=>{
+  if(m.classList.contains('show'))return;
+  closeWatcher.disconnect();
+  if(trigger?.isConnected&&!document.querySelector('.modal.show'))trigger.focus({preventScroll:true});
+ });
+ openModal(m.id);closeWatcher.observe(m,{attributes:true,attributeFilter:['class']});
+ body.scrollTop=0;m.querySelector('[data-close-modal]').focus({preventScroll:true});
+ await loadV16Reviews();
 }
 
 function ensureBusinessTrigger(){
@@ -5374,7 +5533,7 @@ if(typeof originalTicket==='function'){
     if(root.querySelector('#vibraTicketIcons'))return r;
     const section=document.createElement('section');section.className='section-card';section.id='vibraTicketIcons';
     section.innerHTML='<h3>Iconografía boutique</h3><p class="small muted">Diseños SVG para +18, lencería y bienestar. Las opciones se muestran sin emojis.</p><div class="vibra-custom-icons">'+Object.entries(LINGERIE_ICONS).map(([name,svg])=>'<label>'+svg+'<span>'+name+'</span></label>').join('')+'</div>';
-    root.append(section);return r;
+    /* MODIFICADO */ (root.querySelector('.ve-ticket-advanced')||root).append(section);return r;
   };
   if(window.renderTicketAdmin===originalTicket)window.renderTicketAdmin=wrapped;
   else if(window.panelTicket===originalTicket)window.panelTicket=wrapped;
@@ -7267,7 +7426,7 @@ function adminSubmenu(){const tabs=q('#adminTabs'),business=qa('#adminTabs .tab-
 let host=q('#vscopeBusinessSubmenu');if(!host){host=document.createElement('div');host.id='vscopeBusinessSubmenu';business.after(host);const arrow=document.createElement('button');arrow.id='vscopeBusinessToggle';arrow.type='button';arrow.setAttribute('aria-label','Abrir submódulos de negocio');arrow.setAttribute('aria-expanded','false');arrow.innerHTML=svg('<path d="m6 9 6 6 6-6"/>');business.append(arrow);arrow.onclick=e=>{e.stopPropagation();const open=host.classList.toggle('open');arrow.classList.toggle('open',open);arrow.setAttribute('aria-expanded',String(open))};}
 for(const [button,title,symbol] of [[rooms,'Habitaciones','<path d="M3 9h18v11H3zM6 9V5h12v4M7 14h10"/>'],[sites,'Sedes','<path d="M12 21s7-7 7-12a7 7 0 0 0-14 0c0 5 7 12 7 12Z"/><circle cx="12" cy="9" r="2"/>']]){if(button.parentElement!==host)host.append(button);if(!button.dataset.vscopeLabel){button.innerHTML=svg(symbol)+'<span>'+title+'</span>';button.dataset.vscopeLabel='1'}}}
 // NUEVO: enlaces y selección de QR basados en redes ya guardadas.
-function ticketLinks(){const c=q('#adminContent');if(!c||!qa('#adminTabs .tab-btn.active').some(x=>/ticket/i.test(x.textContent)))return;if(q('#vscopeTicketQrSocial'))return;const field=q('#tvQrUrl')||q('#tvQRUrl')||q('#tvQrLink');if(!field)return;const box=document.createElement('label');box.id='vscopeTicketQrSocial';box.innerHTML='<strong>QR · enlace para compartir</strong><select><option value="">Enlace personalizado</option></select>';field.before(box);const list=box.querySelector('select');let socials={};try{socials=state.config?.socials||state.config?.business?.socials||{}}catch{};for(const [key,value] of Object.entries(socials)){if(typeof value==='string'&&/^https:\/\//i.test(value)){const opt=document.createElement('option');opt.textContent=key.charAt(0).toUpperCase()+key.slice(1);opt.value=value;list.append(opt)}}list.onchange=()=>{if(list.value){field.value=list.value;field.dispatchEvent(new Event('input',{bubbles:true}));field.dispatchEvent(new Event('change',{bubbles:true}))}}}
+function ticketLinks(){const c=q('#adminContent');if(!c||!qa('#adminTabs .tab-btn.active').some(x=>/ticket/i.test(x.textContent)))return;/* MODIFICADO */ if(q('#vscopeTicketQrSocial')||q('.ve-ticket-design #foodTicketQrSource'))return;const field=q('#tvQrUrl')||q('#tvQRUrl')||q('#tvQrLink');if(!field)return;const box=document.createElement('label');box.id='vscopeTicketQrSocial';box.innerHTML='<strong>QR · enlace para compartir</strong><select><option value="">Enlace personalizado</option></select>';field.before(box);const list=box.querySelector('select');let socials={};try{socials=state.config?.socials||state.config?.business?.socials||{}}catch{};for(const [key,value] of Object.entries(socials)){if(typeof value==='string'&&/^https:\/\//i.test(value)){const opt=document.createElement('option');opt.textContent=key.charAt(0).toUpperCase()+key.slice(1);opt.value=value;list.append(opt)}}list.onchange=()=>{if(list.value){field.value=list.value;field.dispatchEvent(new Event('input',{bubbles:true}));field.dispatchEvent(new Event('change',{bubbles:true}))}}}
 // NUEVO: listado de ubicaciones registradas para calculadora de rutas existente.
 async function tripOrigins(){const c=q('#adminContent');if(!c||!qa('#adminTabs .tab-btn.active').some(x=>/viajes|calculadora/i.test(x.textContent)))return;if(q('#vscopeTripQuick'))return;const box=document.createElement('div');box.id='vscopeTripQuick';box.innerHTML='<strong>Consultar ubicaciones registradas</strong><label>Origen<select id="vscopeTripFrom"><option>Consultando…</option></select></label><label>Destino<select id="vscopeTripTo"><option>Consultando…</option></select></label><button class="btn" id="vscopeTripEstimate" type="button">Calcular distancia por carretera</button><p id="vscopeTripResult" role="status"></p>';c.querySelector('.admin-pane.active')?.prepend(box);if(!box.isConnected)return;const db=typeof supabaseClient!=='undefined'?supabaseClient:null;const locations=[];try{const main=state.config?.origin;if(main&&Number.isFinite(+main.lat)&&Number.isFinite(+main.lng))locations.push({name:'Local principal',lat:+main.lat,lon:+main.lng})}catch{}
 if(db){for(const [table,type] of [['service_locations','Sede'],['vibra_venues','Destino']]){try{const r=await db.from(table).select('*').limit(200);if(!r.error)for(const it of r.data||[]){const lat=Number(it.latitude),lon=Number(it.longitude);if(Number.isFinite(lat)&&Number.isFinite(lon)&&lat&&lon)locations.push({name:type+' · '+(it.name||it.address||'Ubicación'),lat,lon})}}catch{}}}
@@ -7276,7 +7435,7 @@ const options=locations.map((x,i)=>'<option value="'+i+'">'+escape(x.name)+'</op
 let timer=0,seq=0;
 // MODIFICADO: el destino público usa el único buscador enlazado por bindDestinationSearch.
 // NUEVO: selector de iconos SVG existentes filtrado para evitar motivos alimenticios en el ticket.
-function ticketIconTools(){const picker=q('#tvIconPicker');if(!picker||q('#vscopeTicketIconTools'))return;const card=document.createElement('section');card.id='vscopeTicketIconTools';card.className='vscope-ticket-tools';card.innerHTML='<strong>Iconos apropiados para boutique</strong><p class="small muted">Elige entre los iconos SVG existentes. Los motivos de alimentos y reparto se ocultan en esta biblioteca.</p><label class="field">Filtrar iconos<input class="input" type="search" placeholder="Buscar: corazón, estrella, regalo, ubicación…"></label>';picker.before(card);const input=card.querySelector('input');const forbidden=/utensils|burger|pizza|plate|taco|fries|coffee|drink|food|restaurant|motorcycle|delivery|chef|cake|icecream|fork|spoon/i;const filter=()=>{picker.querySelectorAll('[data-icon],[data-icon-key],.icon-option').forEach(item=>{const key=[item.dataset.icon,item.dataset.iconKey,item.title,item.getAttribute('aria-label'),item.textContent].join(' ');item.hidden=forbidden.test(key)||!!(input.value&&!key.toLocaleLowerCase('es').includes(input.value.toLocaleLowerCase('es')));})};input.oninput=filter;filter()}
+function ticketIconTools(){const picker=q('#tvIconPicker');if(!picker||q('#vscopeTicketIconTools'))return;const card=document.createElement('section');card.id='vscopeTicketIconTools';card.className='vscope-ticket-tools';card.innerHTML='<strong>Iconos apropiados para boutique</strong><p class="small muted">Elige entre los iconos SVG existentes. Los motivos de alimentos y reparto se ocultan en esta biblioteca.</p><label class="field">Filtrar iconos<input class="input" type="search" placeholder="Buscar: corazón, estrella, regalo, ubicación…"></label>';/* MODIFICADO */ const shared=picker.closest('.ve-ticket-design')?.querySelector('#tvIconSearch');if(shared)card.querySelector('label').remove();picker.before(card);const input=shared||card.querySelector('input');const forbidden=/utensils|burger|pizza|plate|taco|fries|coffee|drink|food|restaurant|motorcycle|delivery|chef|cake|icecream|fork|spoon/i;const filter=()=>{picker.querySelectorAll('[data-icon],[data-icon-key],.icon-option').forEach(item=>{const key=[item.dataset.icon,item.dataset.iconKey,item.title,item.getAttribute('aria-label'),item.textContent].join(' ');item.hidden=forbidden.test(key)||!!(input.value&&!key.toLocaleLowerCase('es').includes(input.value.toLocaleLowerCase('es')));})};input.oninput=filter;filter()}
 
 function expensesLabel(){qa('#adminTabs .tab-btn').filter(x=>/Calculadora de viajes/i.test(x.textContent)).forEach(x=>{x.innerHTML=x.innerHTML.replace(/\s*\(heredado\)/ig,'')});qa('#adminTabs .tab-btn').filter(x=>/Gastos e insumos/i.test(x.textContent)).forEach(x=>x.title='Registro de gastos conectado a Supabase mediante catalog_expense')}
 function execute(){adminSubmenu();socialIcons();ticketLinks();ticketIconTools();tripOrigins().catch(console.warn);expensesLabel() /* MODIFICADO: retirar el buscador duplicado. */}
@@ -10235,10 +10394,68 @@ html body #vibraReserveBody :is(.vibra-room-choice,.vibra-room-preview-chip) sma
 html body #vibraReserveBody .vibra-room-choice.selected{border-color:var(--art-focus)!important;box-shadow:inset 0 0 0 1px var(--art-focus)}
 html body #vibraReserveBody .v9action:not([hidden]){min-height:44px;background:var(--art-main)!important;color:#fff!important}
 html body #vibraReserveBody .v9action:disabled{background:var(--art-soft)!important;color:var(--art-ink)!important}
+/* MODIFICADO: composición y estados de la ventana de opiniones. */
 #v16RateBusinessModal .ve-review-author{display:flex;align-items:center;gap:8px;overflow-wrap:anywhere}
-#v16RateBusinessModal :is(.ve-dialog-icon,.v14-star svg){width:18px;height:18px;flex:none}
-#v16RateBusinessModal .v14-star{min-width:44px;min-height:44px;color:var(--art-link)!important}
+#v16RateBusinessModal .v14-star svg{width:18px;height:18px;flex:none;fill:none;stroke:currentColor;stroke-width:1.8}
 #v16RateBusinessModal .v14-star.on svg{fill:currentColor}
+/* NUEVO: distribución de Opiniones y Diseño de ticket con los tokens compartidos. */
+html body #v16RateBusinessModal{width:min(880px,calc(100% - 24px));background:var(--ui-dialog)!important;color:var(--ui-text)!important;display:flex;flex-direction:column}
+#v16RateBusinessModal .modal-body{min-height:0;overflow:auto;display:grid;gap:16px}
+#v16RateBusinessModal .modal-head strong{display:flex;align-items:center;gap:10px}
+#v16RateBusinessModal :is(.modal-head strong,.ve-review-average,.ve-review-result,.ve-review-avatar) svg,
+#adminModal .ve-ticket-design h3>svg{width:20px;height:20px;flex:none;fill:none;stroke:currentColor;stroke-width:1.8}
+#v16RateBusinessModal :is(.ve-review-summary,.ve-review-compose,.v16-review-card){margin:0;background:var(--ui-surface)!important;border-color:var(--ui-border)!important}
+#v16RateBusinessModal :is(.ve-review-summary,.ve-review-compose-footer,.ve-review-list-head,.v16-review-card header){display:flex;align-items:center;justify-content:space-between;gap:8px 12px;flex-wrap:wrap}
+#v16RateBusinessModal .ve-review-summary[hidden]{display:none}
+#v16RateBusinessModal :is(.ve-review-average,.ve-review-result){display:inline-flex;align-items:center;gap:6px;color:var(--ui-link);font-weight:750}
+#v16RateBusinessModal :is(.ve-review-filters,.v14-stars){display:flex;gap:4px;flex-wrap:wrap;justify-content:center}
+#v16RateBusinessModal .ve-review-filters .chip{min-height:36px;color:var(--ui-text);background:var(--ui-raised);border:1px solid var(--ui-border)}
+#v16RateBusinessModal .ve-review-filters [aria-pressed=true]{background:var(--ui-action);color:var(--ui-on-action)}
+#v16RateBusinessModal .v14-review-grid{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:8px;margin-block:12px}
+#v16RateBusinessModal .v14-score{min-width:0;text-align:center;padding:8px 4px;background:var(--ui-raised);border:1px solid var(--ui-border);border-radius:12px;color:var(--ui-text)}
+#v16RateBusinessModal .v14-star{min-width:0!important;width:clamp(35px,5vw,44px);padding:0;background:transparent;color:var(--ui-link)!important;border:1px solid transparent}
+#v16RateBusinessModal .v14-star:hover{background:var(--ui-field);border-color:var(--ui-border)}
+#v16RateBusinessModal .ve-review-score{color:var(--ui-muted);font-size:.8rem}
+#v16RateBusinessModal #v16Comment{display:block;width:100%;min-height:82px;resize:vertical}
+#v16RateBusinessModal .ve-review-compose-footer{margin-top:8px}
+#v16RateBusinessModal .ve-review-list h3,#v16RateBusinessModal .ve-review-list-head p{margin:0 0 4px}
+#v16RateBusinessModal #v16ReviewRows{display:grid;gap:8px;margin-top:8px}
+#v16RateBusinessModal .ve-review-avatar{width:36px;height:36px;display:grid;place-items:center;flex:none;background:var(--ui-raised);color:var(--ui-link);border:1px solid var(--ui-border);border-radius:50%}
+#v16RateBusinessModal .v16-review-card p{white-space:pre-wrap;overflow-wrap:anywhere}
+#v16RateBusinessModal :is(button,textarea):focus-visible,#adminModal .ve-ticket-design :is(button,input,select,summary):focus-visible{outline:2px solid var(--ui-focus);outline-offset:2px}
+html body #adminModal .ve-ticket-design{grid-template-columns:minmax(0,1.14fr) minmax(230px,.86fr);align-items:start;gap:14px}
+#adminModal .ve-ticket-design .ticket-controls{display:grid;gap:10px}
+html body #adminModal .ve-ticket-design :is(.ticket-controls,.ticket-preview-column)>.section-card{margin:0;background:var(--ui-surface)!important;border-color:var(--ui-border)!important}
+#adminModal .ve-ticket-design h3{display:flex;align-items:center;gap:8px;margin:0 0 8px}
+#adminModal .ve-ticket-design .permission-grid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:6px;margin-top:8px}
+#adminModal .ve-ticket-design .permission-option{display:flex;align-items:center;justify-content:space-between;gap:6px;min-height:40px;padding:6px 8px;background:var(--ui-raised);border:1px solid var(--ui-border);border-radius:10px}
+#adminModal .ve-ticket-design .permission-option input{appearance:none;order:1;display:grid;align-items:center;width:34px;height:20px;flex:none;padding:2px;min-height:0;border-radius:20px;background:var(--ui-field)!important;border:1px solid var(--ui-border)!important;cursor:pointer}
+#adminModal .ve-ticket-design .permission-option input::before{content:"";width:13px;height:13px;border-radius:50%;background:var(--ui-link)}
+#adminModal .ve-ticket-design .permission-option input:checked{background:var(--ui-action)!important}
+#adminModal .ve-ticket-design .permission-option input:checked::before{justify-self:end;background:var(--ui-on-action)}
+#adminModal .ve-ticket-design .ve-ticket-formats{display:flex;gap:6px;flex-wrap:wrap;grid-column:1/-1}
+html body #adminModal .ve-ticket-design .ve-ticket-formats [aria-pressed=true]{border-color:var(--ui-focus)!important;background:var(--ui-action)!important;color:var(--ui-on-action)!important}
+html body #adminModal .ve-ticket-design .ticket-canvas-preview{background:var(--ui-stage)!important;overflow:visible;padding:clamp(8px,2vw,18px)}
+#adminModal .ve-ticket-design .ticket-canvas-preview>svg{max-width:min(100%,380px)}
+#adminModal .ve-ticket-design #tvIconPicker{max-height:none;overflow:visible}
+#adminModal .ve-ticket-design .ve-ticket-advanced summary{cursor:pointer;font-weight:750}
+#adminModal .ve-ticket-design .ve-ticket-advanced .section-card{margin-top:8px}
+@media(max-width:1050px){
+ html body #adminModal .ve-ticket-design{grid-template-columns:minmax(0,1fr)}
+ #adminModal .ve-ticket-design .ticket-preview-column{position:static}
+}
+@media(max-width:660px){
+ #v16RateBusinessModal .v14-review-grid{grid-template-columns:minmax(0,1fr)}
+ #adminModal .ve-ticket-design .permission-grid{grid-template-columns:minmax(0,1fr)}
+}
+#v16RateBusinessModal:not(.show){visibility:hidden}
+#v16RateBusinessModal.show{visibility:visible}
+#v16RateBusinessModal button:disabled{opacity:1;color:var(--ui-muted);cursor:not-allowed}
+@media(prefers-reduced-motion:reduce){
+ #v16RateBusinessModal,#v16RateBusinessModal button,#adminModal .ve-ticket-design button{transition:none!important;animation:none!important}
+}
+#adminModal .ve-ticket-design .field[hidden]{display:none!important}
+#adminModal .ve-ticket-design .permission-option span{min-width:0;overflow-wrap:anywhere}
 @media(hover:hover){
  html body #vibraReserveShell :is(.vibra-room-choice,#vibraReserveClose,.vibra-ghost-btn):hover:not(:disabled){background:var(--ve-fx-wash)!important;border-color:var(--art-focus)!important}
  html body #vibraReserveShell .v9action:hover:not(:disabled){background:var(--ve-fx-bright)!important}
