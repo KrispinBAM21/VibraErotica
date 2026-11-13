@@ -5618,33 +5618,84 @@ setTimeout(()=>{renderTrackingButtons();ensureBusinessTrigger()},800);
 .v17-route-popup{min-width:230px}.v17-route-popup h4{margin:0 0 6px}.v17-route-popup p{margin:4px 0;font-size:12px}.v17-route-popup .btn{width:100%;margin-top:8px;justify-content:center}
 .v17-user-pin{width:18px;height:18px;border-radius:50%;background:#1976d2;border:4px solid white;box-shadow:0 3px 10px #0006}
 
-/* NUEVO: composición de Cupones de descuento sobre los tokens compartidos. */
-#adminModal :is(.coupon-kpis,.coupon-editor){display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:12px}
-#adminModal .coupon-editor{grid-template-columns:minmax(0,1.2fr) minmax(0,.8fr);align-items:start}
-#adminModal .coupon-kpis strong{display:block;font-size:1.35rem;color:var(--ui-link)!important}
-#adminModal .coupon-preview{position:sticky;top:0}
-#adminModal .coupon-paper{padding:14px;margin-block:10px;background:linear-gradient(135deg,var(--ui-raised),var(--ui-surface));border:1px dashed var(--ui-border);border-radius:14px;overflow-wrap:anywhere}
-#adminModal .coupon-paper code,#adminModal .coupon-benefit{display:block;color:var(--ui-link)!important}
-#adminModal .coupon-benefit{font-size:1.8rem}
-#adminModal .coupon-state{display:inline-block;padding:3px 7px;border:1px solid var(--ui-border);border-radius:999px;color:var(--ui-link)!important}
-#adminModal .coupon-list-head{display:flex;gap:8px;align-items:end;flex-wrap:wrap}
-#adminModal .coupon-list-head h3{margin-inline-end:auto}
-#adminModal .coupon-record{display:grid;grid-template-columns:minmax(0,1fr) minmax(0,3fr) minmax(0,1.2fr);gap:10px;align-items:center;overflow-wrap:anywhere}
-#adminModal .coupon-record[hidden],#adminModal [data-coupon-empty][hidden]{display:none!important}
-#adminModal .coupon-record-info{display:grid;grid-template-columns:.7fr 1.4fr .8fr auto;gap:7px;align-items:center}
-#adminModal .coupon-record small{display:block;color:var(--ui-muted)!important}
-#adminModal .coupon-record progress{display:block;width:100%;accent-color:var(--ui-action)}
-#adminModal .coupon-record .toolbar{margin:0}
-@media(max-width:1050px){#adminModal .coupon-record{grid-template-columns:minmax(0,1fr)}}
-@media(max-width:760px){
- #adminModal .coupon-editor{grid-template-columns:minmax(0,1fr)}
- #adminModal .coupon-preview{position:static}
- #adminModal .coupon-record-info{grid-template-columns:repeat(2,minmax(0,1fr))}
+/* MODIFICADO: composición de Cupones según el ancho disponible dentro del panel. */
+#adminModal #adminContent:has(>.coupon-workspace){container:coupon-panel / inline-size}
+#adminModal .coupon-workspace{display:grid;gap:16px;min-width:0;color:var(--ui-text);font-size:.8125rem;line-height:1.4}
+#adminModal .coupon-workspace :is(h3,h4,p){margin:0}
+#adminModal .coupon-workspace h3{font-size:1rem}
+#adminModal .coupon-workspace small{color:var(--ui-muted);font-size:.72rem}
+#adminModal .coupon-workspace :is(.section-card,.coupon-paper){min-width:0}
+#adminModal #adminContent .coupon-workspace .section-card{padding:14px;margin:0;border-radius:14px;box-shadow:var(--ui-shadow)}
+.coupon-kpis,.coupon-editor,.v17-coupon-admin-grid,.coupon-dates{display:grid;gap:12px;min-width:0}
+.coupon-kpis{grid-template-columns:repeat(2,minmax(0,1fr))}
+#adminModal #adminContent .coupon-kpis .section-card{padding:8px 12px;border-inline-start:3px solid var(--ui-link)}
+.coupon-kpis strong{display:block;font-size:1.25rem;color:var(--ui-link);line-height:1.2}
+.coupon-editor{grid-template-columns:minmax(0,1fr);align-items:start;gap:16px}
+.coupon-editor>*,.coupon-side,.coupon-dates>*,.v17-coupon-admin-grid>*{min-width:0}
+.coupon-side,.coupon-form{display:grid;gap:12px}
+.coupon-form-head{display:flex;gap:8px;align-items:center;border-bottom:1px solid var(--ui-border);padding-bottom:10px}
+.coupon-form-head>svg{width:19px;height:19px;flex:none;color:var(--ui-link)}
+.v17-coupon-admin-grid{grid-template-columns:repeat(2,minmax(0,1fr))}
+.coupon-form-wide{grid-column:1/-1}
+.coupon-code-row{display:grid;grid-template-columns:minmax(0,1fr) auto;gap:8px;align-items:end}
+.coupon-dates{grid-template-columns:repeat(auto-fit,minmax(min(100%,238px),1fr))}
+.coupon-workspace .field{margin:0;display:grid;gap:4px;min-width:0}
+.coupon-workspace .field>:is(span,label){font-weight:700;font-size:.74rem}
+html body #adminModal #adminContent .coupon-workspace :is(.input,.select,.textarea){box-sizing:border-box;width:100%;min-width:0;max-width:100%;margin:0;padding:5px 8px;border-radius:8px;font:inherit;color:var(--ui-text)!important;background:var(--ui-field)!important}
+.coupon-workspace :is(.input,.select){height:34px;min-height:34px}
+.coupon-workspace .textarea{min-height:72px;resize:vertical}
+.coupon-workspace .date-control{display:grid;grid-template-columns:minmax(0,1fr) auto auto;gap:4px;min-width:0;max-width:100%}
+#adminModal .coupon-workspace .date-control>input{color-scheme:light}
+body.dark-mode #adminModal .coupon-workspace .date-control>input{color-scheme:dark}
+.coupon-workspace .date-control input::-webkit-datetime-edit{padding:0}
+.coupon-workspace .date-control input::-webkit-calendar-picker-indicator{padding:0;margin:0}
+html body #adminModal #adminContent .coupon-workspace .date-control>.icon-btn{width:32px;height:34px;min-width:32px;min-height:34px;padding:4px;background:var(--ui-raised)!important;color:var(--ui-link)!important;border:1px solid var(--ui-border)}
+html body #adminModal #adminContent .coupon-workspace .btn{min-height:34px;padding:5px 9px;border-radius:8px;font-size:.75rem;white-space:normal;line-height:1.25;gap:5px;transition:background .2s,border-color .2s,box-shadow .2s,translate .2s}
+.coupon-workspace :is(.btn,.icon-btn)>svg{display:block;width:15px;height:15px;flex:none;opacity:1;visibility:visible;color:inherit}
+.coupon-workspace :is(.btn,.icon-btn):disabled{opacity:1;border-style:dashed}
+.coupon-workspace :is(.btn,.icon-btn):active:not(:disabled){translate:0 1px}
+.coupon-workspace :is(button,input,select,textarea):focus-visible{outline:2px solid var(--ui-focus);outline-offset:2px}
+.coupon-workspace .toolbar{display:flex;gap:6px;flex-wrap:wrap;margin:0}
+.coupon-footer{padding-top:9px;border-top:1px solid var(--ui-border)}
+html body #adminModal #adminContent .coupon-workspace #v17CouponSave{flex:1;background:linear-gradient(110deg,var(--ui-action),var(--ui-purple))!important;color:var(--ui-on-action)!important;box-shadow:0 3px 12px var(--ui-glow)}
+.coupon-switch{display:flex;align-items:center;justify-content:space-between;gap:8px;padding:9px;border:1px solid var(--ui-border);border-radius:9px;background:var(--ui-field)}
+.coupon-switch input{accent-color:var(--ui-action);flex:none}
+.coupon-preview{display:grid;gap:10px}
+.coupon-preview-head,.coupon-paper-head,.coupon-paper-main,.coupon-paper-footer,.coupon-list-head{display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:8px}
+.coupon-preview-head h3::before{content:"";display:inline-block;width:7px;height:7px;border-radius:50%;background:var(--ui-link);margin-inline-end:6px}
+.coupon-paper{display:grid;gap:10px;padding:14px;background:var(--ui-feature);border:1px solid var(--ui-border);border-radius:12px;overflow-wrap:anywhere;box-shadow:0 2px 12px var(--ui-glow)}
+.coupon-paper-main{border-block:1px dashed var(--ui-border);padding-block:9px}
+.coupon-paper-main strong{color:var(--ui-link);font-size:1.35rem}
+.coupon-paper-footer code{padding:4px 7px;border-radius:6px;background:var(--ui-field);color:var(--ui-link);overflow-wrap:anywhere}
+.coupon-state{display:inline-block;padding:3px 7px;border:1px solid var(--ui-border);border-radius:999px;color:var(--ui-link);font-weight:700}
+.coupon-list-head{padding-bottom:10px;border-bottom:1px solid var(--ui-border)}
+.coupon-list-head h3{margin-inline-end:auto}
+.coupon-list-head label{flex:0 1 155px}
+.v17-coupon-admin-list{display:grid;gap:6px;margin-top:8px}
+.coupon-record{display:grid;gap:8px;min-width:0;padding:8px;border:1px solid var(--ui-border);border-radius:9px;overflow-wrap:anywhere;align-items:center}
+.coupon-record-info{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:7px;align-items:center}
+.coupon-record small{display:block}
+.coupon-record progress{display:block;width:100%;accent-color:var(--ui-action)}
+.coupon-workspace [hidden]{display:none!important}
+@container coupon-panel (min-width:760px){.coupon-editor{grid-template-columns:minmax(0,7fr) minmax(0,5fr)}}
+@container coupon-panel (min-width:840px){
+ .coupon-record{grid-template-columns:minmax(0,1.3fr) minmax(0,3.3fr) auto}
+ .coupon-record-info{grid-template-columns:minmax(0,.7fr) minmax(0,1.35fr) minmax(0,1fr) auto}
 }
-@media(hover:hover){#adminModal .coupon-record:hover{border-color:var(--ui-link)}}
-@media(prefers-reduced-motion:no-preference){#adminModal .coupon-record{transition:border-color .18s ease}}
-.v17-coupon-admin-grid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:12px}.v17-coupon-admin-list{display:grid;gap:10px}.v17-coupon-admin-card{border:1px solid var(--line);border-radius:14px;padding:13px}.v17-coupon-admin-card .row{justify-content:space-between;gap:10px;flex-wrap:wrap}
-@media(max-width:720px){.v17-coupon-admin-grid{grid-template-columns:1fr}}
+@container coupon-panel (max-width:460px){
+ .v17-coupon-admin-grid,.coupon-code-row{grid-template-columns:minmax(0,1fr)}
+ .coupon-workspace .date-control{grid-template-columns:minmax(0,1fr) minmax(0,1fr)}
+ .coupon-workspace .date-control>input{grid-column:1/-1}
+}
+@media(hover:hover){html body #adminModal #adminContent .coupon-workspace :is(.btn,.icon-btn):hover:not(:disabled){border-color:var(--ui-focus)!important;box-shadow:0 0 9px var(--ui-glow)}}
+@media(pointer:coarse){
+ html body #adminModal #adminContent .coupon-workspace :is(.btn,.date-control>.icon-btn){min-height:44px}
+ .coupon-workspace .date-control{grid-template-columns:minmax(0,1fr) minmax(0,1fr)}
+ .coupon-workspace .date-control>input{grid-column:1/-1}
+}
+@media(prefers-reduced-motion:reduce){.coupon-workspace :is(.btn,.icon-btn){transition:none!important;translate:none!important}}
+.coupon-list-head .field>span{display:flex;align-items:center;gap:5px}
+.coupon-list-head .field>span svg{width:13px;height:13px;flex:none;color:var(--ui-link)}
 </style>
 <script id="vibraerotica-v17-enhancements">
 (function(){
@@ -5762,7 +5813,7 @@ async function v17RenderCouponsAdmin(c){
   const current=()=>activeAdmin==='coupons'&&c.isConnected;
   let rows=[];try{rows=(await v17CouponRpc('admin_list',{})).coupons||[]}catch(e){if(!current())return;c.innerHTML='<div class="notice">Instala la migración V17 para habilitar cupones.<br>'+esc(e.message)+'</div>';return}
   if(!current())return;
-  c.innerHTML=`<!-- MODIFICADO --><div class="coupon-workspace"><div class="coupon-kpis"></div><div class="coupon-editor"><section class="section-card"><h3 data-coupon-title>Crear cupón</h3><input type="hidden" id="v17CouponId"><div class="v17-coupon-admin-grid"><label class="field"><span>Código</span><input class="input" id="v17CouponCode" maxlength="32" placeholder="VEROTICA-XXXXXXXX"></label><label class="field"><span>Título</span><input class="input" id="v17CouponTitle" maxlength="120" placeholder="10% de bienvenida"></label><label class="field"><span>Tipo</span><select class="select" id="v17CouponType"><option value="percent">Porcentaje</option><option value="fixed">Cantidad fija</option></select></label><label class="field"><span data-coupon-unit>Valor (%)</span><input class="input" id="v17CouponValue" type="number" min="0.01" step="0.01" value="10"></label><label class="field"><span>Compra mínima</span><input class="input" id="v17CouponMin" type="number" min="0" step="0.01" value="0"></label><label class="field"><span>Máximo de usos totales (vacío = sin límite)</span><input class="input" id="v17CouponMax" type="number" min="1"></label><label class="field"><span>Inicio (UTC)</span><input class="input" id="v17CouponStart" type="datetime-local"></label><label class="field"><span>Fin (UTC)</span><input class="input" id="v17CouponEnd" type="datetime-local"></label></div><div class="toolbar"><button type="button" class="btn secondary" data-coupon-days="7">+7 días</button><button type="button" class="btn secondary" data-coupon-days="30">+30 días</button><button type="button" class="btn ghost" data-coupon-days="">Sin fecha de fin</button></div><label class="field"><span>Descripción</span><textarea class="textarea" id="v17CouponDesc" maxlength="500"></textarea></label><label class="row"><input type="checkbox" id="v17CouponActive" checked> Cupón activo</label><div class="toolbar"><button class="btn" id="v17CouponSave">${UI.save}<span>Guardar cupón</span></button><button class="btn secondary" id="v17CouponGenerate">Generar código VEROTICA</button><button class="btn secondary" id="v17CouponClear">Nuevo / limpiar</button></div></section><aside class="section-card coupon-preview"><h3>Vista previa</h3><p class="small muted" data-coupon-draft></p><div class="coupon-paper" data-coupon-preview></div><button type="button" class="btn secondary" data-coupon-copy disabled>${UI.copy}<span>Copiar código</span></button></aside></div><section class="section-card"><div class="coupon-list-head"><h3>Cupones creados <span data-coupon-count></span></h3><label class="field">Buscar<input class="input" type="search" data-coupon-search placeholder="Código o concepto"></label><label class="field">Estado<select class="select" data-coupon-filter><option value="">Todos</option><option>Activo</option><option>Programado</option><option>Desactivado</option><option>Expirado</option><option>Agotado</option></select></label></div><div class="v17-coupon-admin-list">${rows.map(x=>`<article class="v17-coupon-admin-card coupon-record" data-coupon-record="${esc(x.id)}"><div><strong>${esc(x.code)}</strong><p>${esc(x.title)}</p></div><div class="coupon-record-info" data-coupon-record-info></div><div class="toolbar"><button class="btn secondary" data-v17-edit-coupon="${esc(x.id)}">${UI.edit}<span>Editar</span></button><button class="btn ghost" data-v17-delete-coupon="${esc(x.id)}">${UI.trash}<span>Eliminar</span></button></div></article>`).join('')}</div><p class="notice" data-coupon-empty hidden></p></section></div>`;
+  c.innerHTML=`<!-- MODIFICADO --><div class="coupon-workspace"><div class="coupon-kpis"></div><div class="coupon-editor"><section class="section-card coupon-form"><header class="coupon-form-head">${UI.receipt}<div><h3 data-coupon-title>Crear cupón</h3><p>Configura el beneficio, sus condiciones y la vigencia.</p></div></header><input type="hidden" id="v17CouponId"><div class="v17-coupon-admin-grid"><div class="coupon-code-row coupon-form-wide"><label class="field"><span>Código</span><input class="input" id="v17CouponCode" maxlength="32" placeholder="VEROTICA-XXXXXXXX"></label><button type="button" class="btn secondary" id="v17CouponGenerate">${UI.refresh}<span>Generar código</span></button></div><label class="field coupon-form-wide"><span>Título</span><input class="input" id="v17CouponTitle" maxlength="120" placeholder="10% de bienvenida"></label><label class="field"><span>Tipo</span><select class="select" id="v17CouponType"><option value="percent">Porcentaje</option><option value="fixed">Cantidad fija</option></select></label><label class="field"><span data-coupon-unit>Valor (%)</span><input class="input" id="v17CouponValue" type="number" min="0.01" step="0.01" value="10"></label><label class="field"><span>Compra mínima</span><input class="input" id="v17CouponMin" type="number" min="0" step="0.01" value="0"></label><label class="field"><span>Máximo de usos totales (vacío = sin límite)</span><input class="input" id="v17CouponMax" type="number" min="1"></label><div class="coupon-dates coupon-form-wide"><div class="field"><label for="v17CouponStart">Inicio (UTC)</label><input class="input" id="v17CouponStart" type="datetime-local"></div><div class="field"><label for="v17CouponEnd">Fin (UTC)</label><input class="input" id="v17CouponEnd" type="datetime-local"></div></div></div><div class="toolbar"><button type="button" class="btn secondary" data-coupon-days="7">+7 días</button><button type="button" class="btn secondary" data-coupon-days="30">+30 días</button><button type="button" class="btn ghost" data-coupon-days="">Sin fecha de fin</button></div><label class="field"><span>Descripción</span><textarea class="textarea" id="v17CouponDesc" maxlength="500"></textarea></label><label class="coupon-switch"><span><strong>Cupón activo</strong><small> Sujeto a vigencia y límites.</small></span><input type="checkbox" id="v17CouponActive" checked></label><div class="toolbar coupon-footer"><button class="btn" id="v17CouponSave">${UI.save}<span>Guardar cupón</span></button><button type="button" class="btn secondary" id="v17CouponClear">${UI.trash}<span>Nuevo / Limpiar</span></button></div></section><aside class="coupon-side"><section class="section-card coupon-preview"><header class="coupon-preview-head"><h3>Vista previa en vivo</h3><small data-coupon-draft></small></header><div class="coupon-paper"><div data-coupon-preview></div><div class="coupon-paper-footer"><code data-coupon-code></code><button type="button" class="btn secondary" data-coupon-copy disabled>${UI.copy}<span>Copiar código</span></button></div></div></section><section class="section-card"><p>La vista previa refleja la configuración del formulario. La aplicación del descuento está sujeta a las condiciones del cupón.</p></section></aside></div><section class="section-card"><div class="coupon-list-head"><h3>Cupones creados <span data-coupon-count></span></h3><label class="field"><span>${UI.search} Buscar cupón</span><input class="input" type="search" data-coupon-search placeholder="Código o concepto"></label><label class="field"><span><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" aria-hidden="true"><path d="M3 5h18l-7 8v5l-4 2v-7z"/></svg> Estado</span><select class="select" data-coupon-filter><option value="">Todos</option><option>Activo</option><option>Programado</option><option>Desactivado</option><option>Expirado</option><option>Agotado</option></select></label></div><div class="v17-coupon-admin-list">${rows.map(x=>`<article class="v17-coupon-admin-card coupon-record" data-coupon-record="${esc(x.id)}"><div><strong>${esc(x.code)}</strong><p>${esc(x.title)}</p></div><div class="coupon-record-info" data-coupon-record-info></div><div class="toolbar"><button class="btn secondary" data-v17-edit-coupon="${esc(x.id)}">${UI.edit}<span>Editar</span></button><button class="btn ghost" data-v17-delete-coupon="${esc(x.id)}">${UI.trash}<span>Eliminar</span></button></div></article>`).join('')}</div><p class="notice" data-coupon-empty hidden></p></section></div>`;
   // NUEVO: indicadores, vista previa y filtros sobre los registros del módulo.
   const workspace=c.querySelector('.coupon-workspace');
   const q=selector=>c.querySelector(selector),field=name=>q('#v17Coupon'+name);
@@ -5785,7 +5836,13 @@ async function v17RenderCouponsAdmin(c){
    q('[data-coupon-title]').textContent=row.id?'Editar cupón':'Crear cupón';
    q('[data-coupon-unit]').textContent=row.discount_type==='fixed'?'Valor (MXN)':'Valor (%)';
    q('[data-coupon-draft]').textContent=dirty()||!row.id?'Borrador · sin guardar':'Configuración guardada';
-   paper.innerHTML='<span class="coupon-state">'+couponState(model)+'</span><h4>'+esc(row.title||'Título del cupón')+'</h4><strong class="coupon-benefit">'+esc(v17CouponLabel(row))+'</strong><code>'+esc(row.code||'Código del cupón')+'</code><p>'+esc(dates(model))+'</p><p>Compra mínima: '+esc(money(Number(row.min_subtotal)))+' · '+(row.max_total_uses==null?'Sin límite total':esc(row.max_total_uses)+' usos máximos')+'</p><p>'+esc(row.description)+'</p>';
+   // MODIFICADO: la tarjeta separa el beneficio, la vigencia y el código.
+   paper.innerHTML=`<div class="coupon-paper-head"><small>Cupón de descuento</small><span class="coupon-state">${couponState(model)}</span></div>
+     <h4>${esc(row.title||'Título del cupón')}</h4>
+     <div class="coupon-paper-main"><div><small>Beneficio</small><strong>${esc(v17CouponLabel(row))}</strong></div><div><small>Vigencia (UTC)</small>${esc(dates(model))}</div></div>
+     <p>Compra mínima: ${esc(money(Number(row.min_subtotal)))} · ${row.max_total_uses==null?'Sin límite total':esc(row.max_total_uses)+' usos máximos'}</p>
+     ${row.description?`<p>${esc(row.description)}</p>`:''}`;
+   q('[data-coupon-code]').textContent=row.code||'Código del cupón';
    q('[data-coupon-copy]').disabled=!row.code;
   }
   function filterList(){
