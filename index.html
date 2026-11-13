@@ -270,6 +270,72 @@ body.dialog-open{overflow:hidden}.ticket-editor{display:grid;grid-template-colum
 /* Keep Leaflet panes and controls inside their map stacking context. */
 .leaflet-container{position:relative;z-index:0;isolation:isolate}
 </style>
+<style>
+/* NUEVO: composición de Ofertas relámpago con los tokens del panel. */
+#adminModal .flash-admin{display:grid;gap:18px;color:var(--ui-text);min-width:0}
+.flash-admin h2,.flash-admin h3,.flash-admin h4,.flash-admin p{margin:0}
+.flash-admin small,.flash-admin p,.flash-admin del{color:var(--ui-muted)}
+.flash-admin small{display:block}
+.flash-admin .flash-box{min-width:0;display:grid;gap:14px;padding:clamp(12px,2vw,22px);border:1px solid var(--ui-border);border-radius:16px;background:var(--ui-surface);box-shadow:var(--ui-shadow)}
+.flash-admin .flash-head{grid-template-columns:auto minmax(0,1fr) auto;align-items:center;background:var(--ui-hero);color:var(--ui-on-action)}
+html body #adminModal #adminContent .flash-admin .flash-head :is(h2,small,p){color:var(--ui-on-action)!important}
+.flash-icon{display:grid;place-items:center;width:44px;height:44px;border-radius:12px;background:var(--ui-action);color:var(--ui-on-action)}
+.flash-session{display:grid;justify-items:end;gap:5px;overflow-wrap:anywhere}
+.flash-metrics,.flash-editor,.flash-fields,.flash-search{display:grid;gap:12px;min-width:0}
+.flash-metrics{grid-template-columns:repeat(2,minmax(0,1fr))}
+.flash-metrics .flash-box{border-inline-start:3px solid var(--ui-link);gap:4px}
+.flash-metrics strong{font-size:1.45rem}
+.flash-editor{grid-template-columns:minmax(0,1.45fr) minmax(240px,1fr);align-items:start;gap:18px}
+.flash-aside{display:grid;gap:14px;min-width:0}
+.flash-fields{grid-template-columns:repeat(auto-fit,minmax(min(100%,140px),1fr))}
+.flash-search{grid-template-columns:minmax(0,1fr) minmax(0,.65fr);align-items:end}
+.flash-admin :is(.field,label){min-width:0}
+.flash-admin .field{margin:0}
+.flash-admin .input{width:100%;min-width:0;margin:0;background:var(--ui-field);color:var(--ui-text);border-color:var(--ui-border)}
+.flash-admin .input::placeholder{color:var(--ui-muted);opacity:1}
+.flash-admin :is(button,input,select):focus-visible{outline:2px solid var(--ui-focus);outline-offset:2px}
+.flash-admin .btn{min-height:36px;white-space:normal;transition:background .22s ease,border-color .22s ease,box-shadow .22s ease,transform .22s ease}
+.flash-admin .btn.secondary,.flash-admin .btn.ghost{background:var(--ui-raised);color:var(--ui-text);border-color:var(--ui-border)}
+html body #adminModal #adminContent .flash-admin .btn[aria-pressed=true]{background:var(--ui-action)!important;color:var(--ui-on-action)!important;border-color:var(--ui-focus)!important}
+.flash-admin #marketingSave{background:var(--ui-action);color:var(--ui-on-action)}
+.flash-admin .btn:disabled{opacity:1;border-style:dashed;color:var(--ui-text);background:var(--ui-raised)}
+.flash-admin input[type=datetime-local]{color-scheme:light}
+body.dark-mode .flash-admin input[type=datetime-local]{color-scheme:dark}
+.flash-admin .btn:active:not(:disabled){transform:scale(.97)}
+.flash-admin .flash-actions{display:flex;flex-wrap:wrap;gap:6px;align-items:center}
+.flash-admin .flash-products-head{display:flex;flex-wrap:wrap;align-items:end;justify-content:space-between;gap:8px}
+.flash-enabled,.flash-product{display:grid;gap:10px;align-items:center;padding:9px 10px;border-radius:12px;border:1px solid var(--ui-border);background:var(--ui-field);cursor:pointer}
+.flash-enabled{grid-template-columns:auto minmax(0,1fr)}
+.flash-product{grid-template-columns:auto 42px minmax(0,1fr) auto;transition:background .22s ease,border-color .22s ease,box-shadow .22s ease}
+.flash-product:has(:checked),.flash-enabled:has(:checked){background:var(--ui-raised);border-color:var(--ui-link)}
+.flash-admin input[type=checkbox]{accent-color:var(--ui-action)}
+.flash-admin [hidden]{display:none!important}
+#flashProducts,#flashPreviewProducts{display:grid;gap:6px}
+.flash-thumb{display:grid;place-items:center;width:42px;height:42px;background:var(--ui-stage);border-radius:8px;overflow:hidden}
+.flash-thumb :is(img,svg){width:100%;height:100%;object-fit:contain}
+.flash-prices{text-align:end}
+.flash-prices strong,.flash-preview-item span{color:var(--ui-link)}
+.flash-preview{display:grid;gap:10px;border:1px solid var(--ui-border);border-radius:14px;background:var(--ui-feature);padding:12px}
+.flash-preview-top,.flash-preview-item{display:flex;flex-wrap:wrap;justify-content:space-between;gap:6px}
+.flash-preview-item{background:var(--ui-field);border-radius:8px;padding:7px}
+.flash-badge,.flash-preview-top strong{border-radius:999px;background:var(--ui-raised);color:var(--ui-link);padding:3px 8px;font-weight:700}
+.flash-footer{padding-top:10px;border-top:1px solid var(--ui-border)}
+.flash-table{border-collapse:collapse;width:100%;font-size:.87rem}
+.flash-table :is(th,td){border-bottom:1px solid var(--ui-border);padding:8px;text-align:start;overflow-wrap:anywhere}
+@media(hover:hover){.flash-admin :is(.btn:not(:disabled),.flash-product):hover{border-color:var(--ui-link);box-shadow:0 0 12px var(--ui-glow)}}
+@media(max-width:1050px){.flash-editor{grid-template-columns:1fr}}
+@media(max-width:760px){
+ .flash-table,.flash-table tbody,.flash-table tr,.flash-table td{display:block}
+ .flash-table thead{position:absolute;clip-path:inset(50%);width:1px;height:1px;overflow:hidden}
+ .flash-table tr{border:1px solid var(--ui-border);border-radius:12px;margin-bottom:8px;padding:6px}
+ .flash-table td{display:grid;grid-template-columns:minmax(70px,.55fr) minmax(0,1fr);gap:8px;border:0}
+ .flash-table td::before{content:attr(data-label);color:var(--ui-muted)}
+ .flash-admin .flash-head{grid-template-columns:auto minmax(0,1fr)}
+ .flash-session{grid-column:1/-1;justify-items:start}
+}
+@media(max-width:440px){.flash-search{grid-template-columns:1fr}.flash-prices{grid-column:3;text-align:start}}
+@media(prefers-reduced-motion:reduce){.flash-admin :is(.btn,.flash-product){transition:none;transform:none!important}}
+</style>
 <style>.subscription-notice{margin-top:16px}.billing-method,.billing-payment{padding:16px 0;border-bottom:1px solid var(--line);overflow-wrap:anywhere}.billing-method .toolbar,.billing-payment .toolbar{flex-wrap:wrap}.billing-payment h4{margin:0 0 8px}.subscription-notice p{margin:0 0 12px}</style><style>.date-control{display:flex;align-items:center;gap:6px}.date-control>.input{min-width:0;flex:1}.date-control>.icon-btn{flex:0 0 40px;width:40px;height:40px}.date-control input{color-scheme:light}body.dark-mode .date-control input,#adminModal .date-control input{color-scheme:dark}.date-picker-fields{display:grid;grid-template-columns:1fr 1fr;gap:14px}.flash-offers{margin-top:16px;margin-bottom:18px}.flash-offer-list{display:grid;grid-template-columns:repeat(auto-fit,minmax(260px,1fr));gap:14px}.flash-offer{padding:18px;border:1px solid var(--primary);border-radius:16px;background:var(--card);min-width:0}.flash-offer h3{margin:0 0 10px}.flash-clock{display:flex;align-items:center;gap:8px;font-variant-numeric:tabular-nums;font-size:.9rem;flex-wrap:wrap}.flash-clock svg,.offer-clock-icon{width:20px;height:20px;fill:none;stroke:currentColor;flex:0 0 20px}.combo-products{display:grid;grid-template-columns:repeat(auto-fit,minmax(180px,1fr));gap:12px}.combo-item{border:1px solid var(--line);border-radius:12px;padding:12px;min-width:0}.combo-photo{height:150px;display:grid;place-items:center;overflow:hidden}.combo-photo img{height:100%;width:100%;object-fit:contain}.combo-photo svg{height:90px;width:90px;fill:none;stroke:currentColor}.combo-item .btn{width:100%}.product-card,.icon-btn,.btn,.icon-option{transition:transform .2s ease,box-shadow .2s ease,border-color .2s ease}.product-card:focus-within{border-color:var(--primary)}@media(hover:hover){.product-card:hover{transform:translateY(-4px);box-shadow:0 12px 26px #0002;border-color:var(--primary)}.icon-btn:hover svg,.btn:hover svg{transform:scale(1.12)}}.icon-btn svg,.btn svg{transition:transform .18s ease}.icon-btn:active,.btn:active{transform:scale(.97)}.product-card .product-visual img{transition:transform .3s ease}@media(hover:hover){.product-card:hover .product-visual img{transform:scale(1.025)}}.moderation-order{padding:14px 0;border-bottom:1px solid var(--line)}.moderation-order .toolbar{flex-wrap:wrap}.ticket-footer-options{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:8px}.ticket-footer-options svg{width:24px;height:24px;fill:none;stroke:currentColor}.ticket-image-links{display:grid;gap:12px}.visitor-blocked #catalogGrid,.visitor-blocked #categoryChips,.visitor-blocked #foodDeliveryPlanner,.visitor-blocked #cartBtn,.visitor-blocked #searchWrap,.visitor-blocked #flashOffers,.visitor-blocked #orderChatBubble{display:none!important}@media(max-width:600px){.date-picker-fields{grid-template-columns:1fr}.ticket-footer-options{grid-template-columns:repeat(2,minmax(0,1fr))}}@media(prefers-reduced-motion:reduce){.product-card,.icon-btn,.btn,.icon-option,.icon-btn svg,.btn svg,.product-card .product-visual img{transition:none;transform:none!important}}
 </style><script src="https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js"></script>
 <style id="vibra-refinement-20261010">/* MODIFICADO */ 
@@ -1874,8 +1940,180 @@ const v5BasePane=renderAdminPane;renderAdminPane=async function(id){if(!['promot
 async function marketingCall(action,data={}){const r=await supabaseClient.rpc('catalog_marketing',{p_action:action,p_data:data});if(r.error)throw r.error;return r.data}
 function localDateInput(iso){if(!iso)return '';const d=new Date(iso);return new Date(d.getTime()-d.getTimezoneOffset()*60000).toISOString().slice(0,16)}
 function couponRandom(){const chars='ABCDEFGHJKLMNPQRSTUVWXYZ23456789',bytes=new Uint8Array(10);crypto.getRandomValues(bytes);return 'COMIDA-'+Array.from(bytes,b=>chars[b%chars.length]).join('')}
-async function renderMarketing(host,mode,epoch,editing){const data=await marketingCall('list');if(epoch!==panelEpoch)return;const coupon=mode==='coupons',rows=data[coupon?'coupons':'promotions'],available=state.products.filter(p=>p.active&&p.stock>0);host.innerHTML=`<div class="faithful-session"><span class="small muted">${esc(adminSession.user.email)} · Permiso de Productos</span>${panelButton('marketingLogout','Cerrar sesión',UI.lock,'ghost')}</div><div class="section-card"><h3>${coupon?'Generador de cupones':'Ofertas relámpago'}</h3><p class="small muted">El descuento se aplica únicamente a los productos seleccionados con existencias. Se utiliza el mayor descuento por producto; oferta y cupón no se suman. Las fechas usan la zona horaria de este dispositivo.</p>${panelField('marketingName',coupon?'Código del cupón':'Nombre de la promoción',editing?.[coupon?'code':'title']|| (coupon?couponRandom():''))}${coupon?panelButton('marketingGenerate','Generar otro código',UI.refresh,'secondary'):''}<div class="admin-grid two">${panelField('marketingPercent','Descuento %',editing?.percent||10,'number')}${panelField('marketingStart','Inicio opcional',localDateInput(editing?.starts_at),'datetime-local')}${panelField('marketingEnd','Finalización opcional; vacío = sin límite',localDateInput(editing?.ends_at),'datetime-local')}${coupon?panelField('marketingMaxUses','Usos totales; 0 = ilimitados',editing?.max_uses||0,'number')+panelField('marketingMinimum','Compra mínima antes de descuentos',editing?.min_subtotal||0,'number'):''}</div><label class="row"><input type="checkbox" id="marketingEnabled" ${editing?.enabled!==false?'checked':''}>Activar</label>${panelField('marketingSearch','Buscar productos disponibles','','search')}<div class="marketing-products">${available.map(p=>`<label class="marketing-product" data-product-search="${esc(p.name.toLowerCase())}"><input type="checkbox" value="${esc(p.id)}" data-marketing-product ${editing?.product_ids?.includes(p.id)?'checked':''}><span class="marketing-thumb">${productVisual(p)}</span><span>${esc(p.name)}<small>${money(p.price)} · ${p.stock} disponibles</small></span></label>`).join('')||'<p>No hay productos activos con existencias.</p>'}</div><div class="toolbar">${panelButton('marketingSave',editing?'Guardar cambios':'Crear '+(coupon?'cupón':'promoción'))}${editing?panelButton('marketingCancel','Cancelar edición',UI.close,'ghost'):''}</div></div><div class="section-card"><h3>${coupon?'Cupones creados':'Promociones creadas'}</h3>${rows.map(r=>`<article class="saved-address"><div><strong>${esc(coupon?r.code:r.title)} · ${r.percent}%</strong><p class="small">${r.enabled?'Activada':'Desactivada'} · ${r.product_ids.length} productos · ${r.ends_at?'Hasta '+esc(new Date(r.ends_at).toLocaleString('es-MX')):'Sin fecha límite'}</p>${coupon?`<p class="small">${r.used_count} usos${r.max_uses?' de '+r.max_uses:''} · Compra mínima ${money(r.min_subtotal)}</p>`:''}</div><div class="toolbar"><button class="icon-btn" data-marketing-edit="${r.id}" aria-label="Editar">${UI.edit}</button><button class="btn secondary" data-marketing-toggle="${r.id}">${r.enabled?'Desactivar':'Activar'}</button>${coupon?`<button class="icon-btn" data-coupon-copy="${esc(r.code)}" aria-label="Copiar código">${UI.copy}</button>`:''}</div></article>`).join('')||'<p>Sin registros.</p>'}</div>`;
+async function renderMarketing(host,mode,epoch,editing){const data=await marketingCall('list');if(epoch!==panelEpoch)return;
+ // MODIFICADO: el nuevo editor se limita a Ofertas relámpago.
+ if(mode==='promotions')return renderFlashAdmin(host,data.promotions,epoch,editing);
+ const coupon=mode==='coupons',rows=data[coupon?'coupons':'promotions'],available=state.products.filter(p=>p.active&&p.stock>0);host.innerHTML=`<div class="faithful-session"><span class="small muted">${esc(adminSession.user.email)} · Permiso de Productos</span>${panelButton('marketingLogout','Cerrar sesión',UI.lock,'ghost')}</div><div class="section-card"><h3>${coupon?'Generador de cupones':'Ofertas relámpago'}</h3><p class="small muted">El descuento se aplica únicamente a los productos seleccionados con existencias. Se utiliza el mayor descuento por producto; oferta y cupón no se suman. Las fechas usan la zona horaria de este dispositivo.</p>${panelField('marketingName',coupon?'Código del cupón':'Nombre de la promoción',editing?.[coupon?'code':'title']|| (coupon?couponRandom():''))}${coupon?panelButton('marketingGenerate','Generar otro código',UI.refresh,'secondary'):''}<div class="admin-grid two">${panelField('marketingPercent','Descuento %',editing?.percent||10,'number')}${panelField('marketingStart','Inicio opcional',localDateInput(editing?.starts_at),'datetime-local')}${panelField('marketingEnd','Finalización opcional; vacío = sin límite',localDateInput(editing?.ends_at),'datetime-local')}${coupon?panelField('marketingMaxUses','Usos totales; 0 = ilimitados',editing?.max_uses||0,'number')+panelField('marketingMinimum','Compra mínima antes de descuentos',editing?.min_subtotal||0,'number'):''}</div><label class="row"><input type="checkbox" id="marketingEnabled" ${editing?.enabled!==false?'checked':''}>Activar</label>${panelField('marketingSearch','Buscar productos disponibles','','search')}<div class="marketing-products">${available.map(p=>`<label class="marketing-product" data-product-search="${esc(p.name.toLowerCase())}"><input type="checkbox" value="${esc(p.id)}" data-marketing-product ${editing?.product_ids?.includes(p.id)?'checked':''}><span class="marketing-thumb">${productVisual(p)}</span><span>${esc(p.name)}<small>${money(p.price)} · ${p.stock} disponibles</small></span></label>`).join('')||'<p>No hay productos activos con existencias.</p>'}</div><div class="toolbar">${panelButton('marketingSave',editing?'Guardar cambios':'Crear '+(coupon?'cupón':'promoción'))}${editing?panelButton('marketingCancel','Cancelar edición',UI.close,'ghost'):''}</div></div><div class="section-card"><h3>${coupon?'Cupones creados':'Promociones creadas'}</h3>${rows.map(r=>`<article class="saved-address"><div><strong>${esc(coupon?r.code:r.title)} · ${r.percent}%</strong><p class="small">${r.enabled?'Activada':'Desactivada'} · ${r.product_ids.length} productos · ${r.ends_at?'Hasta '+esc(new Date(r.ends_at).toLocaleString('es-MX')):'Sin fecha límite'}</p>${coupon?`<p class="small">${r.used_count} usos${r.max_uses?' de '+r.max_uses:''} · Compra mínima ${money(r.min_subtotal)}</p>`:''}</div><div class="toolbar"><button class="icon-btn" data-marketing-edit="${r.id}" aria-label="Editar">${UI.edit}</button><button class="btn secondary" data-marketing-toggle="${r.id}">${r.enabled?'Desactivar':'Activar'}</button>${coupon?`<button class="icon-btn" data-coupon-copy="${esc(r.code)}" aria-label="Copiar código">${UI.copy}</button>`:''}</div></article>`).join('')||'<p>Sin registros.</p>'}</div>`;
  document.getElementById('marketingLogout').onclick=adminSignOut;document.getElementById('marketingGenerate')?.addEventListener('click',()=>document.getElementById('marketingName').value=couponRandom());document.getElementById('marketingSearch').oninput=e=>host.querySelectorAll('[data-product-search]').forEach(el=>el.hidden=!el.dataset.productSearch.includes(e.target.value.toLowerCase()));document.getElementById('marketingCancel')?.addEventListener('click',()=>renderAdminPane(mode));document.getElementById('marketingSave').onclick=e=>panelRun(e.currentTarget,async()=>{const st=document.getElementById('marketingStart').value,en=document.getElementById('marketingEnd').value;await marketingCall(coupon?'coupon_save':'promotion_save',{id:editing?.id||'',title:document.getElementById('marketingName').value.trim(),code:document.getElementById('marketingName').value.trim().toUpperCase(),percent:Number(document.getElementById('marketingPercent').value),product_ids:[...host.querySelectorAll('[data-marketing-product]:checked')].map(e=>e.value),starts_at:st?new Date(st).toISOString():null,ends_at:en?new Date(en).toISOString():null,enabled:document.getElementById('marketingEnabled').checked,max_uses:Number(document.getElementById('marketingMaxUses')?.value||0),min_subtotal:Number(document.getElementById('marketingMinimum')?.value||0)});await refreshFoodOffers();await renderAdminPane(mode)},'Guardado.');host.querySelectorAll('[data-marketing-edit]').forEach(b=>b.onclick=()=>renderMarketing(host,mode,epoch,rows.find(r=>r.id===b.dataset.marketingEdit)));host.querySelectorAll('[data-marketing-toggle]').forEach(b=>b.onclick=()=>panelRun(b,async()=>{const r=rows.find(r=>r.id===b.dataset.marketingToggle);await marketingCall(coupon?'coupon_toggle':'promotion_toggle',{id:r.id,enabled:!r.enabled});await refreshFoodOffers();await renderAdminPane(mode)}));host.querySelectorAll('[data-coupon-copy]').forEach(b=>b.onclick=()=>navigator.clipboard.writeText(b.dataset.couponCopy).then(()=>toast('Código copiado.','ok')));}
+// NUEVO: editor de Ofertas relámpago sobre las operaciones existentes de marketing.
+function renderFlashAdmin(host, rows, epoch, editing) {
+  const products=state.products.filter(p=>p.active&&p.stock>0);
+  const date=iso=>iso?new Date(iso).getTime():NaN;
+  const now=()=>Date.now()+offerClockOffset;
+  const status=(row,time)=>{
+    if(!row.enabled)return 'Desactivada';
+    if(row.ends_at&&date(row.ends_at)<=time)return 'Concluida';
+    if(row.starts_at&&date(row.starts_at)>time)return 'Programada';
+    return 'En curso';
+  };
+  const norm=value=>String(value??'').toLocaleLowerCase('es-MX').normalize('NFD').replace(/[\u0300-\u036f]/g,'');
+  const categories=[...new Set(products.map(p=>p.category).filter(Boolean))];
+  const selected=new Set((editing?.product_ids||[]).map(String));
+  const button=(label,attrs)=>`<button type="button" class="btn secondary" ${attrs}>${label}</button>`;
+  host.innerHTML=`<!-- NUEVO --><section class="flash-admin" aria-labelledby="flashAdminTitle">
+    <header class="flash-box flash-head"><span class="flash-icon"><svg viewBox="0 0 24 24" width="24" height="24" fill="none" stroke="currentColor" stroke-width="1.7" aria-hidden="true"><path d="m13 2-9 12h7l-1 8 10-12h-7z"/></svg></span><div><h2 id="flashAdminTitle">Ofertas relámpago</h2><p>Configura descuentos temporales para productos del catálogo.</p></div><div class="flash-session"><small>${esc(adminSession.user.email)} · Permiso de Productos</small>${panelButton('marketingLogout','Cerrar sesión',UI.lock,'ghost')}</div></header>
+    <div class="flash-metrics"><div class="flash-box">Ofertas en curso <strong id="flashLive"></strong></div><div class="flash-box">Productos con descuento por estas ofertas <strong id="flashDiscounted"></strong></div></div>
+    <div class="flash-editor"><form class="flash-box flash-form" novalidate>
+      <h3>${editing?'Editar oferta relámpago':'Configurar nueva oferta relámpago'}</h3>
+      ${panelField('marketingName','Nombre de la promoción',editing?.title||'')}
+      <div class="flash-fields">${panelField('marketingPercent','Descuento %',editing?.percent??10,'number')}${panelField('marketingStart','Inicio opcional',localDateInput(editing?.starts_at),'datetime-local')}${panelField('marketingEnd','Finalización opcional',localDateInput(editing?.ends_at),'datetime-local')}</div>
+      <div class="flash-actions" aria-label="Descuentos rápidos">${[10,15,20,30,50].map(n=>button(n+'%',`data-flash-percent="${n}"`)).join('')}</div>
+      <div class="flash-actions" aria-label="Duraciones desde el inicio">${[2,6,24].map(n=>button('+'+n+' h',`data-flash-hours="${n}"`)).join('')}</div>
+      <p class="small">Las duraciones se calculan desde el inicio indicado o desde ahora. Fechas en la zona horaria de este dispositivo. Si omites la finalización, la oferta no vence automáticamente.</p>
+      <label class="flash-enabled"><input type="checkbox" id="marketingEnabled" ${editing?.enabled!==false?'checked':''}><span><strong>Activar oferta</strong><small>Respeta el inicio programado.</small></span></label>
+      <div class="flash-products-head"><h4>Seleccionar productos <small id="flashSelected"></small></h4><div class="flash-actions">${button('Seleccionar todos los resultados','id="flashSelect"')}${button('Deseleccionar resultados','id="flashClear"')}</div></div>
+      <div class="flash-search">${panelField('marketingSearch','Buscar por nombre o categoría','','search')}<label>Categoría<select id="flashCategory" class="input"><option value="">Todas las categorías</option>${categories.map(c=>`<option value="${esc(c)}">${esc(c)}</option>`).join('')}</select></label></div>
+      <div id="flashProducts">${products.map(p=>`<label class="flash-product" data-product-search="${esc(norm(p.name+' '+p.category))}"><input type="checkbox" data-marketing-product value="${esc(p.id)}" ${selected.has(String(p.id))?'checked':''}><span class="flash-thumb">${productVisual(p)}</span><span><strong>${esc(p.name)}</strong><small>${esc(p.category||'')} · ${esc(p.stock)} disponibles</small></span><span class="flash-prices"><del>${money(p.price)}</del><strong data-flash-price></strong><small data-flash-saving></small></span></label>`).join('')}</div>
+      <p id="flashEmptyProducts" hidden>Sin productos disponibles para estos filtros.</p>
+      <p id="flashUnavailable" hidden></p>
+      <div class="flash-actions flash-footer">${panelButton('marketingSave',editing?'Guardar cambios':'Crear promoción relámpago')}${button(editing?'Cancelar edición':'Nuevo / Limpiar','id="marketingCancel"')}</div>
+    </form><aside class="flash-aside"><section class="flash-box"><h3>Vista previa <small>Simulación · cambios sin guardar</small></h3>
+      <div class="flash-preview"><div class="flash-preview-top"><strong id="flashBenefit"></strong><span id="flashClock"></span></div><h4 id="flashPreviewTitle"></h4><div id="flashPreviewProducts"></div></div>
+    </section><section class="flash-box"><h3>Condiciones de la oferta</h3><p>El precio mostrado en la vista previa se calcula sobre el precio base. La disponibilidad y el importe final se confirman por el flujo de compra existente.</p></section></aside></div>
+    <section class="flash-box"><div class="flash-products-head"><h3>Promociones registradas <small id="flashListCount"></small></h3><div class="flash-search">${panelField('flashListSearch','Buscar campaña','','search')}<label>Estado<select class="input" id="flashStatus"><option value="">Todos</option>${['En curso','Programada','Desactivada','Concluida'].map(s=>`<option>${s}</option>`).join('')}</select></label></div></div>
+    <table class="flash-table"><thead><tr><th>Campaña</th><th>Descuento</th><th>Productos</th><th>Vigencia</th><th>Estado</th><th>Acciones</th></tr></thead><tbody id="flashList"></tbody></table><p id="flashEmptyList" hidden>Sin promociones para estos filtros.</p></section>
+  </section>`;
+  const root=host.querySelector('.flash-admin'),get=id=>root.querySelector('#'+id);
+  const form=root.querySelector('form'), save=get('marketingSave');
+  const inputs=[...root.querySelectorAll('[data-marketing-product]')];
+  const timeFormat=iso=>new Date(iso).toLocaleString('es-MX');
+  const fields=()=>({title:get('marketingName').value.trim(),percent:Number(get('marketingPercent').value),product_ids:[...selected],starts_at:get('marketingStart').value,ends_at:get('marketingEnd').value,enabled:get('marketingEnabled').checked});
+  const initial=JSON.stringify(fields());
+  const mayDiscard=()=>JSON.stringify(fields())===initial||confirm('¿Descartar los cambios sin guardar de esta oferta?');
+  let busy=false, listSignature='';
+  const setText=(id,value)=>{const el=get(id),text=String(value);if(el.textContent!==text)el.textContent=text;};
+  const visible=()=>inputs.filter((el,i)=>el.closest('label').dataset.productSearch.includes(norm(get('marketingSearch').value.trim()))&&(!get('flashCategory').value||products[i].category===get('flashCategory').value));
+  function filterProducts(){
+    const matches=new Set(visible());
+    inputs.forEach(el=>el.closest('label').hidden=!matches.has(el));
+    get('flashEmptyProducts').hidden=matches.size>0;
+    get('flashSelect').disabled=get('flashClear').disabled=!matches.size;
+  }
+  function tick(){
+    const time=now(), draft=fields(), start=date(draft.starts_at), end=date(draft.ends_at);
+    const validRange=!(Number.isFinite(start)&&Number.isFinite(end)&&end<=start);
+    const phase=validRange?status(draft,time):'Vigencia inválida';
+    const target=phase==='Programada'?start:phase==='En curso'?end:NaN;
+    const seconds=Math.max(0,Math.ceil((target-time)/1000));
+    const remaining=[Math.floor(seconds/3600),Math.floor(seconds%3600/60),seconds%60].map(n=>String(n).padStart(2,'0')).join(':');
+    setText('flashClock',Number.isFinite(target)?`${phase==='Programada'?'Inicia en':'Finaliza en'} ${remaining}`:phase+(phase==='En curso'?' · sin vencimiento':''));
+    const statuses=rows.map(row=>status(row,time));
+    const query=norm(get('flashListSearch').value.trim()), filter=get('flashStatus').value;
+    const signature=JSON.stringify([statuses,query,filter]);
+    if(signature===listSignature)return;
+    listSignature=signature;
+    const activeIds=new Set();
+    statuses.forEach((phase,i)=>{
+      if(phase==='En curso'&&Number(rows[i].percent)>0)rows[i].product_ids.forEach(id=>activeIds.add(String(id)));
+    });
+    setText('flashLive',statuses.filter(phase=>phase==='En curso').length);
+    setText('flashDiscounted',products.filter(p=>activeIds.has(String(p.id))).length);
+    const matches=rows.filter((row,i)=>norm(row.title).includes(query)&&(!filter||statuses[i]===filter));
+    get('flashListCount').textContent=`${matches.length} de ${rows.length}`;
+    get('flashEmptyList').hidden=!!matches.length;
+    get('flashList').innerHTML=matches.map(row=>`<tr><td data-label="Campaña"><strong>${esc(row.title)}</strong></td><td data-label="Descuento">${esc(row.percent)}%</td><td data-label="Productos">${row.product_ids.length}</td><td data-label="Vigencia">${row.starts_at?esc(timeFormat(row.starts_at)):'Sin inicio programado'}<br>${row.ends_at?esc(timeFormat(row.ends_at)):'Sin vencimiento'}</td><td data-label="Estado"><span class="flash-badge">${status(row,time)}</span></td><td data-label="Acciones"><div class="flash-actions">${button(UI.edit+' Editar',`data-marketing-edit="${esc(row.id)}"`)}${button(row.enabled?'Desactivar':'Activar',`data-marketing-toggle="${esc(row.id)}"`)}</div></td></tr>`).join('');
+  }
+  function preview(){
+    const draft=fields(), percent=draft.percent;
+    const valid=get('marketingPercent').value!==''&&percent>0&&percent<=100;
+    const chosen=[];
+    get('flashPreviewTitle').textContent=draft.title||'Nombre de la promoción';
+    get('flashBenefit').textContent=valid?`${percent}% de descuento`:'Descuento por configurar';
+    inputs.forEach((el,i)=>{
+      const p=products[i], price=Math.round(p.price*(1-percent/100)*100)/100;
+      const card=el.closest('label');
+      card.querySelector('[data-flash-price]').textContent=valid?money(price):'—';
+      card.querySelector('[data-flash-saving]').textContent=valid?'Ahorro '+money(p.price-price):'';
+      if(el.checked)chosen.push(`<div class="flash-preview-item"><strong>${esc(p.name)}</strong><span>${valid?money(price):'—'}</span></div>`);
+    });
+    const unavailable=selected.size-chosen.length;
+    get('flashUnavailable').hidden=!unavailable;
+    get('flashUnavailable').textContent=unavailable?`${unavailable} productos asociados ya no están disponibles en el selector. Se conserva su asociación al editar.`:'';
+    get('flashSelected').textContent=`(${selected.size} seleccionados)`;
+    get('flashPreviewProducts').innerHTML=chosen.join('')||'<p>Selecciona productos para ver sus precios.</p>';
+    root.querySelectorAll('[data-flash-percent]').forEach(el=>el.setAttribute('aria-pressed',String(valid&&Number(el.dataset.flashPercent)===percent)));
+    tick();
+  }
+  root.addEventListener('input',e=>{
+    if(e.target.matches('[data-marketing-product]')){
+      if(e.target.checked)selected.add(e.target.value);else selected.delete(e.target.value);
+    }
+    if(['marketingSearch','flashCategory'].includes(e.target.id))filterProducts();
+    else if(['flashListSearch','flashStatus'].includes(e.target.id))tick();
+    else preview();
+  });
+  root.addEventListener('click',async e=>{
+    const btn=e.target.closest('button');
+    if(!btn||busy)return;
+    if(btn.id==='marketingLogout'){if(mayDiscard())adminSignOut();return;}
+    if(btn.dataset.flashPercent){get('marketingPercent').value=btn.dataset.flashPercent;preview();}
+    if(btn.dataset.flashHours){
+      const start=get('marketingStart').value;
+      get('marketingEnd').value=localDateInput(new Date((start?date(start):now())+Number(btn.dataset.flashHours)*3600000));
+      preview();
+    }
+    if(['flashSelect','flashClear'].includes(btn.id)){
+      const checked=btn.id==='flashSelect';
+      visible().forEach(el=>{el.checked=checked;if(checked)selected.add(el.value);else selected.delete(el.value)});
+      preview();
+    }
+    if(btn.id==='marketingCancel'&&mayDiscard())renderFlashAdmin(host,rows,epoch);
+    if(btn.dataset.marketingEdit&&mayDiscard()){
+      renderFlashAdmin(host,rows,epoch,rows.find(row=>String(row.id)===btn.dataset.marketingEdit));
+      host.querySelector('#marketingName').focus();
+    }
+    if(btn.dataset.marketingToggle&&mayDiscard()){
+      const row=rows.find(row=>String(row.id)===btn.dataset.marketingToggle);
+      busy=true;
+      try{await panelRun(btn,async()=>{
+        await marketingCall('promotion_toggle',{id:row.id,enabled:!row.enabled});
+        await refreshFoodOffers();
+        if(epoch===panelEpoch)await renderAdminPane('promotions');
+      });}finally{busy=false;}
+    }
+  });
+  const admin=host.closest('#adminModal');
+  const leave=e=>{
+    if(!root.isConnected||epoch!==panelEpoch)return;
+    const control=e.target.closest('#adminTabs button,[data-close-modal="adminModal"],[data-au-logout]');
+    if(control&&(busy||!mayDiscard())){
+      e.preventDefault();
+      e.stopImmediatePropagation();
+    }
+  };
+  admin?.addEventListener('click',leave,true);
+  save.type='submit';
+  form.addEventListener('submit',async e=>{
+    e.preventDefault();
+    if(busy)return;
+    const draft=fields(),{starts_at,ends_at}=draft;
+    busy=true;
+    try{await panelRun(save,async()=>{
+      await marketingCall('promotion_save',{...draft,id:editing?.id||'',code:draft.title.toUpperCase(),starts_at:starts_at?new Date(starts_at).toISOString():null,ends_at:ends_at?new Date(ends_at).toISOString():null,max_uses:0,min_subtotal:0});
+      await refreshFoodOffers();
+      if(epoch===panelEpoch)await renderAdminPane('promotions');
+    },'Guardado.');}finally{busy=false;}
+  });
+  filterProducts();
+  preview();
+  const timer=setInterval(()=>{
+    if(!root.isConnected||epoch!==panelEpoch||!admin?.classList.contains('show')){
+      clearInterval(timer);
+      admin?.removeEventListener('click',leave,true);
+    }
+    else tick();
+  },1000);
+}
 async function refreshFoodOffers(){if(!supabaseClient)return;const{data,error}=await supabaseClient.rpc('catalog_offers');if(error){foodOffers=[];return}const before=JSON.stringify(foodOffers);foodOffers=data?.offers||[];if(before!==JSON.stringify(foodOffers)){invalidateCommerceQuote();if(document.getElementById('cartDrawer').classList.contains('show'))updateCommerceTotals()}offerClockOffset=new Date(data?.server_time||Date.now()).getTime()-Date.now();renderCatalog();clearTimeout(v5OfferTimer);const ends=foodOffers.map(p=>new Date(p.ends_at).getTime()).filter(t=>Number.isFinite(t)&&t>Date.now()+offerClockOffset);if(ends.length)v5OfferTimer=setTimeout(()=>{renderCatalog();invalidateCommerceQuote();refreshFoodOffers()},Math.min(2147483647,Math.max(500,Math.min(...ends)-Date.now()-offerClockOffset+100)));}
 function offerForProduct(p){const time=Date.now()+offerClockOffset;return foodOffers.filter(o=>o.product_ids.includes(p.id)&&(!o.starts_at||new Date(o.starts_at).getTime()<=time)&&(!o.ends_at||new Date(o.ends_at).getTime()>time)).sort((a,b)=>b.percent-a.percent)[0]}
 function productPrice(p){const o=offerForProduct(p);return o?Math.round(p.price*(1-o.percent/100)*100)/100:p.price}
@@ -5262,13 +5500,20 @@ const v17RenderAdminBase=renderAdmin;renderAdmin=function(){v17EnsureCouponTab()
 let paintExperience=window.vibraPaintExperience||function(){};
 paintExperience=function(){
   let h=document.getElementById('v15Experience');if(!h){h=document.createElement('section');h.id='v15Experience';document.querySelector('.container.controls')?.after(h) /* MODIFICADO: reputación debajo del panel de filtros. */}
-  h.className='container v17-experience open'; // MODIFICADO: recuperar el resumen antes de renderizar Calificar negocio.
+  // MODIFICADO: preservar el estado y el foco al actualizar puntuaciones o seguidores.
+  const previousToggle=h.querySelector('#v17ExperienceToggle');
+  const expanded=previousToggle ? h.classList.contains('open') : true;
+  const focusedId=h.contains(document.activeElement)?document.activeElement.id:'';
+  h.classList.add('container','v17-experience');
+  h.classList.remove('v15-experience-card','vibra-experience-balanced');
+  h.classList.toggle('open',expanded);
   const s=summary?.scores||{},avg=Number(s.overall||0);
   // MODIFICADO: iconos propios para las acciones y la puntuación de la barra.
   const experienceSvg=path=>`<svg aria-hidden="true" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round">${path}</svg>`;
   // MODIFICADO: fachada con ubicación, reseña destacada, seguimiento y apertura.
-  h.innerHTML=`<button class="v17-experience-toggle" id="v17ExperienceToggle" aria-expanded="true"><div class="ve-reputation-copy"><h3>Reputación y experiencia</h3><p>Califica el negocio, conoce el perfil, consulta opiniones y síguenos.</p></div><span class="v17-experience-chevron">${experienceSvg('<path d="M5 7h14v10H5z M9 10l3 3 3-3"/>')}</span></button><div class="v17-experience-panel"><div><div class="v17-experience-inner"><div class="v17-experience-summary ve-reputation-rating">${veRatingSummary(avg,s.reviews,summary?.followers)}</div><div class="v17-experience-actions"><button class="btn v16-glow-btn" id="v17KnowBusiness">${experienceSvg('<path d="M3 20h18M5 20V9l7-5 7 5v11M9 20v-5h6v5M10 10h4M12 2v2"/>')}<span>Conocer el negocio</span></button><button class="btn" id="v17Rate">${experienceSvg('<path d="M4 5h16v12H9l-4 3v-3H4z"/><path d="m12 7 1.1 2.3 2.6.4-1.9 1.8.5 2.6-2.3-1.2-2.3 1.2.5-2.6-1.9-1.8 2.6-.4z"/>')}<span>Calificar negocio</span></button><button class="btn secondary" id="veViewOpinions">${experienceSvg('<path d="M4 5h16v12H9l-5 3zM8 9h8m-8 4h5"/>')}<span>Ver opiniones</span></button><button class="btn secondary" id="v17Follow">${experienceSvg(summary?.following?'<path d="M8 13a4 4 0 1 0 0-8 4 4 0 0 0 0 8ZM2 21v-2c0-2 3-4 6-4s6 2 6 4v2M16 11h6"/>':'<path d="M8 13a4 4 0 1 0 0-8 4 4 0 0 0 0 8ZM2 21v-2c0-2 3-4 6-4s6 2 6 4v2M16 11h6m-3-3v6"/>')}<span>${summary?.following?'Siguiendo':'Seguir'}</span></button></div></div></div></div>`;
-  const toggle=document.getElementById('v17ExperienceToggle');toggle.onclick=()=>{const open=!h.classList.contains('open');h.classList.toggle('open',open);toggle.setAttribute('aria-expanded',String(open));clearTimeout(v17ExperienceTimer);if(open)v17ExperienceTimer=setTimeout(()=>{if(h.isConnected){h.classList.remove('open');toggle.setAttribute('aria-expanded','false')}},10*60*1000)};
+  h.innerHTML=`<button class="v17-experience-toggle" id="v17ExperienceToggle" aria-expanded="${expanded}" aria-controls="v17ExperiencePanel"><div class="ve-reputation-copy"><h3>Reputación y experiencia</h3><p>Califica el negocio, conoce el perfil, consulta opiniones y síguenos.</p></div><span class="v17-experience-chevron">${experienceSvg('<path d="M5 7h14v10H5z M9 10l3 3 3-3"/>')}</span></button><div class="v17-experience-panel" id="v17ExperiencePanel"><div><div class="v17-experience-inner"><div class="v17-experience-summary ve-reputation-rating">${veRatingSummary(avg,s.reviews,summary?.followers)}</div><div class="v17-experience-actions"><button class="btn v16-glow-btn" id="v17KnowBusiness">${experienceSvg('<path d="M3 20h18M5 20V9l7-5 7 5v11M9 20v-5h6v5M10 10h4M12 2v2"/>')}<span>Conocer el negocio</span></button><button class="btn" id="v17Rate">${experienceSvg('<path d="M4 5h16v12H9l-4 3v-3H4z"/><path d="m12 7 1.1 2.3 2.6.4-1.9 1.8.5 2.6-2.3-1.2-2.3 1.2.5-2.6-1.9-1.8 2.6-.4z"/>')}<span>Calificar negocio</span></button><button class="btn secondary" id="veViewOpinions">${experienceSvg('<path d="M4 5h16v12H9l-5 3zM8 9h8m-8 4h5"/>')}<span>Ver opiniones</span></button><button class="btn secondary" id="v17Follow">${experienceSvg(summary?.following?'<path d="M8 13a4 4 0 1 0 0-8 4 4 0 0 0 0 8ZM2 21v-2c0-2 3-4 6-4s6 2 6 4v2M16 11h6"/>':'<path d="M8 13a4 4 0 1 0 0-8 4 4 0 0 0 0 8ZM2 21v-2c0-2 3-4 6-4s6 2 6 4v2M16 11h6m-3-3v6"/>')}<span>${summary?.following?'Siguiendo':'Seguir'}</span></button></div></div></div></div>`;
+  const toggle=document.getElementById('v17ExperienceToggle');toggle.onclick=()=>{const open=!h.classList.contains('open');h.classList.toggle('open',open);toggle.setAttribute('aria-expanded',String(open));clearTimeout(v17ExperienceTimer);if(open)v17ExperienceTimer=setTimeout(()=>{if(h.isConnected){h.classList.remove('open');h.querySelector('#v17ExperienceToggle')?.setAttribute('aria-expanded','false');if(h.querySelector('.v17-experience-panel')?.contains(document.activeElement))h.querySelector('#v17ExperienceToggle')?.focus({preventScroll:true})}},10*60*1000)};
+  if(focusedId)document.getElementById(focusedId)?.focus({preventScroll:true}); // MODIFICADO
   // NUEVO: el anillo refleja el seguimiento confirmado por el flujo existente.
   document.getElementById('v17Follow').setAttribute('aria-pressed',String(!!summary?.following));
   document.getElementById('v17KnowBusiness').onclick=()=>openBusinessShowcase();document.getElementById('v17Rate').onclick=()=>openRateBusinessModal();document.getElementById('veViewOpinions').onclick=()=>openRateBusinessModal(true); /* NUEVO: acceso directo a opiniones. */document.getElementById('v17Follow').onclick=async e=>{if(!customerSession){renderCustomerProfile();openModal('customerProfileModal');return toast('Inicia sesión para seguir al negocio.','info')}try{const r=await v16Community('toggle_follow',{});summary.following=r.following;summary.followers=r.followers;paintExperience()}catch(err){toast(err.message,'error')}};
@@ -7416,7 +7661,7 @@ function replaceEmojiBusinessButtons(){
   });
 }
 function fixReserveClose(){ const btn=$('#vibraReserveClose'); if(btn && !btn.dataset.svgReady){ btn.dataset.svgReady='1'; btn.innerHTML=icon.close; } }
-function balanceExperience(){ const card=$('#v15Experience'); if(card) card.classList.add('vibra-experience-balanced'); replaceEmojiBusinessButtons(); }
+function balanceExperience(){ const card=$('#v15Experience'); if(card&&!card.classList.contains('v17-experience')) card.classList.add('vibra-experience-balanced'); /* MODIFICADO: aplicar el diseño heredado solo al resumen anterior. */ replaceEmojiBusinessButtons(); }
 async function enhanceReserve(){
   if(!$('#vibraReserveOverlay')?.classList.contains('open')) return;
   fixReserveClose();
@@ -10345,6 +10590,8 @@ html body main #v15Experience :is(#v16OpenBusiness,#v17KnowBusiness,#v15ViewOpin
 }
 html body main #v15Experience :is(#v16OpenBusiness,#v17KnowBusiness,#v15ViewOpinions,#veViewOpinions) :is(svg,span){color:inherit!important}
 html body main #v15Experience :is(#v15Follow,#v17Follow){background:linear-gradient(105deg,var(--art-main),var(--art-action-end))!important;color:#fff!important}
+/* MODIFICADO: conservar el ancho al bloquear el desplazamiento de la página en ventanas. */
+html:has(#v15Experience){scrollbar-gutter:stable}
 html body main #v15Experience.v17-experience.open :is(.v17-experience-panel,.v17-experience-panel>div,.v17-experience-inner){display:contents!important}
 html body main #v15Experience #v17ExperienceToggle{padding:0;text-align:start}
 html body main #v15Experience .v17-experience-chevron{width:23px;height:23px;background:var(--art-soft)}
