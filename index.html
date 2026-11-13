@@ -6882,7 +6882,7 @@ const demo=[['Lencería elegante','Lencería'],['Aceite para masaje','Bienestar'
 function adminButtons(){const host=$('#adminContent');if(!host||typeof activeAdmin==='undefined'||activeAdmin!=='products')return;
   const toolbar=host.querySelector('.toolbar');if(!toolbar||host.querySelector('#vibraNewService'))return;
   const create=document.createElement('button');create.type='button';create.id='vibraNewService';create.className='btn secondary';create.textContent='Nuevo servicio';create.onclick=()=>{
-    const section=$('#vibraServicesEditor');if(section){const pane=$('#adminContent');if(section.parentElement!==pane)pane.append(section);section.hidden=false;const form=$('#vibraServiceForm');if(form)form.hidden=false;section.scrollIntoView({behavior:'smooth',block:'start'});}else alert('Espera a que se cargue el editor de servicios y vuelve a intentarlo.');
+    const section=$('#vibraServicesEditor');if(section){const pane=$('#adminContent');if(!pane.contains(section))pane.append(section); /* MODIFICADO: mantener la ubicación del editor. */section.hidden=false;const form=$('#vibraServiceForm');if(form)form.hidden=false;section.scrollIntoView({behavior:'smooth',block:'start'});}else alert('Espera a que se cargue el editor de servicios y vuelve a intentarlo.');
   };toolbar.append(create);
   const preview=document.createElement('button');preview.type='button';preview.className='btn ghost';preview.textContent='Vista previa del catálogo';preview.onclick=()=>{
     let panel=host.querySelector('#vibraPreview');if(panel){panel.remove();return;}
@@ -6916,13 +6916,13 @@ const days=['Domingo','Lunes','Martes','Miércoles','Jueves','Viernes','Sábado'
 let cache=[],serviceLinks=[],allServices=[],allMedia=[],galleryItems=[],galleryIndex=0,activeEdit=null,loading=false;
 function status(t){const e=q('#vsmStatus');if(e)e.textContent=t;}
 function mediaUrl(path){try{return db()?.storage.from('catalog-media').getPublicUrl(path).data.publicUrl||''}catch{return ''}}
-async function load(){const client=db();if(!client)return status('No está disponible Supabase.');if(loading)return;loading=true;status('Consultando profesionales y servicios…');try{
+async function load(){const client=db();if(!client)return status('No está disponible Supabase.');if(loading)return;loading=true;const requestPanel=q('#vibraServiceManage');const currentPanel=()=>requestPanel===q('#vibraServiceManage')&&activeAdmin==='products';if(currentPanel())status('Consultando profesionales y servicios…');try{ // MODIFICADO
  const tables=['practitioners','practitioner_services','services','practitioner_work_hours','service_durations','practitioner_media'];
  const res=await Promise.all(tables.map(t=>client.from(t).select('*')));
  const issue=res.find(x=>x.error);if(issue)throw issue.error;
  [cache,serviceLinks,allServices,window.vsmHours,window.vsmDurations,allMedia]=res.map(x=>x.data||[]);
- renderList();enhanceCards();status('Datos actualizados desde Supabase.');
-}catch(e){status('Error al consultar servicios: '+e.message)}finally{loading=false}}
+ if(currentPanel()){renderList();status('Datos actualizados desde Supabase.');}enhanceCards();
+}catch(e){if(currentPanel())status('Error al consultar servicios: '+e.message)}finally{loading=false;if(!currentPanel()&&activeAdmin==='products'&&q('#vibraServiceManage'))queueMicrotask(load)}}
 function renderList(){const host=q('#vsmList');if(!host)return;
 // MODIFICADO: indicadores del módulo a partir de los registros ya consultados.
 const metrics=document.getElementById('veCatalogAdmin');
@@ -7065,10 +7065,10 @@ if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',
 <script id="vibra-admin-ux-stable">
 (()=>{
 'use strict';
-const showCreate=()=>{const editor=document.getElementById('vibraServicesEditor');const pane=document.getElementById('adminContent');if(!editor||!pane)return; if(editor.parentElement!==pane)pane.insertBefore(editor,pane.firstChild);editor.hidden=false;const form=document.getElementById('vibraServiceForm');if(form)form.hidden=false;editor.scrollIntoView({behavior:'smooth',block:'start'});};
-document.addEventListener('click',e=>{const b=e.target.closest('button');if(!b||!document.getElementById('adminModal')?.classList.contains('show'))return;if(b.id==='vibraNewService'||b.id==='vibraCreateServiceTop'||b.textContent.trim()==='Nuevo servicio'){e.preventDefault();e.stopImmediatePropagation();showCreate();}},true);
+const showCreate=()=>{const editor=document.getElementById('vibraServicesEditor');const pane=document.getElementById('adminContent');if(!editor||!pane)return; /* MODIFICADO: el editor conserva el punto de montaje del catálogo. */editor.hidden=false;const form=document.getElementById('vibraServiceForm');if(form)form.hidden=false;editor.scrollIntoView({behavior:'smooth',block:'start'});};
+document.addEventListener('click',e=>{const b=e.target.closest('button');if(!b||!document.getElementById('adminModal')?.classList.contains('show'))return;if(b.id==='vibraNewService'||b.id==='vibraCreateServiceTop'||(b.textContent.trim()==='Nuevo servicio'&&!b.matches('[data-ca-action]'))){e.preventDefault();e.stopImmediatePropagation();showCreate();}},true);
 // Restore the admin editor when a products redraw removes it. Reuse the same node, never clone controls.
-let editor;const admin=document.getElementById('adminContent');const observer=new MutationObserver(()=>{const active=typeof activeAdmin!=='undefined'&&activeAdmin==='products';if(!active)return;editor=editor||document.getElementById('vibraServicesEditor');if(editor&&editor.parentElement!==admin)admin.appendChild(editor);});if(admin)observer.observe(admin,{childList:true});
+let editor;const admin=document.getElementById('adminContent');const observer=new MutationObserver(()=>{const active=typeof activeAdmin!=='undefined'&&activeAdmin==='products';if(!active)return;editor=editor||document.getElementById('vibraServicesEditor');if(editor&&!admin.contains(editor))admin.appendChild(editor); /* MODIFICADO: conservar el nodo dentro de su pestaña. */});if(admin)observer.observe(admin,{childList:true});
 })();
 </script>
 <style id="vibra-v23-polish">
@@ -7791,13 +7791,15 @@ function filter(){const f=window.vibraMassageFilterValues||{},cat=$('vibraServic
 const options=(list,value='')=>['',...list].map(x=>`<option value="${esc(x)}" ${x===value?'selected':''}>${esc(x||'Sin seleccionar')}</option>`).join('');
 const states=['Aguascalientes','Baja California','Baja California Sur','Campeche','Coahuila','Colima','Chiapas','Chihuahua','Ciudad de México','Durango','Guanajuato','Guerrero','Hidalgo','Jalisco','México','Michoacán','Morelos','Nayarit','Nuevo León','Oaxaca','Puebla','Querétaro','Quintana Roo','San Luis Potosí','Sinaloa','Sonora','Tabasco','Tamaulipas','Tlaxcala','Veracruz','Yucatán','Zacatecas'];
 function row(type,obj){return `<div class="vla-line" data-vla-type="${type}" data-vla-id="${esc(obj.id)}"><strong>${esc(obj.display_name||obj.name)}</strong><label>Sede<select data-vla-venue>${options(venues.filter(v=>v.is_active!==false).map(v=>v.id),obj.service_location_id||'')}</select></label><label>Estado<select data-vla-state>${options(states,obj.state_name||'')}</select></label><label>Municipio<input data-vla-city value="${esc(obj.municipality||'')}" placeholder="Municipio"></label>${type==='practitioners'?`<label>Tipo<select data-vla-category>${options(['Mujer','Gay','Trans'],obj.service_category||'')}</select></label>`:''}<button type="button" class="btn" data-vla-save>Guardar</button></div>`}
-function renderAdmin(){if(!adminAllowed()||!$('adminModal')?.classList.contains('show')||typeof activeAdmin==='undefined'||!['products','business'].includes(activeAdmin))return;const host=$('adminContent');if(!host)return;const section=activeAdmin;let panel=$('vibraLocalAdmin');if(panel&&panel.dataset.module!==section)panel.remove();panel=$('vibraLocalAdmin');if(!panel){panel=document.createElement('section');panel.id='vibraLocalAdmin';panel.className='vibra-location-admin';panel.dataset.module=section;host.prepend(panel)}const signature=section+JSON.stringify(practitioners)+JSON.stringify(venues);if(signature===lastAdmin&&panel.querySelector('[data-vla-save]'))return;lastAdmin=signature;
+function renderAdmin(){if(!adminAllowed()||!$('adminModal')?.classList.contains('show')||typeof activeAdmin==='undefined'||!['products','business'].includes(activeAdmin))return;const host=$('adminContent');if(!host)return;const section=activeAdmin;let panel=$('vibraLocalAdmin');if(panel&&panel.dataset.module!==section)panel.remove();panel=$('vibraLocalAdmin');if(!panel){panel=document.createElement('section');panel.id='vibraLocalAdmin';panel.className='vibra-location-admin';panel.dataset.module=section;host.prepend(panel)}const signature=section+JSON.stringify(practitioners)+JSON.stringify(venues);if(panel.dataset.locationDraft==='true'||panel.dataset.locationSignature===signature)return;panel.dataset.locationSignature=signature;lastAdmin=signature; // MODIFICADO
  const rows=section==='business'?venues.map(v=>row('service_locations',v)):practitioners.map(p=>row('practitioners',p));
  panel.innerHTML=`<h3>${section==='business'?'Estado y municipio de las sedes':'Ubicación de masajistas del local'}</h3><p class="small muted">${section==='business'?'La sede suministra la ubicación a sus profesionales cuando no tienen una ubicación específica.':'Asigna una sede o un estado y municipio para aplicar los filtros públicos.'}</p>${rows.join('')||'<p>Sin registros disponibles.</p>'}<p class="vla-message" id="vlaMessage" aria-live="polite"></p>`;
+ panel.oninput=()=>{panel.dataset.locationDraft='true'}; // NUEVO
  panel.querySelectorAll('[data-vla-venue]').forEach(sel=>{const value=sel.closest('.vla-line').dataset.vlaId;sel.innerHTML='<option value="">Sin sede</option>'+venues.filter(v=>v.is_active!==false).map(v=>`<option value="${esc(v.id)}" ${String(practitioners.find(p=>String(p.id)===value)?.service_location_id||'')===String(v.id)?'selected':''}>${esc(v.name)}</option>`).join('')});
- panel.querySelectorAll('[data-vla-save]').forEach(btn=>btn.onclick=async()=>{const line=btn.closest('.vla-line'),table=line.dataset.vlaType,id=line.dataset.vlaId;const val={state_name:line.querySelector('[data-vla-state]')?.value||null,municipality:line.querySelector('[data-vla-city]')?.value.trim()||null};if(table==='practitioners'){val.service_location_id=line.querySelector('[data-vla-venue]')?.value||null;val.service_category=line.querySelector('[data-vla-category]')?.value||null}btn.disabled=true;try{const r=await db().from(table).update(val).eq('id',id).select('id');if(r.error)throw r.error;if(!r.data?.length)throw Error('No se pudo confirmar el guardado. Comprueba los permisos.');$('vlaMessage').textContent='Cambios guardados en Supabase.';lastAdmin='';await load()}catch(e){$('vlaMessage').textContent='No se guardó: '+e.message}finally{btn.disabled=false}})
+ panel.querySelectorAll('[data-vla-save]').forEach(btn=>btn.onclick=async()=>{const line=btn.closest('.vla-line'),table=line.dataset.vlaType,id=line.dataset.vlaId;const val={state_name:line.querySelector('[data-vla-state]')?.value||null,municipality:line.querySelector('[data-vla-city]')?.value.trim()||null};if(table==='practitioners'){val.service_location_id=line.querySelector('[data-vla-venue]')?.value||null;val.service_category=line.querySelector('[data-vla-category]')?.value||null}btn.disabled=true;try{const r=await db().from(table).update(val).eq('id',id).select('id');if(r.error)throw r.error;if(!r.data?.length)throw Error('No se pudo confirmar el guardado. Comprueba los permisos.');const message=panel.querySelector('#vlaMessage');if(message)message.textContent='Cambios guardados en Supabase.';await load()}catch(e){const message=panel.querySelector('#vlaMessage');if(message)message.textContent='No se guardó: '+e.message}finally{btn.disabled=false}})
 }
-function start(){document.addEventListener('vibra-massage-filters-changed',filter);document.addEventListener('click',e=>{if(e.target.closest('#adminTabs'))setTimeout(()=>{lastAdmin='';renderAdmin();load()},250)});const cat=$('catalogGrid');if(cat){let pending=false;new MutationObserver(()=>{if(pending)return;pending=true;requestAnimationFrame(()=>{pending=false;filter()})}).observe(cat,{childList:true,subtree:true})}let tries=0;const poll=setInterval(()=>{if(db()){clearInterval(poll);load()}else if(++tries>25)clearInterval(poll)},400);}
+window.vibraMountCatalogLocation=renderAdmin; // NUEVO
+function start(){document.addEventListener('vibra-massage-filters-changed',filter);document.addEventListener('click',e=>{if(e.target.closest('#adminTabs'))setTimeout(()=>{if(!['products','business'].includes(activeAdmin))return;renderAdmin();load()},250)});const cat=$('catalogGrid');if(cat){let pending=false;new MutationObserver(()=>{if(pending)return;pending=true;requestAnimationFrame(()=>{pending=false;filter()})}).observe(cat,{childList:true,subtree:true})}let tries=0;const poll=setInterval(()=>{if(db()){clearInterval(poll);load()}else if(++tries>25)clearInterval(poll)},400);}
 if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',start,{once:true});else start();
 })();
 </script>
@@ -10817,7 +10819,7 @@ html body main #catalogGrid :is(.desc,.meta,.vibra-service-content p){font-size:
   content.dataset.adminView=id;
   content.dataset.adminKind=viewInfo[id]?.[0]||'';
   let title=content.querySelector(':scope > .admin-workspace-heading');
-  if(!id||id==='ticket'){title?.remove();return}
+  if(!id||id==='ticket'||(id==='products'&&content.querySelector('#veCatalogAdmin'))){title?.remove();return} /* MODIFICADO: el catálogo ya tiene cabecera propia. */
   if(!title){
    title=document.createElement('header');title.className='admin-workspace-heading';
    title.innerHTML='<h2></h2><p></p>';
@@ -12004,9 +12006,36 @@ html body #vibraReserveOverlay[data-res-stage]:not([data-res-stage="3"]) :is(.ve
 #adminContent[data-catalog-admin] .ve-ca-form-group{display:grid;grid-template-columns:repeat(auto-fit,minmax(min(100%,185px),1fr));gap:8px;grid-column:1/-1;border:1px solid var(--ui-border);border-radius:11px;min-width:0;margin:0;padding:10px}
 #adminContent[data-catalog-admin] .ve-ca-form-group legend{color:var(--ui-link);font-weight:700;padding-inline:5px}
 #adminContent[data-catalog-admin] .ve-ca-form-group .ve-ca-actions{grid-column:1/-1}
+/* MODIFICADO: densidad e iconos de la cabecera y de los controles del catálogo. */
+#adminContent:has(>#veCatalogAdmin){container:catalog-admin / inline-size}
+#veCatalogAdmin{font-size:.84rem}
+#veCatalogAdmin .ve-ca-head{padding:10px 13px}
+#veCatalogAdmin .ve-ca-head h2{font-size:1.15rem;line-height:1.3}
+#veCatalogAdmin .ve-ca-head p{color:var(--ui-muted);font-size:.78rem}
+#veCatalogAdmin .ve-ca-metrics>div{padding:8px 11px;border-inline-start:2px solid var(--ui-link)}
+#veCatalogAdmin .ve-ca-metrics strong{font-size:1.22rem}
+#veCatalogAdmin .ve-ca-tabs{padding:5px;border:1px solid var(--ui-border);border-radius:11px;width:fit-content;max-width:100%}
+#veCatalogAdmin [data-ca-slot]{display:grid;gap:10px;margin-block-start:8px;min-width:0}
+#veCatalogAdmin .ve-ca-forwarded,#veCatalogAdmin .ve-ca-original-toolbar:not(:has(> :not(.ve-ca-forwarded))){display:none!important}
+#veCatalogAdmin .ve-ca-management{margin-block-start:10px;padding:10px;border:1px solid var(--ui-border);border-radius:10px;background:var(--ui-field)}
+#veCatalogAdmin .ve-ca-management summary{cursor:pointer;color:var(--ui-link);font-weight:700}
+html body #adminModal #adminContent #veCatalogAdmin :is(button,.btn,.icon-btn)>svg{display:block;width:16px;height:16px;min-width:16px;flex:0 0 16px;visibility:visible;opacity:1;color:inherit}
+#veCatalogAdmin :is(.ve-ca-actions,.ve-ca-tabs)>button{max-width:100%;white-space:normal}
+#veCatalogAdmin :is(.ve-ca-actions,.ve-ca-tabs)>button:disabled{opacity:1;border-style:dashed}
+#veCatalogAdmin :is(.ve-ca-management,.ve-ca-hours) summary:focus-visible{outline:2px solid var(--ui-focus);outline-offset:2px}
+#veCatalogAdmin .date-control{display:grid;grid-template-columns:minmax(0,1fr) auto;min-width:0}
+#veCatalogAdmin .date-control>input{min-width:0;max-width:100%;box-sizing:border-box;color-scheme:light}
+body.dark-mode #veCatalogAdmin .date-control>input{color-scheme:dark}
+#veCatalogAdmin .date-control>.icon-btn{width:34px;height:34px;padding:4px}
+@container catalog-admin (max-width:520px){
+ #veCatalogAdmin .vsm-entry{grid-template-columns:auto minmax(0,1fr)}
+ #veCatalogAdmin .vsm-entry>.toolbar{grid-column:1/-1}
+ #veCatalogAdmin .vsm-hour{grid-template-columns:repeat(2,minmax(0,1fr))}
+ #veCatalogAdmin .vsm-hour>span{grid-column:1/-1}
+}
 </style>
 <script>
-/* NUEVO: navegación y filtros de presentación de Productos y servicios. */
+// MODIFICADO: iconos propios y puntos de montaje estables del catálogo.
 (()=>{
  const host=document.getElementById('adminContent'), modal=document.getElementById('adminModal');
  const q=(s,root=host)=>root.querySelector(s);
@@ -12023,12 +12052,12 @@ html body #vibraReserveOverlay[data-res-stage]:not([data-res-stage="3"]) :is(.ve
    let head=q('#veCatalogAdmin');
    if(!head){
      head=document.createElement('section');head.id='veCatalogAdmin';
-     head.innerHTML=`<!-- NUEVO --><header class="ve-ca-head"><div><h2>Catálogo y profesionales</h2><p>Administra publicaciones, disponibilidad y categorías.</p></div><div class="ve-ca-actions"><button type="button" data-ca-action="preview">${icon('M2 12s4-7 10-7 10 7 10 7-4 7-10 7S2 12 2 12Zm13 0a3 3 0 1 0-6 0 3 3 0 0 0 6 0Z')} Vista previa</button><button type="button" data-ca-action="new-product">${UI.plus} Nuevo producto</button><button type="button" data-ca-action="new-service">${UI.plus} Nuevo servicio</button></div></header>
+     head.innerHTML=`<!-- MODIFICADO --><header class="ve-ca-head"><div><h2>Catálogo y profesionales</h2><p>Administra publicaciones, disponibilidad y categorías.</p></div><div class="ve-ca-actions"><button type="button" data-ca-action="preview">${icon('M2 12s4-7 10-7 10 7 10 7-4 7-10 7S2 12 2 12Zm13 0a3 3 0 1 0-6 0 3 3 0 0 0 6 0Z')} <span>Vista previa</span></button><button type="button" data-ca-action="new-product">${icon('M3 7l9-4 9 4v5M3 7v10l9 4v-9M3 7l9 5 9-5m-3 7v7m-3-3.5h6')} <span>Nuevo producto</span></button><button type="button" data-ca-action="new-service">${icon('M3 21v-2a5 5 0 0 1 5-5h3m2-7a4 4 0 1 1-8 0 4 4 0 0 1 8 0Zm5 6v8m-4-4h8')} <span>Nuevo servicio</span></button></div></header>
        <div class="ve-ca-metrics"><div>Profesionales cargados<strong data-ca-total="staff">—</strong></div><div>Servicios asociados<strong data-ca-total="services">—</strong></div><div>Productos físicos<strong data-ca-total="products"></strong></div><div>Profesionales con horarios<strong data-ca-total="hours">—</strong></div></div>
        <div class="ve-ca-tabs" role="tablist" aria-label="Secciones del catálogo">${sections.map(([key,label,path])=>`<button type="button" id="veCaTab-${key}" role="tab" aria-controls="veCaPanel-${key}" data-ca-tab="${key}">${icon(path)} ${label}</button>`).join('')}</div>
-       <div id="veCaPanel-staff" role="tabpanel" aria-labelledby="veCaTab-staff"><label>Buscar profesional o servicio<input type="search" class="input" data-ca-search="staff"></label><p data-ca-empty="staff" hidden>Sin coincidencias.</p></div>
-       <div id="veCaPanel-products" role="tabpanel" aria-labelledby="veCaTab-products"><div class="ve-ca-filters"><label>Buscar producto<input type="search" class="input" data-ca-search="products"></label><label>Categoría<select class="select" data-ca-filter="category"></select></label><label>Estado<select class="select" data-ca-filter="visibility"><option value="">Todos</option><option value="active">Activo</option><option value="inactive">Inactivo</option></select></label></div><p data-ca-empty="products" hidden>Sin coincidencias.</p></div>
-       <div id="veCaPanel-categories" role="tabpanel" aria-labelledby="veCaTab-categories"><p>Consulta las categorías y abre su editor para administrar las asignaciones.</p><ul></ul></div>`;
+       <div id="veCaPanel-staff" role="tabpanel" aria-labelledby="veCaTab-staff"><label>Buscar profesional o servicio<input type="search" class="input" data-ca-search="staff"></label><p data-ca-empty="staff" hidden>Sin coincidencias.</p><div data-ca-slot="staff"></div><details class="ve-ca-management" hidden><summary>Ubicación y verificación</summary><div data-ca-slot="management"></div></details></div>
+       <div id="veCaPanel-products" role="tabpanel" aria-labelledby="veCaTab-products"><div class="ve-ca-filters"><label>Buscar producto<input type="search" class="input" data-ca-search="products"></label><label>Categoría<select class="select" data-ca-filter="category"></select></label><label>Estado<select class="select" data-ca-filter="visibility"><option value="">Todos</option><option value="active">Activo</option><option value="inactive">Inactivo</option></select></label></div><p data-ca-empty="products" hidden>Sin coincidencias.</p><div data-ca-slot="products"></div></div>
+       <div id="veCaPanel-categories" role="tabpanel" aria-labelledby="veCaTab-categories"><p>Categorías del catálogo. La administración de asignaciones se abre en un módulo separado.</p><ul></ul><div data-ca-slot="categories"></div></div>`;
      host.prepend(head);
      q('[data-ca-search=products]',head).value=productQuery;
      q('[data-ca-search=staff]',head).value=staffQuery;
@@ -12051,8 +12080,8 @@ html body #vibraReserveOverlay[data-res-stage]:not([data-res-stage="3"]) :is(.ve
      head.addEventListener('click',e=>{
        const button=e.target.closest('button');
        if(button?.dataset.caTab)select(button.dataset.caTab);
-       if(button?.dataset.caAction==='new-product'){select('products');q('#newProduct').click();q('#apName')?.focus();}
-       if(button?.dataset.caAction==='new-service'){select('staff');q('#vibraNewService')?.click();q('#vibraStaffName')?.focus();}
+       if(button?.dataset.caAction==='new-product'){select('products');const form=q('#productFormWrap');if(!form||form.style.display==='none')q('#newProduct').click();q('#apName')?.focus();}
+       if(button?.dataset.caAction==='new-service'){select('staff');const open=q('#vibraNewService');if(open){open.click();q('#vibraStaffName')?.focus();}}
        if(button?.dataset.caAction==='preview')preview();
      });
    }
@@ -12061,14 +12090,26 @@ html body #vibraReserveOverlay[data-res-stage]:not([data-res-stage="3"]) :is(.ve
      q('#veCaPanel-'+key).hidden=key!==tab;
    }
    editorTools();
-   const wrap=q('#productFormWrap'), list=q('.product-admin')?.parentElement||[...host.children].find(el=>q(':scope > h3',el)?.textContent==='Productos');
-   if(wrap)wrap.dataset.caSection='products';
-   if(list)list.dataset.caSection='products';
-   for(const id of ['vibraServicesEditor','vibraServiceManage','vibraLocalAdmin','vibraSedesAdmin']){
-     const el=q('#'+id);if(el)el.dataset.caSection='staff';
+   // MODIFICADO: reconciliar por identidad, conservando nodos, valores y eventos.
+   const toolbar=q('#newProduct').closest('.toolbar');
+   const list=q('.product-admin')?.parentElement||[...host.children].find(el=>q(':scope > h3',el)?.textContent==='Productos');
+   function place(key,nodes){
+     const slot=q('[data-ca-slot="'+key+'"]');
+     const ordered=nodes.filter(Boolean);
+     ordered.forEach((node,index)=>{if(slot.children[index]!==node)slot.insertBefore(node,slot.children[index]||null);});
+     return ordered.length;
    }
-   const banner=q('#v15CategoryBanner');if(banner)banner.dataset.caSection='categories';
-   q('#newProduct').closest('.toolbar').dataset.caSection='products';
+   window.vibraMountCatalogLocation?.();
+   place('staff',[q('#vibraServiceManage'),q('#vibraServicesEditor')]);
+   place('products',[toolbar,q('#productFormWrap'),list]);
+   place('categories',[q('#v15CategoryBanner')]);
+   q('.ve-ca-management').hidden=!place('management',[q('#vibraLocalAdmin'),q('#viReviewAdmin'),q('#vibraSedesAdmin')]);
+   toolbar.classList.add('ve-ca-original-toolbar');
+   q('#newProduct').classList.add('ve-ca-forwarded');
+   const service=q('#vibraNewService');service?.classList.add('ve-ca-forwarded');
+   q('[data-ca-action=new-service]').disabled=!service;
+   const verification=q('#viReviewAdmin');
+   if(verification&&!verification.querySelector('svg'))verification.insertAdjacentHTML('afterbegin',icon('M12 22s8-4 8-11V5l-8-3-8 3v6c0 7 8 11 8 11Zm-3-10 2 2 4-4'));
    const products=state.products.filter(p=>!String(p.category||'').startsWith('_'));
    const records=new Map(products.map(p=>[String(p.id),p]));
    text(q('[data-ca-total=products]'),products.length);
@@ -12177,6 +12218,16 @@ html body #vibraReserveOverlay[data-res-stage]:not([data-res-stage="3"]) :is(.ve
    modal.append(dlg);dlg.showModal();
  }
  function schedule(){if(!frame)frame=requestAnimationFrame(update);}
+ // NUEVO: confirmar antes de perder formularios capturados al cambiar de módulo.
+ modal.addEventListener('click',event=>{
+   if(activeAdmin!=='products')return;
+   const action=event.target.closest('#adminTabs [data-tab],#v15OpenCategories');
+   if(!action||action.dataset.tab==='products')return;
+   const pending=[...host.querySelectorAll('.ve-ca-pending')].some(el=>el.textContent&&el.closest('section')?.hidden!==true&&el.closest('#productFormWrap')?.style.display!=='none')||!!q('[data-location-draft=true]');
+   if(pending&&!confirm('¿Salir del módulo y descartar los cambios pendientes?')){
+     event.preventDefault();event.stopImmediatePropagation();
+   }
+ },true);
  new MutationObserver(schedule).observe(host,{childList:true,subtree:true});
  window.vibraCatalogAdminRefresh=schedule;
 })();
