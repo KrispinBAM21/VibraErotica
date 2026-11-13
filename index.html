@@ -298,7 +298,16 @@ body.dialog-open{overflow:hidden}.ticket-editor{display:grid;grid-template-colum
 .flash-fields{grid-template-columns:minmax(0,1fr)}
 .flash-fields>div,.flash-dates>div,.flash-search>label,.flash-admin .field{min-width:0}
 .flash-fields .flash-actions{margin-top:6px}
-.flash-dates{grid-template-columns:repeat(auto-fit,minmax(min(100%,165px),1fr))}
+/* MODIFICADO: una fecha y sus dos botones comparten una sola celda. */
+.flash-dates{grid-template-columns:repeat(auto-fit,minmax(min(100%,252px),1fr))}
+.flash-dates>.field{container:flash-date / inline-size}
+.flash-admin .date-control{display:grid;grid-template-columns:minmax(0,1fr) auto auto;min-width:0;gap:4px}
+html body #adminModal #adminContent .flash-admin .date-control>.icon-btn{width:34px;height:34px;min-width:34px;min-height:34px;padding:4px;background:var(--ui-raised)!important;color:var(--ui-link)!important;border:1px solid var(--ui-border)}
+.flash-admin .date-control>.icon-btn>svg{width:16px;height:16px;flex:none}
+@container flash-date (max-width:245px){
+ .flash-admin .date-control{grid-template-columns:repeat(2,minmax(0,1fr))}
+ .flash-admin .date-control>input{grid-column:1/-1}
+}
 .flash-search{grid-template-columns:minmax(0,1.6fr) minmax(0,1fr);align-items:end}
 .flash-admin .field{margin:0}
 .flash-admin :is(.field label,.flash-search>label){font-size:.72rem;font-weight:700;letter-spacing:.025em;color:var(--ui-muted)}
@@ -389,7 +398,16 @@ html body #adminModal #adminContent .flash-admin #marketingSave{background:linea
 .ve-design-editor :is(h2,h3,h4,p){margin:0}
 .ve-design-head,.ve-design-footer,.ve-design-preview-head{display:flex;gap:10px;align-items:center;justify-content:space-between;flex-wrap:wrap}
 .ve-design-head,.ve-design-footer,.ve-design-controls,.ve-design-preview{padding:14px;background:var(--ui-surface);border:1px solid var(--ui-border);border-radius:14px;min-width:0}
-.ve-design-layout{display:grid;grid-template-columns:minmax(300px,2fr) minmax(0,3fr);gap:14px;align-items:start}
+/* MODIFICADO: mayor espacio de trabajo y una portada de proporciones más cercanas al catálogo. */
+.ve-design-layout{display:grid;grid-template-columns:minmax(0,1fr);gap:18px;align-items:start}
+@container ve-editors (min-width:920px){.ve-design-layout{grid-template-columns:minmax(290px,1fr) minmax(0,1.8fr)}}
+.ve-design-store{display:flex;flex-wrap:wrap;gap:12px;align-items:center;margin-bottom:12px;padding:9px;background:var(--preview-surface);border-radius:10px}
+.ve-design-store :is(nav,.v12-home-nav){display:flex;gap:8px;flex-wrap:wrap;overflow:visible}
+.ve-design-store .brand{display:flex;align-items:center;gap:8px;color:var(--preview-ink);min-width:0}
+.ve-design-store img{width:38px;height:38px;object-fit:contain}
+.ve-design-store .chip{color:var(--preview-ink);background:var(--preview-field);border-color:var(--preview-border)}
+.ve-design-editor .vibra-figure-grid{gap:12px}
+.ve-design-editor .vibra-editor-actions{gap:11px}
 .ve-design-controls .section-card{margin:10px 0;padding:12px}
 .ve-design-tabs,.ve-design-switch{display:flex;gap:6px;flex-wrap:wrap}
 .ve-design-tabs button,.ve-design-switch button,.ve-design-exit{min-height:38px;padding:6px 9px;background:var(--ui-raised);color:var(--ui-text);border:1px solid var(--ui-border);border-radius:9px;cursor:pointer;transition:transform .2s,box-shadow .2s,border-color .2s}
@@ -408,7 +426,7 @@ html body #adminModal #adminContent .flash-admin #marketingSave{background:linea
 .ve-design-viewport.is-mobile{max-width:360px}
 .ve-design-page{position:relative;isolation:isolate;background-size:cover;background-position:center;border-radius:18px;overflow:hidden;padding:16px;color:var(--preview-ink)}
 .ve-design-page::before{content:"";position:absolute;inset:0;z-index:-1;pointer-events:none;background-image:var(--preview-pattern);opacity:var(--preview-pattern-opacity)}
-#adminModal .ve-design-page #vibraHeroCanvas{height:auto;min-height:180px;display:grid;align-content:center;gap:8px;padding:18px!important;overflow-wrap:anywhere}
+#adminModal .ve-design-page #vibraHeroCanvas{height:auto;min-height:180px;display:grid;align-content:center;gap:8px;padding:clamp(16px,3cqw,28px)!important;overflow-wrap:anywhere;isolation:isolate}
 #adminModal .ve-design-page #vibraHeroCanvas :is(h2,p){position:relative;z-index:1;color:inherit!important;pointer-events:none}
 .ve-design-samples{display:grid;gap:10px;margin-top:14px;padding:12px;border-radius:var(--preview-radius);background:var(--preview-surface);color:var(--preview-ink)}
 html body #adminModal #adminContent .ve-design-page .input{color:var(--preview-ink)!important;background:var(--preview-field)!important;border-color:var(--preview-border)!important}
@@ -424,10 +442,62 @@ html body #adminModal #adminContent .ve-design-page .product-card .btn{backgroun
 .ve-design-editor .ve-design-note{padding:10px;background:var(--ui-raised);border-radius:8px}
 .ve-design-editor #veSilhouetteCandidate img{width:110px;height:110px;object-fit:contain;background:var(--ui-raised)}
 @media(hover:hover){.ve-design-editor button:not(:disabled):hover{box-shadow:0 0 12px var(--ui-glow);border-color:var(--ui-focus)}}
-@media(max-width:1000px){.ve-design-layout{grid-template-columns:minmax(0,1fr)}.ve-design-preview{position:static}}
+@container ve-editors (max-width:919px){.ve-design-preview{position:static}}
 @media(prefers-reduced-motion:reduce){.ve-design-editor *, .ve-design-editor button:active{transition:none!important;transform:none}}
 
 .ve-design-sample-secondary{padding:8px 10px;margin:4px;border-radius:var(--preview-radius);border:1px solid var(--preview-accent);background:var(--preview-secondary);color:var(--preview-secondary-ink);cursor:pointer}
+/* NUEVO: Perfil y redes, con distribución según el ancho útil del panel. */
+#adminContent:has(.ve-profile),#adminContent:has(.ve-design-editor){container:ve-editors / inline-size}
+#adminContent:has(.ve-profile,.ve-design-editor)>.admin-workspace-heading{display:none}
+.ve-profile{display:grid;gap:13px;min-width:0;color:var(--ui-text);font-size:.85rem}
+.ve-profile [hidden]{display:none!important}
+.ve-profile :is(h2,h3,p){margin:0}
+.ve-profile p,.ve-profile small{color:var(--ui-muted)}
+.ve-profile-head,.ve-profile-tabs,.ve-profile-actions,.ve-profile-links{display:flex;flex-wrap:wrap;align-items:center;gap:8px}
+.ve-profile-head{justify-content:space-between;padding:10px 13px;background:var(--ui-surface);border:1px solid var(--ui-border);border-radius:12px}
+.ve-profile-kpis,.ve-profile-layout{display:grid;gap:12px;min-width:0}
+.ve-profile-kpis{grid-template-columns:repeat(auto-fit,minmax(min(100%,130px),1fr))}
+.ve-profile-kpis>div{padding:9px 12px;border:1px solid var(--ui-border);border-inline-start:3px solid var(--ui-link);border-radius:10px;background:var(--ui-surface)}
+.ve-profile-kpis strong{display:block;font-size:1rem}
+.ve-profile-layout{align-items:start}
+.ve-profile-edit,.ve-profile-preview{min-width:0}
+.ve-profile-tabs{margin-bottom:10px}
+.ve-profile-tabs button{min-height:38px;padding:6px 10px;border:1px solid var(--ui-border);border-radius:8px;color:var(--ui-text);background:var(--ui-raised);cursor:pointer}
+.ve-profile-tabs button[aria-selected=true]{background:var(--ui-action);color:var(--ui-on-action)}
+.ve-profile button:focus-visible,.ve-profile a:focus-visible{outline:2px solid var(--ui-focus);outline-offset:2px}
+.ve-profile-preview{display:none;gap:10px}
+.ve-profile.is-preview .ve-profile-preview{display:grid}
+.ve-profile.is-preview .ve-profile-edit{display:none}
+.ve-profile-card{width:100%;max-width:100%;margin-inline:auto;border:1px solid var(--ui-border);border-radius:14px;background:var(--ui-surface);overflow-wrap:anywhere;overflow:hidden;box-shadow:var(--ui-shadow)}
+.ve-profile.is-mobile .ve-profile-card{max-width:360px}
+.ve-profile-cover{min-height:96px;background:var(--ui-hero);display:grid;place-items:center}
+.ve-profile-cover img{width:100%;height:clamp(95px,18cqw,195px);object-fit:contain}
+.ve-profile-card-body{display:grid;gap:8px;padding:12px}
+.ve-profile-avatar{width:62px;height:62px;border:1px solid var(--ui-border);border-radius:12px;background:var(--ui-raised)}
+.ve-profile-avatar img,.ve-profile .v16-crop-thumb img{width:100%;height:100%;object-fit:contain}
+.ve-profile-links>span,.ve-profile-preview-goals>p{display:inline-flex;gap:5px;align-items:center;padding:5px 8px;border:1px solid var(--ui-border);border-radius:8px;background:var(--ui-field);color:var(--ui-text)}
+.ve-profile-preview-goals{display:grid;gap:6px}
+.ve-profile :is(.btn,.ve-profile-links span,.field span)>svg{display:inline-block;width:16px;height:16px;flex:0 0 16px;vertical-align:middle;margin-inline-end:3px}
+.ve-profile .field a{color:var(--ui-link);justify-self:start}
+.ve-profile :is(input,textarea,select){min-width:0;max-width:100%}
+.ve-profile :is(button,input):disabled{opacity:1;border-style:dashed}
+@container ve-editors (min-width:760px){
+ .ve-profile-layout{grid-template-columns:minmax(0,1.15fr) minmax(0,1fr)}
+ .ve-profile-preview{display:grid}
+ .ve-profile [data-profile-view]{display:none}
+ .ve-profile.is-preview .ve-profile-edit{display:block}
+}
+@media(hover:hover){.ve-profile-tabs button:hover,.ve-profile button:hover:not(:disabled){box-shadow:0 0 8px var(--ui-glow);border-color:var(--ui-focus)}}
+@media(prefers-reduced-motion:no-preference){.ve-profile button{transition:border-color .2s,box-shadow .2s}.ve-profile button:active:not(:disabled){translate:0 1px}}
+/* NUEVO: conservar posiciones del borrador y limitar las figuras al ancho de la portada simulada. */
+#vibraHeroCanvas{container-type:inline-size}
+#vibraHeroCanvas .vibra-custom-figure{width:min(var(--hero-size,110px),34cqw);height:min(var(--hero-size,110px),34cqw)}
+#vibraHeroCanvas .vibra-custom-figure.is-selected{outline-offset:3px}
+.ve-design-store .chip svg{width:16px;height:16px;flex:0 0 16px;margin-inline-end:3px}
+.ve-profile .v14-goal progress{width:100%;accent-color:var(--ui-action)}
+@container flash-panel (max-width:440px){
+ html body #adminModal #adminContent .flash-admin .date-control>.icon-btn{min-height:44px;width:100%}
+}
 </style>
 <style>.subscription-notice{margin-top:16px}.billing-method,.billing-payment{padding:16px 0;border-bottom:1px solid var(--line);overflow-wrap:anywhere}.billing-method .toolbar,.billing-payment .toolbar{flex-wrap:wrap}.billing-payment h4{margin:0 0 8px}.subscription-notice p{margin:0 0 12px}</style><style>.date-control{display:flex;align-items:center;gap:6px}.date-control>.input{min-width:0;flex:1}.date-control>.icon-btn{flex:0 0 40px;width:40px;height:40px}.date-control input{color-scheme:light}body.dark-mode .date-control input,#adminModal .date-control input{color-scheme:dark}.date-picker-fields{display:grid;grid-template-columns:1fr 1fr;gap:14px}.flash-offers{margin-top:16px;margin-bottom:18px}.flash-offer-list{display:grid;grid-template-columns:repeat(auto-fit,minmax(260px,1fr));gap:14px}.flash-offer{padding:18px;border:1px solid var(--primary);border-radius:16px;background:var(--card);min-width:0}.flash-offer h3{margin:0 0 10px}.flash-clock{display:flex;align-items:center;gap:8px;font-variant-numeric:tabular-nums;font-size:.9rem;flex-wrap:wrap}.flash-clock svg,.offer-clock-icon{width:20px;height:20px;fill:none;stroke:currentColor;flex:0 0 20px}.combo-products{display:grid;grid-template-columns:repeat(auto-fit,minmax(180px,1fr));gap:12px}.combo-item{border:1px solid var(--line);border-radius:12px;padding:12px;min-width:0}.combo-photo{height:150px;display:grid;place-items:center;overflow:hidden}.combo-photo img{height:100%;width:100%;object-fit:contain}.combo-photo svg{height:90px;width:90px;fill:none;stroke:currentColor}.combo-item .btn{width:100%}.product-card,.icon-btn,.btn,.icon-option{transition:transform .2s ease,box-shadow .2s ease,border-color .2s ease}.product-card:focus-within{border-color:var(--primary)}@media(hover:hover){.product-card:hover{transform:translateY(-4px);box-shadow:0 12px 26px #0002;border-color:var(--primary)}.icon-btn:hover svg,.btn:hover svg{transform:scale(1.12)}}.icon-btn svg,.btn svg{transition:transform .18s ease}.icon-btn:active,.btn:active{transform:scale(.97)}.product-card .product-visual img{transition:transform .3s ease}@media(hover:hover){.product-card:hover .product-visual img{transform:scale(1.025)}}.moderation-order{padding:14px 0;border-bottom:1px solid var(--line)}.moderation-order .toolbar{flex-wrap:wrap}.ticket-footer-options{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:8px}.ticket-footer-options svg{width:24px;height:24px;fill:none;stroke:currentColor}.ticket-image-links{display:grid;gap:12px}.visitor-blocked #catalogGrid,.visitor-blocked #categoryChips,.visitor-blocked #foodDeliveryPlanner,.visitor-blocked #cartBtn,.visitor-blocked #searchWrap,.visitor-blocked #flashOffers,.visitor-blocked #orderChatBubble{display:none!important}@media(max-width:600px){.date-picker-fields{grid-template-columns:1fr}.ticket-footer-options{grid-template-columns:repeat(2,minmax(0,1fr))}}@media(prefers-reduced-motion:reduce){.product-card,.icon-btn,.btn,.icon-option,.icon-btn svg,.btn svg,.product-card .product-visual img{transition:none;transform:none!important}}
 </style><script src="https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js"></script>
@@ -1368,7 +1438,7 @@ function bindDesignAdmin(){
  ${[0,1,2,3].map(i=>`<div role="tabpanel" id="veDesignPanel${i}" aria-labelledby="veDesignTab${i}" ${i?'hidden':''}></div>`).join('')}
  </div><section class="ve-design-preview" aria-labelledby="veDesignPreviewTitle">
  <div class="ve-design-preview-head"><div><h3 id="veDesignPreviewTitle">Vista previa interactiva</h3><small>Los controles de prueba no cambian el tema del sitio.</small></div><div class="ve-design-switch" role="group" aria-label="Tema de vista previa"><button type="button" data-design-theme="default">Claro</button><button type="button" data-design-theme="dark">Oscuro</button></div></div>
- <div class="ve-design-viewport"><div class="ve-design-page"><div class="ve-design-cover hero-card" id="vibraHeroCanvas" aria-label="Vista previa editable de la portada"><h2></h2><p></p></div>
+ <div class="ve-design-viewport"><div class="ve-design-page"><div class="ve-design-store"></div><div class="ve-design-cover hero-card" id="vibraHeroCanvas" aria-label="Vista previa editable de la portada"><h2></h2><p></p></div>
  <div class="ve-design-samples"><h4>Muestra de componentes</h4><label>Campo de búsqueda<input type="search" class="input" placeholder="Prueba la escritura y el foco"></label><div class="ve-design-sample-card"></div></div></div></div>
  <p class="ve-design-contrast" role="status"></p></section></div>
  <footer class="ve-design-footer"><div class="ve-design-switch"><button type="button" id="resetDesign">${UI.refresh} Restablecer diseño</button><button type="button" id="veDesignFullscreen">Pantalla completa</button></div><p id="veDesignStatus" role="status"></p><div class="ve-design-switch"><button type="button" id="veDesignCancel">Cancelar</button><button type="button" id="veDesignSave" class="btn">${UI.save} Guardar y aplicar</button></div></footer>`;
@@ -1380,6 +1450,13 @@ function bindDesignAdmin(){
  panel(3).append(cards[3]);
  panel(1).insertAdjacentHTML('afterbegin','<p class="ve-design-note">La configuración visual es compartida por ambos temas. Comprueba su contraste alternando la vista previa.</p>');
  const page=q('.ve-design-page'), cover=q('#vibraHeroCanvas');
+ // NUEVO: marca y accesos actuales del encabezado público, en una copia de solo lectura.
+ const brand=document.querySelector('.topbar .brand'), nav=document.querySelector('.topbar #v12HomeNav');
+ for(const node of [brand,nav]){
+   if(!node)continue;
+   const copy=node.cloneNode(true);copy.removeAttribute('id');copy.querySelectorAll('[id]').forEach(el=>el.removeAttribute('id'));
+   copy.inert=true;q('.ve-design-store').append(copy);
+ }
  cover.querySelector('h2').textContent=document.getElementById('heroTitle')?.textContent||state.config.businessName;
  cover.querySelector('p').textContent=document.getElementById('heroText')?.textContent||'';
  const sample=q('.ve-design-sample-card'), product=state.products.find(p=>p.active);
@@ -5631,31 +5708,138 @@ renderCustomerProfile=function(){
 };
 
 async function renderV16ProfileAdmin(c){
-  const p=publicProfileCfg(); let goals=[]; try{goals=(await v16Community('goals_admin',{})).goals||[]}catch{}
+  const p=publicProfileCfg();let goals=[],goalError=false;
+  try{goals=(await v16Community('goals_admin',{})).goals||[]}catch{goalError=true;}
+  if(!c.isConnected||activeAdmin!=='profile')return; // MODIFICADO: descartar una carga de otro panel.
   const s=p.socials||{};
-  c.innerHTML=`<section class="section-card"><h3>Portada y perfil público</h3><div class="admin-grid two"><label class="field"><span>URL de portada</span><input class="input" id="v16Cover" value="${esc(p.cover||'')}"></label><label class="field"><span>URL de foto de perfil</span><input class="input" id="v16Avatar" value="${esc(p.avatar||'')}"></label><label class="field"><span>Subir portada</span><input class="input" id="v16CoverUpload" type="file" accept="image/png,image/jpeg,image/webp"></label><label class="field"><span>Subir foto de perfil</span><input class="input" id="v16AvatarUpload" type="file" accept="image/png,image/jpeg,image/webp"></label></div><label class="row v19-logo-reuse"><input type="checkbox" id="v16UseLogo" __REPLACE_ME__ > Usar el logotipo actual como foto del perfil público</label><div class="admin-grid two"><div class="v16-crop-thumb rect">${p.cover?`<img id="v16CoverPreview" src="${esc(p.cover)}">`:'<img id="v16CoverPreview" style="display:none">'} </div><div class="v16-crop-thumb circle">${p.avatar?`<img id="v16AvatarPreview" src="${esc(p.avatar)}">`:'<img id="v16AvatarPreview" style="display:none">'}</div></div><label class="field"><span>Descripción</span><textarea class="textarea" id="v16Bio">${esc(p.bio||'')}</textarea></label><div class="admin-grid two"><label class="field"><span>Texto de ubicación</span><input class="input" id="v16LocationLabel" value="${esc(p.location_label||'')}" placeholder="Ej. Manzanillo, Colima"></label><label class="field"><span>Enlace de donación</span><input class="input" id="v16DonationUrl" value="${esc(p.donation_url||'')}" placeholder="https://..."></label><label class="field"><span>Texto del botón de donación</span><input class="input" id="v16DonationLabel" value="${esc(p.donation_label||'Apoyar con donación')}" maxlength="40"></label><label class="row"><input id="v16ProfileShow" type="checkbox" ${p.show!==false?'checked':''}> Mostrar perfil público</label></div></section>
+  c.innerHTML=`<section class="section-card"><h3>Portada y perfil público</h3><div class="admin-grid two"><label class="field"><span>URL de portada</span><input class="input" id="v16Cover" value="${esc(p.cover||'')}"></label><label class="field"><span>URL de foto de perfil</span><input class="input" id="v16Avatar" value="${esc(p.avatar||'')}"></label><label class="field"><span>Subir portada</span><input class="input" id="v16CoverUpload" type="file" accept="image/png,image/jpeg,image/webp"></label><label class="field"><span>Subir foto de perfil</span><input class="input" id="v16AvatarUpload" type="file" accept="image/png,image/jpeg,image/webp"></label></div><label class="row v19-logo-reuse"><input type="checkbox" id="v16UseLogo" ${p.avatar&&p.avatar===state.config.logo?'checked':''} > Usar el logotipo actual como foto del perfil público</label><div class="admin-grid two"><div class="v16-crop-thumb rect">${p.cover?`<img id="v16CoverPreview" src="${esc(p.cover)}">`:'<img id="v16CoverPreview" style="display:none">'} </div><div class="v16-crop-thumb circle">${p.avatar?`<img id="v16AvatarPreview" src="${esc(p.avatar)}">`:'<img id="v16AvatarPreview" style="display:none">'}</div></div><label class="field"><span>Descripción</span><textarea class="textarea" id="v16Bio">${esc(p.bio||'')}</textarea></label><div class="admin-grid two"><label class="field"><span>Texto de ubicación</span><input class="input" id="v16LocationLabel" value="${esc(p.location_label||'')}" placeholder="Ej. Manzanillo, Colima"></label><label class="field"><span>Enlace de donación</span><input class="input" id="v16DonationUrl" value="${esc(p.donation_url||'')}" placeholder="https://..."></label><label class="field"><span>Texto del botón de donación</span><input class="input" id="v16DonationLabel" value="${esc(p.donation_label||'Apoyar con donación')}" maxlength="40"></label><label class="row"><input id="v16ProfileShow" type="checkbox" ${p.show!==false?'checked':''}> Mostrar perfil público</label></div></section>
  <section class="section-card"><h3>Redes sociales</h3><div class="admin-grid two">${['facebook','instagram','tiktok','x','telegram','whatsapp','youtube','website'].map(k=>`<label class="field"><span>${socialLabel(k)}</span><input class="input" data-v16-social="${k}" value="${esc(s[k]||'')}" placeholder="https://..."></label>`).join('')}</div><button class="btn v16-glow-btn" id="v16SaveProfile">${UI.save}<span>Guardar perfil del negocio</span></button></section>
- <section class="section-card"><h3>Metas de seguidores / likes externos</h3><p class="small muted">Para actualizar automáticamente las metas usa la función Edge social-metrics con API oficial del proveedor. Aquí puedes crear, sincronizar y eliminar metas.</p><div class="admin-grid two"><label class="field"><span>Plataforma</span><select class="select" id="v16GoalPlatform">${['facebook','instagram','tiktok','x','telegram','youtube'].map(x=>`<option value="${x}">${socialLabel(x)}</option>`).join('')}</select></label><label class="field"><span>Meta</span><input class="input" id="v16GoalTarget" type="number" min="1" value="1000"></label><label class="field"><span>Texto</span><input class="input" id="v16GoalLabel" placeholder="Llegar a 1,000 seguidores"></label><label class="field"><span>URL que visitará el usuario</span><input class="input" id="v16GoalUrl" placeholder="https://..."></label><label class="field"><span>ID externo / username</span><input class="input" id="v16GoalExternal" placeholder="page_id, user_id, chat_id..."></label><label class="field"><span>Métrica</span><select class="select" id="v16GoalMetric"><option value="followers">Seguidores</option><option value="likes">Likes</option><option value="members">Miembros</option></select></label></div><button class="btn secondary" id="v16GoalSave">${UI.plus}<span>Agregar meta</span></button></section>
- <section class="section-card"><h3>Metas activas</h3><div id="v16GoalList">${goals.map(g=>`<article class="v14-goal"><div class="v14-goal-head"><span>${esc(g.label)}</span><span>${Number(g.current_count||0)} / ${Number(g.target_count||0)}</span></div><div class="v14-goal-bar"><span style="width:${Math.min(100,Number(g.current_count||0)/Math.max(1,Number(g.target_count||1))*100)}%"></span></div><div class="toolbar"><button class="btn secondary" data-v16-syncgoal="${esc(g.id)}">${UI.refresh}<span>Actualizar métrica</span></button><button class="btn ghost" data-v16-deletegoal="${esc(g.id)}">${UI.trash}<span>Eliminar</span></button></div></article>`).join('')||'<p class="small muted">Sin metas.</p>'}</div></section>`;
-  const bindCropUpload=(id,aspect,shape,inputId,previewId)=>{const el=document.getElementById(id); el.onchange=async e=>{try{if(!e.target.files?.[0])return; const src=await fileToDataURL(e.target.files[0]); openCropper({title:shape==='circle'?'Ajustar foto de perfil':'Ajustar portada',src,aspect,shape,apply:(data)=>{document.getElementById(inputId).value=data; const img=document.getElementById(previewId); img.src=data; img.style.display='block'; toast('Imagen ajustada. Guarda el perfil para aplicar.','ok')}})}catch(err){toast(err.message,'error')}}};
+ <section class="section-card"><h3>Metas de seguidores / likes externos</h3><p class="small muted">Crea metas y solicita una actualización de la métrica. La disponibilidad depende de la integración configurada.</p><div class="admin-grid two"><label class="field"><span>Plataforma</span><select class="select" id="v16GoalPlatform">${['facebook','instagram','tiktok','x','telegram','youtube'].map(x=>`<option value="${x}">${socialLabel(x)}</option>`).join('')}</select></label><label class="field"><span>Meta</span><input class="input" id="v16GoalTarget" type="number" min="1" value="1000"></label><label class="field"><span>Texto</span><input class="input" id="v16GoalLabel" placeholder="Llegar a 1,000 seguidores"></label><label class="field"><span>URL que visitará el usuario</span><input class="input" id="v16GoalUrl" placeholder="https://..."></label><label class="field"><span>ID externo / username</span><input class="input" id="v16GoalExternal" placeholder="page_id, user_id, chat_id..."></label><label class="field"><span>Métrica</span><select class="select" id="v16GoalMetric"><option value="followers">Seguidores</option><option value="likes">Likes</option><option value="members">Miembros</option></select></label></div><button class="btn secondary" id="v16GoalSave">${UI.plus}<span>Agregar meta</span></button></section>
+ <section class="section-card"><h3>Metas activas</h3><div id="v16GoalList">${goals.map(g=>`<article class="v14-goal"><div class="v14-goal-head"><span>${esc(g.label)}</span><span>${g.current_count==null?'Sin datos':esc(g.current_count)} / ${esc(g.target_count??'Sin objetivo')}</span></div>${g.current_count==null?'':`<progress aria-label="Progreso de la meta" max="${Math.max(1,Number(g.target_count)||1)}" value="${Math.max(0,Number(g.current_count)||0)}"></progress>`}<div class="toolbar"><button class="btn secondary" data-v16-syncgoal="${esc(g.id)}">${UI.refresh}<span>Actualizar métrica</span></button><button class="btn ghost" data-v16-deletegoal="${esc(g.id)}">${UI.trash}<span>Eliminar</span></button></div></article>`).join('')||'<p class="small muted">Sin metas.</p>'}</div></section>`;
+  // NUEVO: editor por apartados y simulación sin enlaces activos.
+  const sections=[...c.querySelectorAll(':scope > .section-card')];
+  const shell=document.createElement('section');shell.className='ve-profile';
+  shell.innerHTML=`<!-- NUEVO --><header class="ve-profile-head"><div><h2>Perfil y redes</h2><p>Edita la presentación pública del negocio.</p></div><div class="ve-profile-actions"><button type="button" class="btn secondary" data-profile-public>${UI.business}<span>Ver perfil público</span></button><button type="button" class="btn secondary" data-profile-view>Ver vista previa</button></div></header>
+    <div class="ve-profile-kpis"><div>Visibilidad<strong data-profile-visibility></strong></div><div>Canales configurados<strong data-profile-count></strong></div><div>Metas registradas<strong data-profile-goals>${goalError?'Sin datos':goals.length}</strong></div></div>
+    <div class="ve-profile-layout"><div class="ve-profile-edit"><div class="ve-profile-tabs" role="tablist" aria-label="Apartados del perfil">${['Identidad y portada','Redes sociales','Metas y métricas'].map((label,i)=>`<button type="button" role="tab" id="veProfileTab${i}" aria-controls="veProfilePanel${i}">${label}</button>`).join('')}</div>${[0,1,2].map(i=>`<section id="veProfilePanel${i}" role="tabpanel" aria-labelledby="veProfileTab${i}"></section>`).join('')}</div>
+    <aside class="ve-profile-preview"><div class="ve-profile-head"><div><h3>Vista previa del perfil</h3><small>Simulación · acciones de contacto desactivadas</small></div><div class="ve-profile-actions"><button type="button" class="btn secondary" data-profile-size="desktop">Escritorio</button><button type="button" class="btn secondary" data-profile-size="mobile">Móvil</button></div></div>
+    <div class="ve-profile-card"><div class="ve-profile-cover"></div><div class="ve-profile-card-body"><div class="ve-profile-avatar"></div><h3>${esc(state.config.businessName)}</h3><p data-profile-location></p><p data-profile-bio></p><div class="ve-profile-links"></div><div class="ve-profile-preview-goals"></div></div></div></aside></div>
+    <footer class="ve-profile-head"><p role="status" data-profile-status></p><div class="ve-profile-actions"><button type="button" class="btn secondary" data-profile-reset>Descartar</button></div></footer>`;
+  const q=selector=>shell.querySelector(selector), field=id=>q('#v16'+id);
+  sections.forEach((section,i)=>q('#veProfilePanel'+Math.min(i,2)).append(section));
+  q('footer .ve-profile-actions').append(field('SaveProfile'));
+  c.replaceChildren(shell);
+  const iconPaths={facebook:'M14 22v-9h3l1-4h-4V7c0-1 1-2 4-1V2h-3a5 5 0 0 0-5 5v2H7v4h3v9',instagram:'M7 3h10a4 4 0 0 1 4 4v10a4 4 0 0 1-4 4H7a4 4 0 0 1-4-4V7a4 4 0 0 1 4-4Zm9 9a4 4 0 1 0-8 0 4 4 0 0 0 8 0Zm2-6h.01',tiktok:'M14 3v13a4 4 0 1 1-4-4m4-9c0 4 3 6 6 6',x:'M4 3h4l12 18h-4L4 3Zm16 0L4 21',telegram:'m2 11 20-8-5 18-6-5-4 3v-6zm5 2L18 7l-7 9',whatsapp:'M4 18 2 22l5-1a9 9 0 1 0-3-3Zm4-9c1 4 3 6 7 7l2-2-3-2-1 1-2-2 1-1-2-3Z',youtube:'M3 5h18v14H3Zm7 3v8l6-4Z',website:'M22 12A10 10 0 1 1 2 12a10 10 0 0 1 20 0ZM2 12h20M12 2a16 16 0 0 1 0 20 16 16 0 0 1 0-20'};
+  const socialIcon=k=>`<svg viewBox="0 0 24 24" aria-hidden="true" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linejoin="round"><path d="${iconPaths[k]||iconPaths.website}"/></svg>`;
+  const web=value=>{try{return ['http:','https:'].includes(new URL(value).protocol)}catch{return false}};
+  const image=value=>web(value)||/^data:image\/(png|jpeg|webp);base64,/i.test(value);
+  const socials=[...shell.querySelectorAll('[data-v16-social]')];
+  for(const el of socials){
+    el.previousElementSibling.insertAdjacentHTML('afterbegin',socialIcon(el.dataset.v16Social));
+    const link=document.createElement('a');link.textContent='Abrir enlace';link.target='_blank';link.rel='noopener noreferrer';el.after(link);
+    el.veLink=link;
+  }
+  const inputs=[...shell.querySelectorAll('#veProfilePanel0 input:not([type=file]),#veProfilePanel0 textarea,[data-v16-social]')];
+  const snapshot=()=>inputs.map(el=>el.type==='checkbox'?el.checked:el.value);
+  let baseline=JSON.stringify(snapshot()), previewOnly=false, saving=false;
+  const message=q('[data-profile-status]');
+  const tabs=[...shell.querySelectorAll('[role=tab]')];
+  function tab(i,focus=false){
+    tabs.forEach((b,n)=>{b.setAttribute('aria-selected',String(i===n));b.tabIndex=i===n?0:-1;q('#veProfilePanel'+n).hidden=i!==n;});
+    if(focus)tabs[i].focus();
+  }
+  tabs.forEach((b,i)=>{b.onclick=()=>tab(i);b.onkeydown=e=>{const n={ArrowRight:(i+1)%3,ArrowLeft:(i+2)%3,Home:0,End:2}[e.key];if(n!==undefined){e.preventDefault();tab(n,true);}};});
+  function putImage(holder,src,alt){
+    let img=holder.querySelector('img');
+    if(!image(src)&&!(src&&src===state.config.logo&&!/^javascript:/i.test(src))){img?.remove();return;}
+    if(!img){img=document.createElement('img');img.alt=alt;holder.append(img);}
+    if(img.getAttribute('src')!==src)img.src=src;
+  }
+  function paint(){
+    const configured=socials.filter(el=>el.value.trim());
+    for(const el of socials){
+      const url=el.value.trim();el.veLink.hidden=!web(url);
+      if(web(url))el.veLink.href=url;else el.veLink.removeAttribute('href');
+    }
+    q('[data-profile-count]').textContent=configured.length;
+    q('[data-profile-visibility]').textContent=field('ProfileShow').checked?'Visible':'Oculto';
+    const avatar=(field('UseLogo').checked?state.config.logo:field('Avatar').value.trim())||state.config.logo||'';
+    putImage(q('.ve-profile-cover'),field('Cover').value.trim(),'Portada');
+    putImage(q('.ve-profile-avatar'),avatar,'Imagen del negocio');
+    for(const [key,src] of [['Cover',field('Cover').value.trim()],['Avatar',avatar]]){
+      const thumb=field(key+'Preview');thumb.style.display=image(src)?'block':'none';if(image(src)&&thumb.getAttribute('src')!==src)thumb.src=src;
+    }
+    q('[data-profile-location]').textContent=field('LocationLabel').value.trim()||[state.config.businessAddress?.street,state.config.businessAddress?.ext,state.config.businessAddress?.neighborhood,state.config.businessAddress?.municipality,state.config.businessAddress?.state].filter(Boolean).join(', ')||state.config.origin?.address||'Ubicación del negocio';
+    q('[data-profile-bio]').textContent=field('Bio').value.trim()||state.config.tagline||'';
+    q('.ve-profile-links').innerHTML=configured.filter(el=>web(el.value.trim())).map(el=>`<span>${socialIcon(el.dataset.v16Social)}${esc(socialLabel(el.dataset.v16Social))}</span>`).join('')+(web(field('DonationUrl').value.trim())?`<span>${esc(field('DonationLabel').value.trim()||'Apoyar con donación')}</span>`:'');
+    message.textContent=JSON.stringify(snapshot())===baseline?'Sin cambios pendientes':'Cambios pendientes de guardar';
+  }
+  q('.ve-profile-preview-goals').innerHTML=goals.map(g=>`<p><strong>${esc(g.label)}</strong><br>${g.current_count==null?'Sin datos':esc(g.current_count)} / ${esc(g.target_count??'Sin objetivo')}</p>`).join('')||(goalError?'<p>Metas no disponibles.</p>':'');
+  shell.oninput=paint;shell.onchange=paint;
+  q('[data-profile-view]').onclick=e=>{previewOnly=!previewOnly;shell.classList.toggle('is-preview',previewOnly);e.currentTarget.textContent=previewOnly?'Volver a edición':'Ver vista previa';};
+  shell.querySelectorAll('[data-profile-size]').forEach(b=>b.onclick=()=>{
+    shell.classList.toggle('is-mobile',b.dataset.profileSize==='mobile');
+    shell.querySelectorAll('[data-profile-size]').forEach(x=>x.setAttribute('aria-pressed',String(x===b)));
+  });
+  q('[data-profile-size=desktop]').click();
+  q('[data-profile-public]').onclick=()=>{if(publicProfileCfg().show===false)return toast('El perfil guardado está oculto.','info');window.v18OpenBusiness?.();};
+  q('[data-profile-reset]').onclick=()=>{
+    if(saving||JSON.stringify(snapshot())===baseline||!confirm('¿Descartar los cambios del perfil?'))return;
+    JSON.parse(baseline).forEach((value,i)=>{if(inputs[i].type==='checkbox')inputs[i].checked=value;else inputs[i].value=value;});
+    field('CoverUpload').value=field('AvatarUpload').value='';paint();
+  };
+  for(const key of ['Cover','Avatar']){
+    const button=document.createElement('button');button.type='button';button.className='btn secondary';button.innerHTML=UI.trash+'<span>Retirar imagen</span>';
+    field(key+'Upload').closest('label').after(button);button.onclick=()=>{field(key).value='';field(key+'Upload').value='';if(key==='Avatar')field('UseLogo').checked=false;paint();};
+  }
+  tab(0);paint();
+  const bindCropUpload=(id,aspect,shape,inputId,previewId)=>{const el=document.getElementById(id); el.onchange=async e=>{try{if(!e.target.files?.[0])return; const src=await fileToDataURL(e.target.files[0]);if(!shell.isConnected)return; openCropper({title:shape==='circle'?'Ajustar foto de perfil':'Ajustar portada',src,aspect,shape,apply:(data)=>{if(!shell.isConnected)return; q('#'+inputId).value=data;if(inputId==='v16Avatar')field('UseLogo').checked=false;paint(); toast('Imagen ajustada. Guarda el perfil para aplicar.','ok')}})}catch(err){toast(err.message,'error')}}};
   bindCropUpload('v16CoverUpload',16/5,'rect','v16Cover','v16CoverPreview'); bindCropUpload('v16AvatarUpload',1,'circle','v16Avatar','v16AvatarPreview');
   const reuseLogo=document.getElementById('v16UseLogo');
   reuseLogo.disabled=!state.config.logo;
-  if(!state.config.logo)reuseLogo.parentElement.title='Primero configura el logotipo en Personalización.';
+  if(!state.config.logo)reuseLogo.parentElement.title='Primero configura el logotipo en Negocio.';
   reuseLogo.onchange=()=>{
     if(!reuseLogo.checked)return;
-    document.getElementById('v16Avatar').value=state.config.logo;
-    const img=document.getElementById('v16AvatarPreview');img.src=state.config.logo;img.style.display='block';
+    paint(); // MODIFICADO: conservar la foto del borrador al activar la opción de logotipo.
   };
-  document.getElementById('v16SaveProfile').onclick=e=>panelRun(e.currentTarget,async()=>{state.config.publicProfile={...state.config.publicProfile,cover:document.getElementById('v16Cover').value.trim(),avatar:(document.getElementById('v16UseLogo').checked&&state.config.logo?state.config.logo:document.getElementById('v16Avatar').value.trim()),bio:document.getElementById('v16Bio').value.trim(),show:document.getElementById('v16ProfileShow').checked,location_label:document.getElementById('v16LocationLabel').value.trim(),donation_url:document.getElementById('v16DonationUrl').value.trim(),donation_label:document.getElementById('v16DonationLabel').value.trim(),socials:Object.fromEntries([...c.querySelectorAll('[data-v16-social]')].map(x=>[x.dataset.v16Social,x.value.trim()]))}; saveLocal(); await syncAdminStateToCloud(); ensureBusinessTrigger();},'Perfil guardado.');
-  document.getElementById('v16GoalSave').onclick=e=>panelRun(e.currentTarget,async()=>{await v16Community('goal_save',{platform:document.getElementById('v16GoalPlatform').value,label:document.getElementById('v16GoalLabel').value.trim(),target_count:Number(document.getElementById('v16GoalTarget').value),target_url:document.getElementById('v16GoalUrl').value.trim(),external_id:document.getElementById('v16GoalExternal').value.trim(),metric_kind:document.getElementById('v16GoalMetric').value}); await renderV16ProfileAdmin(c)},'Meta agregada.');
-  c.querySelectorAll('[data-v16-deletegoal]').forEach(b=>b.onclick=e=>panelRun(e.currentTarget,async()=>{await v16Community('goal_delete',{id:b.dataset.v16Deletegoal}); await renderV16ProfileAdmin(c)},'Meta eliminada.'));
-  c.querySelectorAll('[data-v16-syncgoal]').forEach(b=>b.onclick=e=>panelRun(e.currentTarget,async()=>{if(!supabaseClient)throw Error('Sin conexión con Supabase.'); const {data,error}=await supabaseClient.functions.invoke('social-metrics',{body:{action:'sync_goal',goal_id:b.dataset.v16Syncgoal}}); if(error||data?.error)throw Error(data?.error||error.message||'No se pudo sincronizar la meta.'); await renderV16ProfileAdmin(c)},'Métrica actualizada.'));
+  // MODIFICADO: publicar el borrador solo tras confirmar el guardado existente.
+  field('SaveProfile').onclick=e=>panelRun(e.currentTarget,async()=>{
+    if(saving)return;
+    if(!supabaseClient||!panelCan('profile'))throw Error('No tienes acceso para guardar el perfil.');
+    for(const el of [...socials,field('DonationUrl')])if(el.value.trim()&&!web(el.value.trim())){el.focus();throw Error('Los enlaces deben usar http:// o https://.');}
+    for(const key of ['Cover','Avatar'])if(field(key).value.trim()&&field(key).value.trim()!==state.config.logo&&!image(field(key).value.trim()))throw Error('Revisa la URL de la imagen.');
+    const draft={...state.config.publicProfile,cover:document.getElementById('v16Cover').value.trim(),avatar:(document.getElementById('v16UseLogo').checked&&state.config.logo?state.config.logo:document.getElementById('v16Avatar').value.trim()),bio:document.getElementById('v16Bio').value.trim(),show:document.getElementById('v16ProfileShow').checked,location_label:document.getElementById('v16LocationLabel').value.trim(),donation_url:document.getElementById('v16DonationUrl').value.trim(),donation_label:document.getElementById('v16DonationLabel').value.trim(),socials:Object.fromEntries([...c.querySelectorAll('[data-v16-social]')].map(x=>[x.dataset.v16Social,x.value.trim()]))};
+    saving=true;shell.inert=true;
+    try{
+      if(cloudSaving)await cloudSaving;
+      if(pendingCloudModules.size){clearTimeout(cloudSyncTimer);await syncAdminStateToCloud();}
+      await vibraSaveConfig({...state.config,publicProfile:draft},'profile');
+      state.config.publicProfile=draft;saveLocal();ensureBusinessTrigger();
+      baseline=JSON.stringify(snapshot());paint();
+    }finally{saving=false;shell.inert=false;}
+  },'Perfil guardado.');
+  async function refreshGoals(){
+    try{
+      const fresh=(await v16Community('goals_admin',{})).goals||[];
+      if(!shell.isConnected)return;
+      const list=field('GoalList');
+      list.innerHTML=fresh.map(g=>`<article class="v14-goal"><div class="v14-goal-head"><strong>${esc(g.label)}</strong><span>${g.current_count==null?'Sin datos':esc(g.current_count)} / ${esc(g.target_count??'Sin objetivo')}</span></div>${g.current_count==null?'':`<progress aria-label="Progreso de la meta" max="${Math.max(1,Number(g.target_count)||1)}" value="${Math.max(0,Number(g.current_count)||0)}"></progress>`}<div class="toolbar"><button type="button" class="btn secondary" data-v16-syncgoal="${esc(g.id)}">${UI.refresh}<span>Actualizar métrica</span></button><button type="button" class="btn ghost" data-v16-deletegoal="${esc(g.id)}">${UI.trash}<span>Eliminar</span></button></div></article>`).join('')||'<p>Sin metas.</p>';
+      q('[data-profile-goals]').textContent=fresh.length;
+      q('.ve-profile-preview-goals').innerHTML=fresh.map(g=>`<p>${esc(g.label)} · ${g.current_count==null?'Sin datos':esc(g.current_count)} / ${esc(g.target_count??'Sin objetivo')}</p>`).join('');
+      bindGoalActions();
+    }catch{field('GoalList').insertAdjacentHTML('afterbegin','<p role="status">No se pudo actualizar la lista de metas.</p>');}
+  }
+  document.getElementById('v16GoalSave').onclick=e=>panelRun(e.currentTarget,async()=>{await v16Community('goal_save',{platform:document.getElementById('v16GoalPlatform').value,label:document.getElementById('v16GoalLabel').value.trim(),target_count:Number(document.getElementById('v16GoalTarget').value),target_url:document.getElementById('v16GoalUrl').value.trim(),external_id:document.getElementById('v16GoalExternal').value.trim(),metric_kind:document.getElementById('v16GoalMetric').value}); await refreshGoals()},'Meta agregada.');
+  function bindGoalActions(){
+  c.querySelectorAll('[data-v16-deletegoal]').forEach(b=>b.onclick=e=>panelRun(e.currentTarget,async()=>{await v16Community('goal_delete',{id:b.dataset.v16Deletegoal}); await refreshGoals()},'Meta eliminada.'));
+  c.querySelectorAll('[data-v16-syncgoal]').forEach(b=>b.onclick=e=>panelRun(e.currentTarget,async()=>{if(!supabaseClient)throw Error('Sin conexión con Supabase.'); const {data,error}=await supabaseClient.functions.invoke('social-metrics',{body:{action:'sync_goal',goal_id:b.dataset.v16Syncgoal}}); if(error||data?.error)throw Error(data?.error||error.message||'No se pudo sincronizar la meta.'); await refreshGoals()},'Métrica actualizada.'));
+  }
+  bindGoalActions();
  }
 
 const v16AdminPaneBase=renderAdminPane;
 renderAdminPane=async function(id){
-  if(id==='profile'){activeAdmin=id; document.querySelectorAll('.tab-btn').forEach(b=>b.classList.toggle('active',b.dataset.tab===id)); const c=document.getElementById('adminContent'); c.innerHTML='<p class="muted">Cargando…</p>'; const row=document.createElement('div'); row.className='faithful-session'; const who=document.createElement('span'); who.className='small muted'; who.textContent=(adminSession?.user?.email||'')+' · '+(panelAccess.owner?'Propietario':'Colaborador'); const logout=document.createElement('button'); logout.className='btn ghost'; logout.innerHTML=UI.lock+'<span>Cerrar sesión</span>'; logout.onclick=()=>adminSignOut(); c.replaceChildren(row); row.append(who,logout); const inner=document.createElement('div'); c.append(inner); return renderV16ProfileAdmin(inner)}
+  if(id==='profile'){if(!panelCan(id))return toast('No tienes acceso a Perfil y redes.','error');++panelEpoch;activeAdmin=id; document.querySelectorAll('.tab-btn').forEach(b=>b.classList.toggle('active',b.dataset.tab===id)); const c=document.getElementById('adminContent'); c.innerHTML='<p class="muted">Cargando…</p>'; const row=document.createElement('div'); row.className='faithful-session'; const who=document.createElement('span'); who.className='small muted'; who.textContent=(adminSession?.user?.email||'')+' · '+(panelAccess.owner?'Propietario':'Colaborador'); const logout=document.createElement('button'); logout.className='btn ghost'; logout.innerHTML=UI.lock+'<span>Cerrar sesión</span>'; logout.onclick=()=>adminSignOut(); c.replaceChildren(row); row.append(who,logout); const inner=document.createElement('div'); c.append(inner); return renderV16ProfileAdmin(inner)}
   const result=await v16AdminPaneBase(id); if(id==='business'||id==='products')ensureBusinessTrigger(); return result;
  };
 
@@ -7725,7 +7909,7 @@ function drawPreview(){
  canvas.querySelectorAll('[data-fig]').forEach((el,i)=>{
    const v=list[i];el.classList.toggle('is-selected',i===selected);
    el.style.left=v.x+'%';el.style.top=v.y+'%';
-   el.style.setProperty('--hero-size',v.size+'px');el.style.setProperty('--hero-opacity',v.opacity);
+   el.style.setProperty('--hero-size',v.size+'px');el.style.setProperty('--hero-opacity',v.opacity); // MODIFICADO: el CSS adapta el tamaño al ancho simulado.
  });
  for(const [id,key] of [['vibraHeroSize','size'],['vibraHeroOpacity','opacity'],['veHeroX','x'],['veHeroY','y']]){
    const el=$('#'+id);if(el){el.disabled=!curr;if(curr)el.value=curr[key];}
@@ -7880,7 +8064,7 @@ function renderPublic(){
 }
 
 async function reviewUI(){if(typeof panelAccess==='undefined'||!(panelAccess.master||panelAccess.owner))return;const db=api();if(!db)return;const r=await db.from('vibra_independent_profiles').select('user_id,display_name,verification_document_path,verification_document_type').eq('verification_status','pending');if(r.error)throw r.error;adminSecondaryDialog(modal('Solicitudes de verificación',`<div class="vi-panel"><h3>Documentos pendientes de aprobación</h3><div id="viReviews"></div></div>`));$('viReviews').innerHTML=(r.data||[]).map(p=>`<div class="vi-panel"><strong>${safe(p.display_name)}</strong> · ${safe(p.verification_document_type)}<div class="vi-actions"><button class="btn secondary" data-review="view" data-id="${p.user_id}">Consultar documento</button><button class="btn" data-review="yes" data-id="${p.user_id}">Aprobar</button><button class="btn danger" data-review="no" data-id="${p.user_id}">Rechazar</button></div></div>`).join('')||'<p>Sin solicitudes pendientes.</p>';$('viReviews').onclick=async e=>{const btn=e.target.closest('[data-review]');if(!btn)return;const p=r.data.find(x=>x.user_id===btn.dataset.id);if(!p)return;try{if(btn.dataset.review==='view'){const out=await db.storage.from('vibra-independent-ids').createSignedUrl(p.verification_document_path,60);if(out.error)throw out.error;window.open(out.data.signedUrl,'_blank','noopener');return}if(!confirm(btn.dataset.review==='yes'?'¿Aprobar identificación tras revisarla?':'¿Rechazar esta identificación?'))return;const out=await db.rpc('vibra_independent_review',{p_user_id:p.user_id,p_approve:btn.dataset.review==='yes'});if(out.error)throw out.error;await reviewUI()}catch(err){message(err)}}}
-function adminButton(){if(activeAdmin==='business')return; /* MODIFICADO: verificación permanece en Productos y servicios. */ const c=$('adminContent');if(!c||!c.querySelector('.admin-pane,.section-card')||!c.querySelector('button'))return;if(typeof panelAccess==='undefined'||!(panelAccess.master||panelAccess.owner))return;if(c.querySelector('#viReviewAdmin'))return;const b=document.createElement('button');b.id='viReviewAdmin';b.className='btn secondary';b.textContent='Verificación de masajistas independientes';b.onclick=()=>reviewUI().catch(message);c.prepend(b)}
+function adminButton(){if(['business','design','profile'].includes(activeAdmin))return; /* MODIFICADO: verificación permanece en Productos y servicios. */ const c=$('adminContent');if(!c||!c.querySelector('.admin-pane,.section-card')||!c.querySelector('button'))return;if(typeof panelAccess==='undefined'||!(panelAccess.master||panelAccess.owner))return;if(c.querySelector('#viReviewAdmin'))return;const b=document.createElement('button');b.id='viReviewAdmin';b.className='btn secondary';b.textContent='Verificación de masajistas independientes';b.onclick=()=>reviewUI().catch(message);c.prepend(b)}
 function ageNote(){const age=$('vibraAccessAge');if(!age||age.querySelector('.vi-age-note'))return;const p=document.createElement('p');p.className='vi-age-note';p.textContent='Al ingresar aceptas interactuar con respeto, proteger la privacidad de otras personas y realizar consultas serias. No se tolera el acoso ni el uso indebido de información personal.';age.querySelector('.vibra-age-card')?.append(p)}
 let scheduled=false;function check(){scheduled=false;ageNote();if(user()&&typeof panelAccess!=='undefined'&&adminSession?.user?.id===user().id&&(panelAccess.owner||panelAccess.master||(panelAccess.modules||[]).length)){$('viCategoryPrompt')?.remove();checkedUser=user().id;accountCategory='privileged';}addAccountEntry();adminButton();if(user()&&checkedUser!==user().id&&!categoryPending)loadAccountCategory().catch(console.warn);if(!user()){checkedUser=null;accountCategory=null;$('viCategoryPrompt')?.remove()}}
 function queue(){if(scheduled)return;scheduled=true;requestAnimationFrame(check)}
