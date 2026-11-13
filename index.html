@@ -1650,10 +1650,54 @@ document.getElementById('retrySupabase').onclick=async()=>{try{await initSupabas
 function initOriginMap(){if(!document.getElementById('originMap')||typeof L==='undefined')return;if(originMap){originMap.remove();originMap=null}const o=state.config.origin;originMap=L.map('originMap',{rotate:true,touchRotate:true,dragRotate:true,shiftKeyRotate:true,rotateControl:{position:"topright",behavior:"reset",closeOnZeroBearing:false}}).setView([o.lat,o.lng],14);if(!addConfiguredTileLayer(originMap,'originMap')){originMap.remove();originMap=null;return;}originMarker=L.marker([o.lat,o.lng],{draggable:true}).addTo(originMap);const set=e=>{const ll=e.latlng||e.target.getLatLng();state.config.origin.lat=ll.lat;state.config.origin.lng=ll.lng;save()};originMap.on('click',e=>{originMarker.setLatLng(e.latlng);set(e)});originMarker.on('dragend',set)}
 function renderTripAdmin(c){const s=state.config.shipping;c.innerHTML=`<div class="section-card"><h3>Ruta y distancia</h3><div class="field"><label>Origen</label><input class="input" value="${esc(state.config.origin.address)}" disabled></div><div class="field"><label>Destino</label><input class="input" id="tripDestination" placeholder="Escribe una dirección"></div><button class="btn secondary" id="tripGeocode">${UI.pin}<span>Buscar destino</span></button><div class="small muted" style="margin:8px 0">También puedes dar clic en el mapa para fijar el destino.</div><div id="tripMap" class="map"></div><label class="row" style="margin-top:10px"><input type="checkbox" id="roundTrip" ${s.roundTrip?'checked':''}><span>Ida y vuelta</span></label></div><div class="section-card"><h3>Vehículo y combustible</h3><div class="field"><label>Vehículo</label><select class="select" id="vehicle"><option value="moto" ${s.vehicle==='moto'?'selected':''}>Moto</option><option value="auto" ${s.vehicle==='auto'?'selected':''}>Auto</option><option value="truck" ${s.vehicle==='truck'?'selected':''}>Camioneta</option><option value="bike" ${s.vehicle==='bike'?'selected':''}>Bicicleta u otro</option></select></div><div class="admin-grid two">${[['Moto','moto',UI.moto],['Auto','auto',UI.car],['Camioneta','truck',UI.truck],['Bicicleta u otro','bike',UI.bike]].map(([lab,key,ico])=>`<div class="field"><label class="row">${ico}<span>${lab} km/l</span></label><input class="input" type="number" step="0.1" data-eff="${key}" value="${s.efficiency[key]}"></div>`).join('')}</div><div class="field"><label>Combustible</label><select class="select" id="fuelType">${['Magna','Premium','Diésel'].map(f=>`<option ${s.fuel===f?'selected':''}>${f}</option>`).join('')}</select></div><div class="admin-grid two">${['Magna','Premium','Diésel'].map(f=>`<div class="field"><label>${f} precio por litro</label><input class="input" type="number" step="0.01" data-fuel="${f}" value="${s.fuelPrice[f]}"></div>`).join('')}</div></div><div class="section-card"><h3>Tarifa de envío</h3><div class="admin-grid two"><div class="field"><label>Costo base</label><input class="input" id="shipBase" type="number" step="0.01" value="${s.base}"></div><div class="field"><label>Tarifa por km</label><input class="input" id="shipPerKm" type="number" step="0.01" value="${s.perKm}"></div><div class="field"><label>Margen de ganancia</label><input class="input" id="shipMargin" type="number" step="0.1" value="${s.margin}"></div><div class="field"><label>Redondeo</label><input class="input" id="shipRound" type="number" step="1" value="${s.rounding}"></div><div class="field"><label>Envío gratis desde</label><input class="input" id="shipFree" type="number" step="1" value="${s.freeFrom}"></div></div></div><div class="section-card"><h3>Resultado</h3><div class="result-grid"><div class="metric"><strong id="resKm">0.00 km</strong><span>Distancia</span></div><div class="metric"><strong id="resLiters">0.00 l</strong><span>Litros</span></div><div class="metric"><strong id="resFuel">${money(0)}</strong><span>Costo combustible</span></div><div class="metric"><strong id="resSuggested">${money(0)}</strong><span>Envío sugerido</span></div></div><div class="toolbar" style="margin-top:12px"><button class="btn" id="useRate">${UI.save}<span>Usar esta tarifa</span></button></div></div>`;bindTripAdmin();setTimeout(initTripMap,100)}
 let tripKm=0;
-function bindTripAdmin(){document.getElementById('tripGeocode').onclick=()=>geocodeAddress(document.getElementById('tripDestination').value,'trip');document.getElementById('roundTrip').onchange=e=>{state.config.shipping.roundTrip=e.target.checked;save();recalcTrip()};document.querySelectorAll('[data-eff]').forEach(i=>i.oninput=e=>{state.config.shipping.efficiency[e.target.dataset.eff]=Number(e.target.value)||0;recalcTrip()});document.querySelectorAll('[data-fuel]').forEach(i=>i.oninput=e=>{state.config.shipping.fuelPrice[e.target.dataset.fuel]=Number(e.target.value)||0;recalcTrip()});document.getElementById('vehicle').onchange=e=>{state.config.shipping.vehicle=e.target.value;recalcTrip()};document.getElementById('fuelType').onchange=e=>{state.config.shipping.fuel=e.target.value;recalcTrip()};['shipBase','shipPerKm','shipMargin','shipRound','shipFree'].forEach(id=>document.getElementById(id).oninput=recalcTrip);document.getElementById('useRate').onclick=()=>{const s=state.config.shipping;s.base=Number(document.getElementById('shipBase').value)||0;s.perKm=Number(document.getElementById('shipPerKm').value)||0;s.margin=Number(document.getElementById('shipMargin').value)||0;s.rounding=Number(document.getElementById('shipRound').value)||0;s.freeFrom=Number(document.getElementById('shipFree').value)||0;save();toast('Tarifa de envío guardada.','ok')}}
-function initTripMap(){if(!document.getElementById('tripMap')||typeof L==='undefined')return;if(tripMap){tripMap.remove();tripMap=null}const o=state.config.origin;tripMap=L.map('tripMap',{rotate:true,touchRotate:true,dragRotate:true,shiftKeyRotate:true,rotateControl:{position:"topright",behavior:"reset",closeOnZeroBearing:false}}).setView([o.lat,o.lng],13);if(!addConfiguredTileLayer(tripMap,'tripMap')){tripMap.remove();tripMap=null;return;}tripOriginMarker=L.marker([o.lat,o.lng]).addTo(tripMap);tripMap.on('click',e=>setTripDestination(e.latlng.lat,e.latlng.lng))}
+// MODIFICADO: ajustes de cotización en memoria; el guardado es explícito.
+function bindTripAdmin(){
+ const destination=document.getElementById('tripDestination'),search=document.getElementById('tripGeocode');
+ search.onclick=async()=>{
+   const query=destination.value.trim(),root=destination.closest('.ve-trip');
+   if(!query){toast('Escribe una dirección.','error');return;}
+   const status=root.querySelector('#veTripStatus'), serial=++panelTripSerial;
+   panelRouteReady=false;status.textContent='Buscando dirección…';recalcTrip();
+   try{
+     const url=`https://nominatim.openstreetmap.org/search?format=json&limit=1&q=${encodeURIComponent(query)}`;
+     const response=await fetch(url,{headers:{Accept:'application/json'}});
+     if(!response.ok)throw Error('El servicio de búsqueda no respondió.');
+     const [point]=await response.json();
+     if(!root.isConnected||serial!==panelTripSerial||activeAdmin!=='trip')return;
+     if(!point)throw Error('No se encontró la dirección. Puedes marcar el destino en el mapa.');
+     if(!tripMap||tripMap.getContainer()!==root.querySelector('#tripMap'))throw Error('El mapa no está disponible.');
+     destination.value=point.display_name;
+     await setTripDestination(Number(point.lat),Number(point.lon));
+   }catch(error){if(root.isConnected&&serial===panelTripSerial&&activeAdmin==='trip')status.textContent=error.message;}
+ };
+ destination.onkeydown=e=>{if(e.key==='Enter'){e.preventDefault();search.click();}};
+ const wrap=destination.closest('.section-card');
+ wrap.oninput=e=>{
+   if(e.target===destination){++panelTripSerial;panelRouteReady=false;document.getElementById('veTripStatus').textContent='Busca la dirección para actualizar la ruta.';}
+   recalcTrip();
+ };
+ document.getElementById('roundTrip').onchange=recalcTrip;
+ document.querySelectorAll('[data-eff],[data-fuel],#shipBase,#shipPerKm,#shipMargin,#shipRound,#shipFree').forEach(el=>el.oninput=recalcTrip);
+ document.getElementById('vehicle').onchange=recalcTrip;
+ document.getElementById('fuelType').onchange=recalcTrip;
+}
+function initTripMap(){const container=document.getElementById('tripMap');if(!container||container.closest('[hidden]')||!document.querySelector('#adminModal.show')||typeof L==='undefined')return;
+ // MODIFICADO: reutilizar el mapa al volver a la cotización.
+ if(tripMap?.getContainer()===container){tripMap.invalidateSize();return;}if(tripMap){tripMap.remove();tripMap=null}const o=state.config.origin;tripMap=L.map('tripMap',{rotate:true,touchRotate:true,dragRotate:true,shiftKeyRotate:true,rotateControl:{position:"topright",behavior:"reset",closeOnZeroBearing:false}}).setView([o.lat,o.lng],13);if(!addConfiguredTileLayer(tripMap,'tripMap')){tripMap.remove();tripMap=null;return;}tripOriginMarker=L.marker([o.lat,o.lng]).addTo(tripMap);tripMap.on('click',e=>setTripDestination(e.latlng.lat,e.latlng.lng))}
 async function setTripDestination(lat,lng){if(!tripMap)return;if(tripDestMarker)tripDestMarker.setLatLng([lat,lng]);else tripDestMarker=L.marker([lat,lng],{draggable:true}).addTo(tripMap);tripDestMarker.on('dragend',e=>{const ll=e.target.getLatLng();setTripDestination(ll.lat,ll.lng)});const o=state.config.origin,res=await routeDistance(o.lat,o.lng,lat,lng);tripKm=res.km;if(tripRouteLayer){tripMap.removeLayer(tripRouteLayer);tripRouteLayer=null}if(res.geo){tripRouteLayer=L.geoJSON(res.geo).addTo(tripMap);tripMap.fitBounds(tripRouteLayer.getBounds(),{padding:[20,20]})}recalcTrip();if(res.fallback)toast('La ruta no respondió. Se usa una estimación de respaldo.','error')}
-function recalcTrip(){const s=state.config.shipping,km=tripKm*(document.getElementById('roundTrip')?.checked?2:1),veh=document.getElementById('vehicle')?.value||s.vehicle,fuel=document.getElementById('fuelType')?.value||s.fuel,eff=Number(document.querySelector(`[data-eff="${veh}"]`)?.value)||s.efficiency[veh],price=Number(document.querySelector(`[data-fuel="${fuel}"]`)?.value)||s.fuelPrice[fuel],liters=veh==='bike'?0:km/Math.max(eff,.1),fuelCost=liters*price,base=Number(document.getElementById('shipBase')?.value)||0,per=Number(document.getElementById('shipPerKm')?.value)||0,margin=Number(document.getElementById('shipMargin')?.value)||0,round=Number(document.getElementById('shipRound')?.value)||0;let suggested=(base+km*per+fuelCost)*(1+margin/100);if(round>0)suggested=Math.ceil(suggested/round)*round;document.getElementById('resKm').textContent=`${km.toFixed(2)} km`;document.getElementById('resLiters').textContent=`${liters.toFixed(2)} l`;document.getElementById('resFuel').textContent=money(fuelCost);document.getElementById('resSuggested').textContent=money(suggested)}
+function recalcTrip(){
+ const root=document.querySelector('#adminContent > .ve-trip');
+ if(!root)return;
+ const valid=panelRouteReady&&validTripParameters(root);
+ const action=root.querySelector('#useRate');
+ action.disabled=!valid;
+ if(!valid){
+   root.veQuote=null;
+   for(const id of ['resKm','resLiters','resFuel','resSuggested'])root.querySelector('#'+id).textContent='—';
+   return;
+ }
+ // MODIFICADO: misma fórmula, con transferencia del importe numérico calculado.
+ const s=state.config.shipping,km=tripKm*(document.getElementById('roundTrip')?.checked?2:1),veh=document.getElementById('vehicle')?.value||s.vehicle,fuel=document.getElementById('fuelType')?.value||s.fuel,eff=Number(document.querySelector(`[data-eff="${veh}"]`)?.value)||s.efficiency[veh],price=Number(document.querySelector(`[data-fuel="${fuel}"]`)?.value)||s.fuelPrice[fuel],liters=veh==='bike'?0:km/Math.max(eff,.1),fuelCost=liters*price,base=Number(document.getElementById('shipBase')?.value)||0,per=Number(document.getElementById('shipPerKm')?.value)||0,margin=Number(document.getElementById('shipMargin')?.value)||0,round=Number(document.getElementById('shipRound')?.value)||0;let suggested=(base+km*per+fuelCost)*(1+margin/100);if(round>0)suggested=Math.ceil(suggested/round)*round;root.veQuote=suggested;document.getElementById('resKm').textContent=`${km.toFixed(2)} km`;document.getElementById('resLiters').textContent=veh==='bike'?'No aplica':`${liters.toFixed(2)} l`;document.getElementById('resFuel').textContent=veh==='bike'?'No aplica':money(fuelCost);document.getElementById('resSuggested').textContent=money(suggested)}
 function renderOrdersAdmin(c){c.innerHTML=`<div class="section-card"><h3>Historial de pedidos</h3><div class="table-wrap"><table class="admin-table"><thead><tr><th>Folio</th><th>Fecha</th><th>Cliente</th><th>Total</th><th>Estado</th><th>Acciones</th></tr></thead><tbody>${state.orders.length?state.orders.map(o=>`<tr><td>${esc(o.folio)}</td><td>${esc(new Date(o.date).toLocaleString('es-MX'))}</td><td>${esc(o.customer.name)}</td><td>${money(o.total)}</td><td><span class="status-badge status-${o.status}">${o.status==='pendiente'?UI.pending:o.status==='pagado'?UI.paid:UI.delivered}<span>${o.status}</span></span></td><td><div class="row"><select class="select" data-order-status="${o.id}"><option value="pendiente" ${o.status==='pendiente'?'selected':''}>Pendiente</option><option value="pagado" ${o.status==='pagado'?'selected':''}>Pagado</option><option value="entregado" ${o.status==='entregado'?'selected':''}>Entregado</option></select><button class="icon-btn" data-reprint="${o.id}">${UI.download}</button></div></td></tr>`).join(''):`<tr><td colspan="6">Todavía no hay pedidos.</td></tr>`}</tbody></table></div></div><div class="section-card"><h3>Respaldo</h3><div class="toolbar"><button class="btn" id="exportJson">${UI.download}<span>Exportar JSON</span></button><label class="btn secondary" for="importJson">${UI.upload}<span>Importar JSON</span></label><input class="hidden" id="importJson" type="file" accept="application/json"></div></div>`;document.querySelectorAll('[data-order-status]').forEach(s=>s.onchange=e=>{const o=state.orders.find(x=>x.id===e.target.dataset.orderStatus);if(o){o.status=e.target.value;save();renderOrdersAdmin(document.getElementById('adminContent'))}});document.querySelectorAll('[data-reprint]').forEach(b=>b.onclick=()=>reprintOrder(b.dataset.reprint));document.getElementById('exportJson').onclick=exportJson;document.getElementById('importJson').onchange=importJson}
 function exportJson(){const blob=new Blob([JSON.stringify(state,null,2)],{type:'application/json'}),a=document.createElement('a');a.href=URL.createObjectURL(blob);a.download='respaldo-catalogo-comida.json';a.click();setTimeout(()=>URL.revokeObjectURL(a.href),1000)}
 function importJson(e){const f=e.target.files[0];if(!f)return;const r=new FileReader();r.onload=()=>{try{const data=JSON.parse(r.result);state=merge(defaults,data);save();applyDesign();renderHeader();renderCategories();renderCatalog();renderOrdersAdmin(document.getElementById('adminContent'));toast('Respaldo importado.','ok')}catch(err){toast('El archivo JSON no es válido.','error')}};r.readAsText(f)}
@@ -1939,8 +1983,11 @@ async function panelRun(button,task,message){button.disabled=true;try{await task
 renderBusinessAdmin=function(c){panelBaseBusiness(c);const logo=document.getElementById('bizLogo');logo.accept='image/png,image/jpeg,image/webp';const preview=document.createElement('div');preview.className='faithful-logo-preview';preview.innerHTML=(state.config.logo?`<img src="${esc(state.config.logo)}" alt="Logo del negocio">`:'')+panelButton('panelDeleteLogo','Quitar logo',UI.trash,'ghost');logo.after(preview);document.getElementById('panelDeleteLogo').onclick=()=>{state.config.logo='';save();renderHeader();renderBusinessAdmin(c)};logo.onchange=async()=>{try{if(logo.files[0])state.config.logo=await panelReadImage(logo.files[0]);save();renderHeader();renderBusinessAdmin(c)}catch(e){toast(e.message,'error')}};const pay=document.getElementById('paymentAdmin');pay.innerHTML=state.config.payments.map(p=>`<div class="section-card"><div class="admin-grid two">${panelField('pt_'+p.id,'Nombre',p.title)}${panelField('pd_'+p.id,'Cuenta / CLABE / instrucciones',p.data)}${panelField('pb_'+p.id,'Beneficiario',p.beneficiary)}</div><label class="row"><input type="checkbox" data-panel-visible="${esc(p.id)}" ${p.visible!==false?'checked':''}>Mostrar al cliente</label><button class="icon-btn" data-panel-delete="${esc(p.id)}" aria-label="Eliminar método">${UI.trash}</button></div>`).join('');pay.querySelectorAll('[data-panel-delete]').forEach(b=>b.onclick=()=>{if(confirm('¿Eliminar este método de pago?')){state.config.payments=state.config.payments.filter(p=>p.id!==b.dataset.panelDelete);save();renderBusinessAdmin(c)}});document.getElementById('addPayment').onclick=()=>{state.config.payments.push({id:uid('pay'),title:'Nuevo método',data:'',beneficiary:'',visible:true});renderBusinessAdmin(c)};document.getElementById('savePayments').onclick=e=>panelRun(e.currentTarget,async()=>{const copy=state.config.payments.map(p=>({...p,title:document.getElementById('pt_'+p.id).value.trim(),data:document.getElementById('pd_'+p.id).value.trim(),beneficiary:document.getElementById('pb_'+p.id).value.trim(),visible:pay.querySelector(`[data-panel-visible="${p.id}"]`).checked}));if(copy.some(p=>!p.title))throw Error('Escribe el nombre de cada método.');state.config.payments=copy;saveLocal();clearTimeout(cloudSyncTimer);await syncAdminStateToCloud()},'Métodos guardados.');document.getElementById('saveIdentity').onclick=e=>panelRun(e.currentTarget,async()=>{const name=document.getElementById('bizName').value.trim();if(!name)throw Error('Escribe el nombre del negocio.');state.config.businessName=name;state.config.tagline=document.getElementById('bizTagline').value.trim();saveLocal();renderHeader();clearTimeout(cloudSyncTimer);await syncAdminStateToCloud()},'Identidad guardada.')};
 async function panelReadImage(file){if(file.size>5*1024*1024)throw Error('Máximo 5 MB.');const b=await createImageBitmap(file);try{if(b.width*b.height>24000000)throw Error('Máximo 24 megapíxeles.');const canvas=document.createElement('canvas'),scale=Math.min(1,800/Math.max(b.width,b.height));canvas.width=Math.max(1,Math.round(b.width*scale));canvas.height=Math.max(1,Math.round(b.height*scale));canvas.getContext('2d').drawImage(b,0,0,canvas.width,canvas.height);return canvas.toDataURL('image/png')}finally{b.close()}}
 const panelBaseCart=renderCart;renderCart=function(){const payments=state.config.payments;try{state.config.payments=payments.filter(p=>p.visible!==false).map(p=>({...p,data:p.data+(p.beneficiary?' · Beneficiario: '+p.beneficiary:'')}));panelBaseCart()}finally{state.config.payments=payments}};
-setTripDestination=async function(lat,lng){if(!tripMap)return;panelRouteReady=false;const serial=++panelTripSerial;const map=tripMap;if(tripDestMarker)tripDestMarker.setLatLng([lat,lng]);else{tripDestMarker=L.marker([lat,lng],{draggable:true}).addTo(map);tripDestMarker.on('dragend',e=>{const ll=e.target.getLatLng();setTripDestination(ll.lat,ll.lng)})}try{const o=state.config.origin,res=await routeDistance(o.lat,o.lng,lat,lng);if(serial!==panelTripSerial||map!==tripMap||activeAdmin!=='trip')return;tripKm=res.km;if(tripRouteLayer){map.removeLayer(tripRouteLayer);tripRouteLayer=null}if(res.geo){tripRouteLayer=L.geoJSON(res.geo).addTo(map);map.fitBounds(tripRouteLayer.getBounds(),{padding:[20,20]})}panelRouteReady=Number.isFinite(tripKm)&&tripKm>0;recalcTrip();if(res.fallback)toast('Distancia estimada: el servicio de rutas no respondió.','error')}catch(e){if(serial===panelTripSerial)toast(e.message,'error')}};
-renderTripAdmin=function(c){panelRouteReady=false;panelTripSerial++;tripKm=0;tripDestMarker=null;tripRouteLayer=null;panelBaseTrip(c);if(!panelAccess.owner){document.getElementById('useRate').disabled=true;document.getElementById('useRate').title='Solo el propietario guarda la tarifa';}c.insertAdjacentHTML('beforeend',`<div class="section-card"><h3>Registrar viaje realizado</h3><div class="admin-grid two">${panelField('panelTripCustomer','Cliente')}${panelField('panelTripReference','Folio de pedido')}${panelField('panelTripAmount','Importe cobrado por el viaje',0,'number')}${panelField('panelTripMaterials','Productos cobrados',0,'number')}${panelField('panelTripTip','Propina del repartidor',0,'number')}</div><div class="field"><label>¿Quién recibió el cobro?</label><select id="panelTripCollector" class="select"><option value="worker">Repartidor</option><option value="business">Negocio</option></select></div><div class="field"><label>Observaciones</label><textarea class="textarea" id="panelTripNotes"></textarea></div>${panelButton('panelTripRegister','Registrar viaje',UI.save)}<p class="small muted">La comisión se calcula al guardar. Los viajes anteriores conservan su desglose.</p></div>`);document.getElementById('panelTripRegister').onclick=e=>panelRun(e.currentTarget,async()=>{if(!panelRouteReady)throw Error('Calcula primero una ruta válida en el mapa.');const customer=document.getElementById('panelTripCustomer').value.trim();if(!customer)throw Error('Escribe el cliente.');const amount=Number(document.getElementById('panelTripAmount').value),materials=Number(document.getElementById('panelTripMaterials').value),tip=Number(document.getElementById('panelTripTip').value);if([amount,materials,tip].some(n=>!Number.isFinite(n)||n<0))throw Error('Los importes deben ser positivos o cero.');await panelCall('trip_save',{id:crypto.randomUUID(),customer,reference:document.getElementById('panelTripReference').value.trim(),origin:state.config.origin,destination:{address:document.getElementById('tripDestination').value,lat:tripDestMarker.getLatLng().lat,lng:tripDestMarker.getLatLng().lng},distance:tripKm,amount,materials,tip,collector:document.getElementById('panelTripCollector').value,notes:document.getElementById('panelTripNotes').value});renderAdminPane('history')},'Viaje registrado.')};
+setTripDestination=async function(lat,lng){if(!tripMap)return;panelRouteReady=false;const serial=++panelTripSerial;const map=tripMap,view=map.getContainer();const status=document.getElementById('veTripStatus');if(status)status.textContent='Calculando distancia…';recalcTrip();if(tripDestMarker)tripDestMarker.setLatLng([lat,lng]);else{tripDestMarker=L.marker([lat,lng],{draggable:true}).addTo(map);tripDestMarker.on('dragend',e=>{const ll=e.target.getLatLng();setTripDestination(ll.lat,ll.lng)})}try{const o=state.config.origin,res=await routeDistance(o.lat,o.lng,lat,lng);if(serial!==panelTripSerial||map!==tripMap||!view.isConnected||activeAdmin!=='trip')return;tripKm=res.km;if(tripRouteLayer){map.removeLayer(tripRouteLayer);tripRouteLayer=null}if(res.geo){tripRouteLayer=L.geoJSON(res.geo).addTo(map);map.fitBounds(tripRouteLayer.getBounds(),{padding:[20,20]})}panelRouteReady=Number.isFinite(tripKm)&&tripKm>0;
+ if(status)status.textContent=!panelRouteReady?'No hay una distancia válida para cotizar.':res.fallback?'Estimación de respaldo: línea recta ajustada. No es distancia por carretera.':'Distancia calculada por carretera.';
+ recalcTrip();
+ }catch(e){if(serial===panelTripSerial&&view.isConnected&&activeAdmin==='trip'){if(status)status.textContent=e.message;recalcTrip();}}};
+renderTripAdmin=function(c){panelRouteReady=false;panelTripSerial++;tripKm=0;tripDestMarker=null;tripRouteLayer=null;panelBaseTrip(c);if(!panelAccess.owner){document.getElementById('useRate').disabled=true;document.getElementById('useRate').title='Solo el propietario guarda la tarifa';}c.insertAdjacentHTML('beforeend',`<div class="section-card"><h3>Registrar viaje realizado</h3><div class="admin-grid two">${panelField('panelTripCustomer','Cliente')}${panelField('panelTripReference','Folio de pedido')}${panelField('panelTripAmount','Importe cobrado por el viaje',0,'number')}${panelField('panelTripMaterials','Productos cobrados',0,'number')}${panelField('panelTripTip','Propina del repartidor',0,'number')}</div><div class="field"><label>¿Quién recibió el cobro?</label><select id="panelTripCollector" class="select"><option value="worker">Repartidor</option><option value="business">Negocio</option></select></div><div class="field"><label>Observaciones</label><textarea class="textarea" id="panelTripNotes"></textarea></div>${panelButton('panelTripRegister','Registrar viaje',UI.save)}<p class="small muted">La comisión se calcula al guardar. Los viajes anteriores conservan su desglose.</p></div>`);document.getElementById('panelTripRegister').onclick=e=>panelRun(e.currentTarget,async()=>{if(!panelRouteReady)throw Error('Calcula primero una ruta válida en el mapa.');const customer=document.getElementById('panelTripCustomer').value.trim();if(!customer)throw Error('Escribe el cliente.');const amount=Number(document.getElementById('panelTripAmount').value),materials=Number(document.getElementById('panelTripMaterials').value),tip=Number(document.getElementById('panelTripTip').value);if([amount,materials,tip].some(n=>!Number.isFinite(n)||n<0))throw Error('Los importes deben ser positivos o cero.');await panelCall('trip_save',{id:crypto.randomUUID(),customer,reference:document.getElementById('panelTripReference').value.trim(),origin:state.config.origin,destination:{address:document.getElementById('tripDestination').value,lat:tripDestMarker.getLatLng().lat,lng:tripDestMarker.getLatLng().lng},distance:tripKm,amount,materials,tip,collector:document.getElementById('panelTripCollector').value,notes:document.getElementById('panelTripNotes').value});renderAdminPane('history')},'Viaje registrado.');mountTripWorkspace(c);recalcTrip();};
 async function panelHistory(c,epoch){c.innerHTML=`<div class="section-card"><h3>Viajes realizados</h3><div class="admin-grid two">${panelField('panelFrom','Desde','','date')}${panelField('panelTo','Hasta','','date')}</div>${panelButton('panelHistoryFilter','Consultar',UI.search,'secondary')}<div class="notice" id="panelHistoryTotal" style="margin-top:12px"></div><div id="panelHistoryList"></div></div>`;async function load(){const trips=await panelCall('trips',{from:document.getElementById('panelFrom').value,to:document.getElementById('panelTo').value});if(epoch!==panelEpoch)return;document.getElementById('panelHistoryTotal').textContent=`${trips.length} viajes · ${trips.reduce((a,t)=>a+Number(t.data.distance),0).toFixed(2)} km · Cobrado: ${money(trips.reduce((a,t)=>a+Number(t.data.total),0))} · Hasta 500 registros`;document.getElementById('panelHistoryList').innerHTML=trips.length?trips.map(t=>{const d=t.data;return `<article class="section-card"><strong>${esc(d.customer)} · ${esc(d.reference||'')}</strong><p class="small muted">${esc(new Date(t.created_at).toLocaleString('es-MX'))} · ${esc(d.operator||t.created_by)}</p><p>Salida: ${esc(d.origin?.address||'')}<br>Destino: ${esc(d.destination?.address||'')}</p>${panelSettlement(d)}<p class="small">${esc(d.notes||'')}</p><p>${d.liquidated?'Liquidación confirmada':'Liquidación pendiente'}</p>${panelAccess.owner?`<button class="btn secondary" data-panel-settle="${esc(t.id)}" data-state="${d.liquidated?'false':'true'}">${UI.check}<span>${d.liquidated?'Reabrir liquidación':'Confirmar liquidación'}</span></button>`:''}</article>`}).join(''):'<p>No hay viajes en este periodo.</p>';c.querySelectorAll('[data-panel-settle]').forEach(b=>b.onclick=()=>panelRun(b,async()=>{await panelCall('settle',{id:b.dataset.panelSettle,done:b.dataset.state==='true'});await load()},'Liquidación actualizada.'))}document.getElementById('panelHistoryFilter').onclick=e=>panelRun(e.currentTarget,load);await load()}
 function panelSettlement(d){return `<div class="ticket-row"><span>Viaje</span><strong>${money(d.amount)}</strong></div><div class="ticket-row"><span>Productos íntegros para el negocio</span><strong>${money(d.materials)}</strong></div><div class="ticket-row"><span>Comisión del negocio</span><strong>${money(d.commission)}</strong></div><div class="ticket-row"><span>Propina del repartidor</span><strong>${money(d.tip)}</strong></div><div class="ticket-row total"><span>Ingreso del repartidor</span><strong>${money(d.worker_income)}</strong></div><div class="notice">${d.collector==='business'?'El negocio debe pagar al repartidor: '+money(Number(d.amount)-Number(d.commission)):'El repartidor debe entregar al negocio: '+money(Number(d.materials)+Number(d.commission))}</div>`}
 async function panelCommissions(c,epoch){const rule=await panelCall('commission_get');if(epoch!==panelEpoch)return;c.innerHTML=`<div class="section-card"><h3>Comisión del negocio sobre el viaje</h3><div class="notice">La comisión solo se aplica al importe del viaje. Los productos se entregan íntegros al negocio; la propina completa es del repartidor.</div><div class="admin-grid two"><div class="field"><label>Modalidad</label><select id="panelCommissionMode" class="select"><option value="percent">Porcentaje del viaje</option><option value="fixed">Cuota fija por viaje</option></select></div>${panelField('panelCommissionValue','Porcentaje o cuota',rule.value||0,'number')}</div>${panelButton('panelSaveCommission','Guardar comisión general')}<p class="small muted">Los viajes anteriores conservan su cálculo. Una cuota fija se limita al importe del viaje.</p></div><div id="panelCommissionHistory"></div>`;document.getElementById('panelCommissionMode').value=rule.mode||'percent';document.getElementById('panelSaveCommission').onclick=e=>panelRun(e.currentTarget,async()=>{const mode=document.getElementById('panelCommissionMode').value,value=Number(document.getElementById('panelCommissionValue').value);if(!Number.isFinite(value)||value<0||mode==='percent'&&value>100)throw Error('Captura una comisión válida.');await panelCall('commission_save',{mode,value})},'Comisión guardada para próximos viajes.');const history=document.getElementById('panelCommissionHistory');await panelHistory(history,epoch)}
@@ -11128,7 +11175,7 @@ html body main #catalogGrid :is(.desc,.meta,.vibra-service-content p){font-size:
   content.dataset.adminView=id;
   content.dataset.adminKind=viewInfo[id]?.[0]||'';
   let title=content.querySelector(':scope > .admin-workspace-heading');
-  if(!id||id==='ticket'||(id==='business'&&content.querySelector('.ve-business'))||(id==='categories'&&content.querySelector('.ve-cat'))||(id==='products'&&content.querySelector('#veCatalogAdmin'))){title?.remove();return} /* MODIFICADO: el catálogo ya tiene cabecera propia. */
+  if(!id||id==='ticket'||(id==='trip'&&content.querySelector('.ve-trip'))||(id==='business'&&content.querySelector('.ve-business'))||(id==='categories'&&content.querySelector('.ve-cat'))||(id==='products'&&content.querySelector('#veCatalogAdmin'))){title?.remove();return} /* MODIFICADO: el catálogo ya tiene cabecera propia. */
   if(!title){
    title=document.createElement('header');title.className='admin-workspace-heading';
    title.innerHTML='<h2></h2><p></p>';
@@ -12764,5 +12811,163 @@ html body #adminModal .ve-business :is(.vibra-manage-buttons button,.vibra-secti
    return navigate(id);
  };
 })();
+</script>
+<style>
+/* NUEVO: calculadora administrativa, con colores compartidos y cuadrícula adaptable. */
+#adminContent:has(>.ve-trip){container:ve-trip / inline-size}
+#adminContent:has(>.ve-trip)>.admin-workspace-heading{display:none}
+.ve-trip{display:grid;gap:12px;min-width:0;color:var(--ui-text);font-size:.85rem}
+.ve-trip [hidden]{display:none!important}
+.ve-trip h2,.ve-trip h3,.ve-trip p{margin:0}
+.ve-trip-head,.ve-trip-tabs{display:flex;flex-wrap:wrap;gap:8px;align-items:center;padding:10px 12px;border:1px solid var(--ui-border);border-radius:12px;background:var(--ui-surface)}
+.ve-trip-head{justify-content:space-between}
+.ve-trip-head p,.ve-trip-status{color:var(--ui-muted)}
+.ve-trip-tabs button{padding:6px 10px;min-height:40px;border:1px solid var(--ui-border);border-radius:8px;background:var(--ui-field);color:var(--ui-text);cursor:pointer}
+.ve-trip-tabs button[aria-selected=true],html body #adminModal #adminContent .ve-trip .btn[aria-pressed=true]{background:var(--ui-action)!important;color:var(--ui-on-action)!important}
+.ve-trip-quote,.ve-trip-addresses,.ve-trip-vehicles{display:grid;gap:10px;min-width:0}
+.ve-trip-quote{align-items:start}
+.ve-trip-addresses{align-items:end;grid-template-columns:repeat(auto-fit,minmax(min(100%,160px),1fr))}
+.ve-trip-addresses .field{margin:0;min-width:0}
+.ve-trip-vehicles{grid-template-columns:repeat(auto-fit,minmax(min(100%,115px),1fr));margin:10px 0}
+.ve-trip-vehicles small{display:block;color:inherit}
+.ve-trip .section-card{display:grid;gap:10px}
+.ve-trip .section-card>h3{font-size:1rem}
+.ve-trip .result-grid{grid-template-columns:repeat(auto-fit,minmax(min(100%,100px),1fr));gap:6px}
+.ve-trip .metric{min-width:0;padding:8px}
+.ve-trip .metric strong{font-size:1rem;overflow-wrap:anywhere}
+.ve-trip .metric:last-child{border-color:var(--ui-link);background:var(--ui-raised)}
+.ve-trip #tripMap{width:100%;height:clamp(250px,35dvh,420px)}
+.ve-trip button>svg{width:17px;height:17px;flex:0 0 17px}
+.ve-trip :is(button,input,select,summary):focus-visible{outline:2px solid var(--ui-focus);outline-offset:2px}
+.ve-trip :is(input,select,button):disabled{opacity:1;border-style:dashed}
+.ve-trip input:not([type=checkbox]),.ve-trip select{width:100%;min-width:0;max-width:100%;box-sizing:border-box}
+.ve-trip details summary{cursor:pointer;color:var(--ui-link)}
+@container ve-trip (min-width:850px){.ve-trip-quote{grid-template-columns:minmax(0,1.6fr) minmax(235px,1fr)}}
+@media(hover:hover){.ve-trip :is(.btn,.ve-trip-tabs button):hover:not(:disabled){box-shadow:0 0 8px var(--ui-glow);border-color:var(--ui-focus)}}
+@media(prefers-reduced-motion:no-preference){.ve-trip button{transition:border-color .2s,box-shadow .2s}.ve-trip button:active:not(:disabled){translate:0 1px}}
+</style>
+<script>
+// NUEVO: composición y estado visual de la calculadora sobre sus controles originales.
+function mountTripWorkspace(host){
+ const [route,vehicle,rates,result,registration]=[...host.children];
+ const root=document.createElement('section');root.className='ve-trip';
+ root.innerHTML=`<!-- NUEVO --><header class="ve-trip-head"><div><h2>Calculadora de viajes</h2><p>Consulta una ruta y calcula su tarifa antes de registrar el viaje.</p></div><div class="toolbar"></div></header>
+ <div class="ve-trip-tabs" role="tablist" aria-label="Apartados de la calculadora"></div>
+ <section class="ve-trip-quote" role="tabpanel" id="veTrip-quote" aria-labelledby="veTripTab-quote"></section>
+ <section role="tabpanel" id="veTrip-vehicle" aria-labelledby="veTripTab-vehicle" hidden></section>
+ <section role="tabpanel" id="veTrip-rates" aria-labelledby="veTripTab-rates" hidden></section>
+ <section role="tabpanel" id="veTrip-register" aria-labelledby="veTripTab-register" hidden></section>`;
+ const q=s=>root.querySelector(s);
+ q('#veTrip-quote').append(route,result);q('#veTrip-vehicle').append(vehicle);
+ q('#veTrip-rates').append(rates);q('#veTrip-register').append(registration);
+ host.append(root);
+ const tabs=[['quote','Cotizar viaje'],['vehicle','Vehículos y combustible'],['rates','Tarifas y condiciones'],['register','Registrar viaje']];
+ function activate(key,focus=false){
+   for(const [id] of tabs){
+     const selected=id===key, button=q('#veTripTab-'+id);
+     button.setAttribute('aria-selected',String(selected));button.tabIndex=selected?0:-1;
+     q('#veTrip-'+id).hidden=!selected;
+   }
+   if(key==='quote')requestAnimationFrame(()=>{
+     if(!root.isConnected||q('#veTrip-quote').hidden)return;
+     if(tripMap?.getContainer()===q('#tripMap'))tripMap.invalidateSize();else initTripMap();
+   });
+   if(focus)q('#veTripTab-'+key).focus();
+ }
+ tabs.forEach(([key,title],i)=>{
+   const button=document.createElement('button');button.type='button';button.id='veTripTab-'+key;
+   button.setAttribute('role','tab');button.setAttribute('aria-controls','veTrip-'+key);button.textContent=title;
+   button.onclick=()=>activate(key);
+   button.onkeydown=e=>{
+     const n={ArrowRight:(i+1)%tabs.length,ArrowLeft:(i+tabs.length-1)%tabs.length,Home:0,End:tabs.length-1}[e.key];
+     if(n!==undefined){e.preventDefault();activate(tabs[n][0],true);}
+   };
+   q('[role=tablist]').append(button);
+ });
+ const toolbar=q('.ve-trip-head .toolbar');
+ for(const [key,label] of [['history','Viajes realizados'],['commissions','Comisiones y liquidaciones']]){
+   if(!panelCan(key))continue;
+   const button=document.createElement('button');button.type='button';button.className='btn secondary';
+   button.innerHTML=(key==='history'?UI.orders:UI.calc)+'<span>'+label+'</span>';
+   button.onclick=()=>renderAdminPane(key);toolbar.append(button);
+ }
+ const status=document.createElement('p');status.className='ve-trip-status';status.id='veTripStatus';status.setAttribute('role','status');
+ status.textContent='Busca una dirección o marca el destino en el mapa.';
+ q('#tripMap').before(status);
+ q('#roundTrip').closest('label').insertAdjacentHTML('afterend','<p>Ida y vuelta duplica el kilometraje de la ruta de ida para la cotización.</p>');
+ q('.ve-trip-tabs').insertAdjacentHTML('afterend','<p>Los ajustes de la cotización son temporales. Para conservarlos, guarda los parámetros generales en Tarifas y condiciones.</p>');
+ const origin=q('#tripDestination').closest('.field').previousElementSibling;
+ const destination=q('#tripDestination').closest('.field');
+ const search=q('#tripGeocode'), row=document.createElement('div');row.className='ve-trip-addresses';
+ origin.before(row);row.append(origin,destination,search);
+ const selector=q('#vehicle'), cards=document.createElement('div');cards.className='ve-trip-vehicles';cards.setAttribute('role','group');cards.setAttribute('aria-label','Vehículo');
+ const vehicleIcons={moto:UI.moto,auto:UI.car,truck:UI.truck,bike:UI.bike};
+ for(const option of selector.options){
+   const button=document.createElement('button');button.type='button';button.className='btn secondary';
+   button.innerHTML=vehicleIcons[option.value]+'<span>'+esc(option.textContent)+'<small></small></span>';
+   button.dataset.tripVehicle=option.value;
+   button.onclick=()=>{selector.value=option.value;selector.dispatchEvent(new Event('change',{bubbles:true}));};
+   cards.append(button);
+ }
+ selector.closest('.field').hidden=true;selector.closest('.field').after(cards);
+ const efficiency=q('[data-eff]').closest('.admin-grid'), advanced=document.createElement('details');
+ advanced.innerHTML='<summary>Rendimiento por vehículo (km/l)</summary>';efficiency.before(advanced);advanced.append(efficiency);
+ q('#fuelType').closest('.field').insertAdjacentHTML('beforebegin','<p>Precios por litro capturados manualmente.</p>');
+ rates.insertAdjacentHTML('beforeend','<p>La gratuidad se aplica al subtotal del pedido. En la cotización por ruta se muestra el costo antes de esa condición.</p>');
+ result.querySelector('h3').textContent='Resultado de cotización';
+ const action=q('#useRate');action.disabled=true;action.removeAttribute('title');action.querySelector('span').textContent='Usar tarifa en el registro';
+ action.onclick=()=>{
+   if(!panelRouteReady||root.veQuote==null)return;
+   q('#panelTripAmount').value=root.veQuote.toFixed(2);activate('register');q('#panelTripAmount').focus();
+ };
+ const rateSave=document.createElement('button');rateSave.type='button';rateSave.className='btn';
+ rateSave.innerHTML=UI.save+'<span>Guardar parámetros generales</span>';rateSave.disabled=!panelAccess.owner;
+ rates.append(rateSave);
+ rateSave.onclick=e=>panelRun(e.currentTarget,async()=>{
+   if(!panelAccess.owner||!supabaseClient||!adminSession)throw Error('Solo el propietario puede guardar los parámetros.');
+   if(!validTripParameters(root)||[...root.querySelectorAll('[data-eff],[data-fuel]')].some(el=>!el.value.trim()||!Number.isFinite(Number(el.value))||Number(el.value)<0||(el.dataset.eff&&el.dataset.eff!=='bike'&&Number(el.value)===0)))throw Error('Revisa los rendimientos y los precios de combustible.');
+   const draft={...state.config.shipping,efficiency:{...state.config.shipping.efficiency},fuelPrice:{...state.config.shipping.fuelPrice}};
+   for(const [key,id] of Object.entries({base:'shipBase',perKm:'shipPerKm',margin:'shipMargin',rounding:'shipRound',freeFrom:'shipFree'}))draft[key]=Number(q('#'+id).value)||0;
+   draft.roundTrip=q('#roundTrip').checked;draft.vehicle=selector.value;draft.fuel=q('#fuelType').value;
+   for(const input of root.querySelectorAll('[data-eff]'))draft.efficiency[input.dataset.eff]=Number(input.value)||0;
+   for(const input of root.querySelectorAll('[data-fuel]'))draft.fuelPrice[input.dataset.fuel]=Number(input.value)||0;
+   if(cloudSaving)await cloudSaving;
+   if(pendingCloudModules.size){clearTimeout(cloudSyncTimer);await syncAdminStateToCloud();}
+   await vibraSaveConfig({...state.config,shipping:draft},'trip');
+   state.config.shipping=draft;saveLocal();
+ },'Parámetros generales guardados.');
+ function refreshVehicle(){
+   for(const b of cards.children){
+     const key=b.dataset.tripVehicle;
+     b.setAttribute('aria-pressed',String(key===selector.value));
+     b.querySelector('small').textContent=key==='bike'?'Sin combustible':q('[data-eff="'+key+'"]').value+' km/l';
+   }
+ }
+ root.addEventListener('input',refreshVehicle);root.addEventListener('change',refreshVehicle);
+ refreshVehicle();activate('quote');
+ if(supabaseClient)loadTripDestinations(root);
+}
+function validTripParameters(root){
+ const vehicle=root.querySelector('#vehicle').value,fuel=root.querySelector('#fuelType').value;
+ const eff=root.querySelector('[data-eff="'+vehicle+'"]'),price=root.querySelector('[data-fuel="'+fuel+'"]');
+ const positive=el=>el.value.trim()!==''&&Number.isFinite(Number(el.value));
+ return (vehicle==='bike'||(positive(eff)&&Number(eff.value)>0&&positive(price)&&Number(price.value)>=0))&&
+ [...root.querySelectorAll('#shipBase,#shipPerKm,#shipMargin,#shipRound,#shipFree')].every(el=>Number.isFinite(Number(el.value))&&Number(el.value)>=0);
+}
+async function loadTripDestinations(root){
+ const label=document.createElement('label');label.textContent='Ubicaciones registradas';
+ const select=document.createElement('select');select.className='select';select.append(new Option('Cargando ubicaciones…',''));select.disabled=true;
+ label.append(select);root.querySelector('.ve-trip-addresses').after(label);
+ try{
+   const responses=await Promise.all(['service_locations','vibra_destinations'].map(table=>supabaseClient.from(table).select('name,address,latitude,longitude').limit(200)));
+   if(!root.isConnected||activeAdmin!=='trip')return;
+   const locations=responses.flatMap(r=>r.error?[]:r.data||[]).filter(x=>x.latitude!=null&&x.longitude!=null&&Number.isFinite(Number(x.latitude))&&Number.isFinite(Number(x.longitude))&&Math.abs(Number(x.latitude))<=90&&Math.abs(Number(x.longitude))<=180);
+   const incomplete=responses.some(r=>r.error);
+   select.replaceChildren(new Option(locations.length?(incomplete?'Ubicaciones disponibles · consulta parcial':'Selecciona un destino'):(incomplete?'No se pudieron cargar todas las ubicaciones':'Sin ubicaciones registradas'),''));
+   locations.forEach((x,i)=>select.append(new Option(x.name||x.address,String(i))));
+   select.disabled=!locations.length;
+   select.onchange=()=>{const x=locations[select.value];if(x){root.querySelector('#tripDestination').value=x.address||x.name;setTripDestination(Number(x.latitude),Number(x.longitude));}};
+ }catch{if(root.isConnected)select.options[0].textContent='No se pudieron consultar las ubicaciones';}
+}
 </script>
 </html>
