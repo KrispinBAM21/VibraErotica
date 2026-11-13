@@ -1641,6 +1641,38 @@ const stableProductEditor=renderProductsAdmin;renderProductsAdmin=function(c){st
 let customerSession=null,customerProfile=null,customerAddresses=[],customerAuthView='login',customerAuthBusy=false,customerSerial=0,accountError='',avatarDraft='',siteStatus=null,siteCheckSerial=0;
 let publicFoodMap=null,publicFoodPin=null,publicFoodRoute=null,publicFoodOrigin=null,publicQuoteSerial=0,publicAddressMap=null,addressEditorSerial=0,lastQuote=null;
 const CUSTOMER_ICON=FOOD.customer,GOOGLE_ICON='<svg viewBox="0 0 24 24" aria-hidden="true"><path fill="#4285f4" stroke="none" d="M21.6 12.2c0-.7-.1-1.5-.2-2.2H12v4.3h5.4c-.2 1.1-.9 2-1.9 2.6v2.8h3.4c2-1.8 2.7-4.5 2.7-7.5Z"/><path fill="#34a853" stroke="none" d="M12 22c2.7 0 5-.9 6.9-2.3l-3.4-2.8c-.9.6-2.1 1-3.5 1-2.6 0-4.8-1.7-5.6-4H2.9v2.9A10 10 0 0 0 12 22Z"/><path fill="#fbbc05" stroke="none" d="M6.4 13.9a6 6 0 0 1 0-3.8V7.2H2.9a10 10 0 0 0 0 9.6Z"/><path fill="#ea4335" stroke="none" d="M12 6.1c1.5 0 2.8.5 3.8 1.5L19 4.4A10 10 0 0 0 2.9 7.2l3.5 2.9c.8-2.3 3-4 5.6-4Z"/></svg>';
+// NUEVO: apariencia y foco solo en ventanas abiertas desde administración.
+function adminSecondaryDialog(dialog,enabled=true){
+ dialog.classList.toggle('admin-secondary',enabled);
+ if(!enabled)return dialog;
+ const heading=dialog.querySelector('.modal-head strong');
+ const close=dialog.querySelector('[data-close-modal],#viClose');
+ if(!heading||!close)return dialog;
+ heading.id||=dialog.id+'AdminTitle';
+ dialog.setAttribute('role','dialog');dialog.setAttribute('aria-modal','true');dialog.setAttribute('aria-labelledby',heading.id);
+ if(close.id==='viClose')close.innerHTML=UI.close;
+ const trigger=document.activeElement;
+ dialog.onkeydown=event=>{
+  if(!dialog.classList.contains('admin-secondary'))return;
+  if(event.key==='Escape'){event.preventDefault();event.stopPropagation();close.click();return}
+  if(event.key!=='Tab')return;
+  const controls=[...dialog.querySelectorAll('button,a[href],input,select,textarea,[tabindex]')].filter(el=>!el.disabled&&el.tabIndex>=0&&el.getClientRects().length);
+  const first=controls[0],last=controls.at(-1);
+  if(first&&(event.shiftKey?document.activeElement===first:document.activeElement===last)){
+   event.preventDefault();(event.shiftKey?last:first).focus();
+  }
+ };
+ if(!dialog.adminFocusWatcher){
+  dialog.adminFocusWatcher=new MutationObserver(()=>{
+   if(dialog.classList.contains('show'))return;
+   dialog.adminFocusWatcher.disconnect();dialog.adminFocusWatcher=null;
+   if(trigger?.isConnected&&document.querySelector('#adminModal.show'))trigger.focus({preventScroll:true});
+  });
+  dialog.adminFocusWatcher.observe(dialog,{attributes:true,attributeFilter:['class']});
+ }
+ requestAnimationFrame(()=>{if(dialog.classList.contains('show')&&!dialog.contains(document.activeElement))close.focus({preventScroll:true})});
+ return dialog;
+}
 function v4Modal(id,title){let m=document.getElementById(id);if(!m){m=document.createElement('div');m.className='modal';m.id=id;m.innerHTML=`<div class="modal-head"><strong>${esc(title)}</strong><button class="icon-btn" data-close-modal="${id}" aria-label="Cerrar">${UI.close}</button></div><div class="modal-body"></div>`;document.body.append(m)}return m}
 async function customerRpc(action,data={}){if(!supabaseClient||!customerSession)throw Error('Inicia sesión.');const r=await supabaseClient.rpc('catalog_customer',{p_action:action,p_data:data});if(r.error)throw r.error;return r.data}
 function syncAdminVisibility(){const b=document.getElementById('adminBtn');const allowed=!!adminSession&&(!!panelAccess.master||panelAccess.owner||panelAccess.modules.length>0);b.hidden=!allowed;b.style.display=allowed?'':'none';b.setAttribute('aria-hidden',String(!allowed));}
@@ -2020,7 +2052,7 @@ function paintMyOrders(){const host=document.getElementById('myOrdersModal')?.qu
 function paintNotifications(){const host=document.getElementById('notificationsModal').querySelector('.modal-body');host.innerHTML=trackingConfig.notifications_enabled?`<div>${trackingEvents.slice().sort((a,b)=>Number(b.id)-Number(a.id)).map(e=>`<article class="notification-item"><strong>${esc(e.title)}</strong><small>Pedido ${esc(trackingOrders.find(o=>o.id===e.order_id)?.folio||'')} · ${esc(new Date(e.created_at).toLocaleString('es-MX'))}</small></article>`).join('')||'<p>Sin avisos nuevos.</p>'}${trackingOrders.filter(o=>o.chat_open&&o.last_message_sender==='admin').map(o=>`<article class="notification-item">El local respondió en el pedido ${esc(o.folio)}.</article>`).join('')}</div>`:'<p>El administrador desactivó los avisos automáticos. Las confirmaciones se realizan por llamada o WhatsApp.</p>';}
 async function openNotifications(){if(!customerSession?.user?.id){renderCustomerProfile();openModal('customerProfileModal');return}v4Modal('notificationsModal','Notificaciones');openModal('notificationsModal');try{await refreshTracking();paintNotifications();trackingSeen=Math.max(trackingSeen,...trackingEvents.map(e=>Number(e.id)));persistTracking();renderTrackingButtons()}catch(e){document.getElementById('notificationsModal').querySelector('.modal-body').textContent=e.message}}
 async function recoverLocalTracking(){return} // No recuperar pedidos antiguos del navegador.
-async function openOrderChat(orderId,role='customer'){closeModal('myOrdersModal');const m=v4Modal('orderChatModal','Chat del pedido');m.classList.add('modal-followup');activeChat={orderId,role,epoch:trackingEpoch};const o=role==='customer'?trackingOrders.find(o=>o.id===orderId):null;m.querySelector('.modal-head strong').textContent='Chat · Pedido '+(o?.folio||orderId.slice(0,8));m.querySelector('.modal-body').innerHTML=`<p class="small muted">Conversación exclusiva de este pedido. Al entregarlo, se cierra y se borran sus mensajes.</p><div id="chatThread" class="chat-thread" aria-live="polite"></div><div class="chat-compose"><textarea class="textarea" id="chatText" maxlength="1000" placeholder="Escribe al ${role==='customer'?'administrador':'cliente'}…"></textarea>${panelButton('chatSend','Enviar',UI.arrowRight)}</div><p id="chatStatus" role="status"></p>`;document.getElementById('chatText').value=chatDrafts.get(orderId)?.body||'';document.getElementById('chatText').oninput=e=>chatDrafts.set(orderId,{body:e.target.value,clientId:crypto.randomUUID()});document.getElementById('chatSend').onclick=e=>panelRun(e.currentTarget,sendOrderMessage);openModal(m.id);await loadOrderMessages().catch(e=>document.getElementById('chatStatus').textContent=e.message)}
+async function openOrderChat(orderId,role='customer'){closeModal('myOrdersModal');const m=adminSecondaryDialog(v4Modal('orderChatModal','Chat del pedido'),role==='admin');m.classList.add('modal-followup');activeChat={orderId,role,epoch:trackingEpoch};const o=role==='customer'?trackingOrders.find(o=>o.id===orderId):null;m.querySelector('.modal-head strong').textContent='Chat · Pedido '+(o?.folio||orderId.slice(0,8));m.querySelector('.modal-body').innerHTML=`<p class="small muted">Conversación exclusiva de este pedido. Al entregarlo, se cierra y se borran sus mensajes.</p><div id="chatThread" class="chat-thread" aria-live="polite"></div><div class="chat-compose"><textarea class="textarea" id="chatText" maxlength="1000" placeholder="Escribe al ${role==='customer'?'administrador':'cliente'}…"></textarea>${panelButton('chatSend','Enviar',UI.arrowRight)}</div><p id="chatStatus" role="status"></p>`;document.getElementById('chatText').value=chatDrafts.get(orderId)?.body||'';document.getElementById('chatText').oninput=e=>chatDrafts.set(orderId,{body:e.target.value,clientId:crypto.randomUUID()});document.getElementById('chatSend').onclick=e=>panelRun(e.currentTarget,sendOrderMessage);openModal(m.id);await loadOrderMessages().catch(e=>document.getElementById('chatStatus').textContent=e.message)}
 async function loadOrderMessages(){const chat=activeChat;if(!chat||chat.epoch!==trackingEpoch||!document.getElementById('orderChatModal')?.classList.contains('show'))return;const r=chat.role==='admin'?await followupAdmin('messages',{order_id:chat.orderId}):await trackingCall('messages',{order_id:chat.orderId,token:credentialFor(chat.orderId)?.token});if(activeChat!==chat||chat.epoch!==trackingEpoch)return;if(r.closed){closeChat('La conversación ya está cerrada.');return}const host=document.getElementById('chatThread'),lastId=Number(r.messages?.at(-1)?.id)||0;const atBottom=host.scrollHeight-host.scrollTop-host.clientHeight<40;host.innerHTML=(r.messages||[]).map(m=>`<div class="chat-message ${(chat.role==='customer'?m.sender==='customer':m.sender==='admin')?'own':''}">${esc(m.body)}<small>${m.sender==='admin'?'Local':'Cliente'} · ${esc(new Date(m.created_at).toLocaleTimeString('es-MX'))}</small></div>`).join('')||'<p class="small muted">Inicia la conversación.</p>';if(atBottom)host.scrollTop=host.scrollHeight;chatSeen[chat.orderId]=lastId;persistTracking();renderTrackingButtons()}
 async function sendOrderMessage(){const chat=activeChat;if(!chat)throw Error('Abre nuevamente el pedido.');const input=document.getElementById('chatText'),body=input.value.trim();if(!body)throw Error('Escribe un mensaje.');let draft=chatDrafts.get(chat.orderId);if(!draft||draft.body.trim()!==body){draft={body,clientId:crypto.randomUUID()};chatDrafts.set(chat.orderId,draft)}const data={order_id:chat.orderId,body,client_id:draft.clientId,token:credentialFor(chat.orderId)?.token};const r=chat.role==='admin'?await followupAdmin('send',data):await trackingCall('send',data);if(activeChat!==chat)return;if(r.closed){closeChat('El pedido ya terminó; la conversación está cerrada.');return}input.value='';chatDrafts.delete(chat.orderId);await loadOrderMessages()}
 function closeChat(message){if(activeChat)chatDrafts.delete(activeChat.orderId);activeChat=null;document.getElementById('orderChatModal')?.querySelector('.modal-body')?.replaceChildren();closeModal('orderChatModal');if(message)toast(message,'info')}
@@ -2157,7 +2189,7 @@ function installTicketOptions(c,getDraft,paint){const section=document.createEle
 </script><script>
 const V9_CLOCK='<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><circle cx="12" cy="12" r="9"/><path d="M12 6v6l4 2"/></svg>',V9_CALENDAR='<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><rect x="3" y="5" width="18" height="16" rx="2"/><path d="M7 2v6M17 2v6M3 10h18M7 14h2M12 14h2M17 14h1M7 18h2M12 18h2"/></svg>';
 function enhanceDateInputs(root=document){root.querySelectorAll('input[type=date],input[type=time],input[type=datetime-local]').forEach(input=>{if(input.dataset.dateEnhanced)return;input.dataset.dateEnhanced='1';const wrap=document.createElement('div');wrap.className='date-control';input.before(wrap);wrap.append(input);const datetime=input.type==='datetime-local';for(const[type,icon]of(datetime?[['date',V9_CALENDAR],['time',V9_CLOCK]]:[[input.type,input.type==='time'?V9_CLOCK:V9_CALENDAR]])){const button=document.createElement('button');button.type='button';button.className='icon-btn';button.innerHTML=icon;button.setAttribute('aria-label',type==='date'?'Elegir fecha':'Elegir hora');button.onclick=()=>{if(datetime)openDateTimePicker(input,type);else{try{if(input.showPicker)input.showPicker();else{input.focus();input.click()}}catch{input.focus()}}};wrap.append(button)}})}
-function openDateTimePicker(input,type){const modal=v4Modal('dateTimePickerModal','Selecciona fecha y hora'),host=modal.querySelector('.modal-body'),values=input.value.split('T');host.innerHTML=`<div class="date-picker-fields"><label class="field">Fecha<input class="input" type="date" id="pickerDate" value="${esc(values[0]||'')}"></label><label class="field">Hora<input class="input" type="time" id="pickerTime" value="${esc(values[1]?.slice(0,5)||'')}"></label></div><div class="toolbar">${panelButton('pickerApply','Aplicar',UI.check)}${panelButton('pickerClear','Sin fecha límite',UI.close,'secondary')}</div><p id="pickerStatus" role="status"></p>`;document.getElementById('pickerApply').onclick=()=>{const d=document.getElementById('pickerDate').value,t=document.getElementById('pickerTime').value;if(!d||!t){document.getElementById('pickerStatus').textContent='Selecciona fecha y hora.';return}const v=d+'T'+t;if(input.min&&v<input.min||input.max&&v>input.max){document.getElementById('pickerStatus').textContent='La fecha está fuera del rango permitido.';return}input.value=v;input.dispatchEvent(new Event('input',{bubbles:true}));input.dispatchEvent(new Event('change',{bubbles:true}));closeModal(modal.id)};document.getElementById('pickerClear').onclick=()=>{if(input.required){document.getElementById('pickerStatus').textContent='Este campo requiere fecha y hora.';return}input.value='';input.dispatchEvent(new Event('input',{bubbles:true}));input.dispatchEvent(new Event('change',{bubbles:true}));closeModal(modal.id)};openModal(modal.id);document.getElementById(type==='time'?'pickerTime':'pickerDate').focus()}
+function openDateTimePicker(input,type){const modal=adminSecondaryDialog(v4Modal('dateTimePickerModal','Selecciona fecha y hora'),!!input.closest('#adminContent:not([data-admin-view=ticket])')),host=modal.querySelector('.modal-body'),values=input.value.split('T');host.innerHTML=`<div class="date-picker-fields"><label class="field">Fecha<input class="input" type="date" id="pickerDate" value="${esc(values[0]||'')}"></label><label class="field">Hora<input class="input" type="time" id="pickerTime" value="${esc(values[1]?.slice(0,5)||'')}"></label></div><div class="toolbar">${panelButton('pickerApply','Aplicar',UI.check)}${panelButton('pickerClear','Sin fecha límite',UI.close,'secondary')}</div><p id="pickerStatus" role="status"></p>`;document.getElementById('pickerApply').onclick=()=>{const d=document.getElementById('pickerDate').value,t=document.getElementById('pickerTime').value;if(!d||!t){document.getElementById('pickerStatus').textContent='Selecciona fecha y hora.';return}const v=d+'T'+t;if(input.min&&v<input.min||input.max&&v>input.max){document.getElementById('pickerStatus').textContent='La fecha está fuera del rango permitido.';return}input.value=v;input.dispatchEvent(new Event('input',{bubbles:true}));input.dispatchEvent(new Event('change',{bubbles:true}));closeModal(modal.id)};document.getElementById('pickerClear').onclick=()=>{if(input.required){document.getElementById('pickerStatus').textContent='Este campo requiere fecha y hora.';return}input.value='';input.dispatchEvent(new Event('input',{bubbles:true}));input.dispatchEvent(new Event('change',{bubbles:true}));closeModal(modal.id)};openModal(modal.id);document.getElementById(type==='time'?'pickerTime':'pickerDate').focus()}
 new MutationObserver(records=>{if(records.some(r=>r.addedNodes.length))enhanceDateInputs()}).observe(document.body,{childList:true,subtree:true});enhanceDateInputs();
 let visitorToken=localStorage.getItem('VibraErotica.visitor:'+location.pathname)||'',visitorReady=null,visitorBlocked=false,v9InvokeClient=null;
 function applyVisitorGate(blocked){visitorBlocked=blocked;document.body.classList.toggle('visitor-blocked',blocked);let n=document.getElementById('visitorNotice');if(!n){n=document.createElement('section');n.id='visitorNotice';n.className='container notice';document.querySelector('main').prepend(n)}n.hidden=!blocked;n.textContent='El negocio restringió el acceso de este visitante. Contacta al local para solicitar una revisión.';if(blocked){closeDrawer();closeChat()}}
@@ -4086,7 +4118,7 @@ async function v14RenderCategoriesAdmin(c){
  c.querySelectorAll('[data-v14-deletecat]').forEach(b=>b.onclick=()=>v14DeleteCategory(b.dataset.v14Deletecat));
 }
 function v14TextModal(title,label,value,onSave){
- const m=v4Modal('v14TextModal',title),body=m.querySelector('.modal-body');body.innerHTML=`<div class="v14-reject-form"><label class="field"><span>${esc(label)}</span><input class="input" id="v14TextValue" value="${esc(value||'')}"></label><div class="toolbar"><button class="btn" id="v14TextSave">${UI.check}<span>Guardar</span></button><button class="btn secondary" data-close-modal="${m.id}">${UI.close}<span>Cancelar</span></button></div></div>`;body.querySelector('[data-close-modal]').onclick=()=>closeModal(m.id);document.getElementById('v14TextSave').onclick=async e=>{const v=document.getElementById('v14TextValue').value.trim();await panelRun(e.currentTarget,()=>onSave(v));closeModal(m.id)};openModal(m.id);setTimeout(()=>document.getElementById('v14TextValue').focus(),50)
+ const m=adminSecondaryDialog(v4Modal('v14TextModal',title)),body=m.querySelector('.modal-body');body.innerHTML=`<div class="v14-reject-form"><label class="field"><span>${esc(label)}</span><input class="input" id="v14TextValue" value="${esc(value||'')}"></label><div class="toolbar"><button class="btn" id="v14TextSave">${UI.check}<span>Guardar</span></button><button class="btn secondary" data-close-modal="${m.id}">${UI.close}<span>Cancelar</span></button></div></div>`;body.querySelector('[data-close-modal]').onclick=()=>closeModal(m.id);document.getElementById('v14TextSave').onclick=async e=>{const v=document.getElementById('v14TextValue').value.trim();await panelRun(e.currentTarget,()=>onSave(v));closeModal(m.id)};openModal(m.id);setTimeout(()=>document.getElementById('v14TextValue').focus(),50)
 }
 function v14RenameCategory(old){
  v14TextModal('Renombrar categoría','Nuevo nombre',old,async name=>{if(!name)throw Error('Escribe un nombre.');state.products.forEach(p=>{if(p.category===old)p.category=name});state.config.catalogCategories=state.config.catalogCategories.map(x=>x===old?name:x);if(!state.config.catalogCategories.includes(name))state.config.catalogCategories.push(name);saveLocal();await syncAdminStateToCloud();renderCategories();renderCatalog();renderAdminPane('categories')});
@@ -4117,7 +4149,7 @@ async function v14RenderProfileAdmin(c){
 
 /* ----- pagos: sólo pendientes + rechazo modal integrado ----- */
 function v14RejectPayment(orderId,c){
- const m=v4Modal('v14RejectPaymentModal','Rechazar comprobante'),body=m.querySelector('.modal-body');
+ const m=adminSecondaryDialog(v4Modal('v14RejectPaymentModal','Rechazar comprobante')),body=m.querySelector('.modal-body');
  body.innerHTML=`<div class="v14-reject-form"><div class="notice">Indica al cliente por qué el comprobante no puede aprobarse.</div><label class="field"><span>Motivo del rechazo</span><textarea class="textarea" id="v14RejectReason" maxlength="500">Comprobante no válido</textarea></label><div class="toolbar"><button class="btn danger" id="v14RejectConfirm">${UI.close}<span>Confirmar rechazo</span></button><button class="btn secondary" id="v14RejectCancel">${UI.arrowLeft}<span>Cancelar</span></button></div></div>`;
  document.getElementById('v14RejectCancel').onclick=()=>closeModal(m.id);
  document.getElementById('v14RejectConfirm').onclick=e=>panelRun(e.currentTarget,async()=>{const reason=document.getElementById('v14RejectReason').value.trim();if(!reason)throw Error('Escribe el motivo.');await setPaymentDecision(orderId,'REJECTED',reason);closeModal(m.id);toast('Pago rechazado.','ok');renderPaymentReviewAdmin(c)});
@@ -4142,7 +4174,7 @@ openReceiptSecure=async function(receiptId){
   const {data:r,error}=await supabaseClient.from('receipts').select('file_path,file_url,mime_type').eq('id',receiptId).single();if(error)throw error;
   let url=r.file_url;if(r.file_path){const s=await supabaseClient.storage.from('receipts-private').createSignedUrl(r.file_path,120);if(s.error)throw s.error;url=s.data.signedUrl}
   if(!url)throw Error('Comprobante no disponible.');
-  const m=v4Modal('v14ReceiptModal','Comprobante');m.classList.add('v14-receipt-modal');const body=m.querySelector('.modal-body');
+  const m=adminSecondaryDialog(v4Modal('v14ReceiptModal','Comprobante'),!!document.querySelector('#adminModal.show'));m.classList.add('v14-receipt-modal');const body=m.querySelector('.modal-body');
   const isPdf=/pdf/i.test(r.mime_type||r.file_path||r.file_url||'');body.innerHTML=isPdf?`<iframe src="${esc(url)}" title="Comprobante PDF"></iframe>`:`<img src="${esc(url)}" alt="Comprobante de pago">`;openModal(m.id);
  }catch(e){toast('No se pudo abrir el comprobante. '+e.message,'error')}
 };
@@ -4797,7 +4829,7 @@ new MutationObserver(()=>ensureBusinessTrigger()).observe(document.body,{childLi
 async function fileToDataURL(file){return await new Promise((res,rej)=>{const r=new FileReader();r.onload=()=>res(r.result);r.onerror=()=>rej(Error('No se pudo leer la imagen.'));r.readAsDataURL(file)})}
 function openCropper(opts){
   const {title='Ajustar imagen',src,aspect=1,shape='rect',apply}=opts;
-  const m=v4Modal('v16CropModal',title); const body=m.querySelector('.modal-body');
+  const m=adminSecondaryDialog(v4Modal('v16CropModal',title),!!document.querySelector('#adminModal.show')&&title!=='Ajustar foto de perfil'||!!document.activeElement?.closest('#adminContent:not([data-admin-view=ticket])')); const body=m.querySelector('.modal-body');
   const stageH=Math.round(380/Math.max(.65,aspect));
   body.innerHTML=`<div class="v16-crop-layout"><div class="v16-crop-stage-wrap"><div class="v16-crop-stage" data-shape="${shape}" id="v16CropStage" style="aspect-ratio:${aspect};min-height:${Math.max(180,stageH)}px"><img id="v16CropImage" class="v16-crop-image" src="${src}"></div><div class="small muted">Arrastra con los controles para decidir qué parte se verá en la imagen final.</div></div><div class="v16-crop-controls"><label class="field"><span>Zoom</span><input class="v16-range" id="v16Zoom" type="range" min="1" max="3" step="0.01" value="1"></label><label class="field"><span>Horizontal</span><input class="v16-range" id="v16X" type="range" min="-100" max="100" step="1" value="0"></label><label class="field"><span>Vertical</span><input class="v16-range" id="v16Y" type="range" min="-100" max="100" step="1" value="0"></label><div class="v16-crop-preview"><div class="v16-crop-thumb ${shape==='circle'?'circle':'rect'}"><img id="v16CropMini" src="${src}"></div><span class="small muted">Vista previa</span></div><div class="toolbar"><button class="btn" id="v16CropApply">Usar recorte</button><button class="btn ghost" data-close-modal="v16CropModal">Cancelar</button></div></div></div>`;
   const stage=body.querySelector('#v16CropStage'), img=body.querySelector('#v16CropImage'), mini=body.querySelector('#v16CropMini');
@@ -6743,7 +6775,7 @@ const select=(id,options,value='')=>`<select id="${id}" aria-label="${id==='viFi
 const field=(id,label,value='',type='text',wide=false)=>`<div class="vi-field ${wide?'wide':''}"><label for="${id}">${safe(label)}</label>${type==='textarea'?`<textarea id="${id}">${safe(value)}</textarea>`:`<input id="${id}" type="${type}" value="${safe(value)}" ${type==='number'?'min="18" max="99"':''}>`}</div>`;
 const read=id=>$(id)?.value?.trim()||'';
 function message(err){if(typeof toast==='function')toast(err.message||text(err),'error');else alert(err.message||text(err))}
-function modal(title,html){let m=$('viModal');if(!m){m=document.createElement('div');m.id='viModal';m.className='modal';m.style.zIndex='140';m.innerHTML='<div class="modal-head"><strong id="viTitle"></strong><button class="icon-btn" id="viClose" type="button" aria-label="Cerrar">×</button></div><div class="modal-body" id="viBody"></div>';document.body.append(m);$('viClose').onclick=()=>{m.classList.remove('show');if(!document.querySelector('.modal.show')&&!document.querySelector('.drawer.show'))$('overlay')?.classList.remove('show')}}$('viTitle').textContent=title;$('viBody').innerHTML=html;$('overlay')?.classList.add('show');m.classList.add('show');return m}
+function modal(title,html){let m=$('viModal');if(!m){m=document.createElement('div');m.id='viModal';m.className='modal';m.style.zIndex='140';m.innerHTML='<div class="modal-head"><strong id="viTitle"></strong><button class="icon-btn" id="viClose" type="button" aria-label="Cerrar">×</button></div><div class="modal-body" id="viBody"></div>';document.body.append(m);$('viClose').onclick=()=>{m.classList.remove('show');if(!document.querySelector('.modal.show')&&!document.querySelector('.drawer.show'))$('overlay')?.classList.remove('show')}}/* MODIFICADO: conservar la presentación pública de este diálogo compartido. */if(title!=='Solicitudes de verificación'&&m.classList.contains('admin-secondary')){m.classList.remove('admin-secondary');$('viClose').textContent='×';}$('viTitle').textContent=title;$('viBody').innerHTML=html;$('overlay')?.classList.add('show');m.classList.add('show');return m}
 function phoneCountry(){const arr=[['MX','+52','México'],['US','+1','EE. UU. / Canadá'],['ES','+34','España'],['AR','+54','Argentina'],['CO','+57','Colombia'],['PE','+51','Perú'],['CL','+56','Chile'],['BR','+55','Brasil'],['VE','+58','Venezuela'],['GT','+502','Guatemala'],['SV','+503','El Salvador'],['HN','+504','Honduras'],['NI','+505','Nicaragua'],['CR','+506','Costa Rica'],['PA','+507','Panamá'],['EC','+593','Ecuador'],['UY','+598','Uruguay'],['PY','+595','Paraguay'],['BO','+591','Bolivia'],['DO','+1','Rep. Dominicana'],['CU','+53','Cuba'],['GB','+44','Reino Unido'],['FR','+33','Francia'],['DE','+49','Alemania'],['IT','+39','Italia'],['PT','+351','Portugal'],['NL','+31','Países Bajos'],['BE','+32','Bélgica'],['CH','+41','Suiza'],['AT','+43','Austria'],['IE','+353','Irlanda'],['AU','+61','Australia'],['NZ','+64','Nueva Zelanda'],['JP','+81','Japón'],['CN','+86','China'],['IN','+91','India'],['KR','+82','Corea del Sur'],['AE','+971','Emiratos Árabes'],['SA','+966','Arabia Saudita'],['ZA','+27','Sudáfrica'],['EG','+20','Egipto'],['MA','+212','Marruecos'],['NG','+234','Nigeria']];return arr}
 function countrySelect(){return '<select id="viPhonePrefix" aria-label="Lada internacional">'+phoneCountry().map(x=>`<option value="${x[1]}">${x[2]} (${x[1]})</option>`).join('')+'</select>'}
 function enhancePhone(){const root=$('customerProfileModal');if(!root||!user())return;const phone=[...root.querySelectorAll('input')].find(e=>/profilePhone|customerPhone|accountPhone/i.test(e.id)||/tel[eé]fono|celular/i.test(e.closest('.field')?.textContent||''));if(!phone||phone.dataset.viPhone)return;phone.dataset.viPhone='1';phone.type='tel';phone.inputMode='tel';const wrap=document.createElement('div');wrap.className='vi-country-phone';phone.parentNode.insertBefore(wrap,phone);wrap.innerHTML=countrySelect();wrap.append(phone);const current=phone.value||'';const cc=phoneCountry().sort((a,b)=>b[1].length-a[1].length).find(x=>current.startsWith(x[1]));if(cc){$('viPhonePrefix').value=cc[1];phone.value=current.slice(cc[1].length).trim()};phone.addEventListener('input',()=>{phone.dataset.viDigits=phone.value.replace(/\D/g,'')});const original=phone.value;phone.addEventListener('change',()=>{const v=phone.value.replace(/\D/g,'');phone.value=v?$('viPhonePrefix').value+v:original});$('viPhonePrefix').addEventListener('change',()=>{phone.value=$('viPhonePrefix').value+phone.value.replace(/\D/g,'')});}
@@ -6827,7 +6859,7 @@ function renderPublic(){
  /* MODIFICADO: propagar filtros a servicios locales y productos de la sede */window.vibraMassageFilterValues={state:stateFilter,city:cityFilter,category:genderFilter,kind:serviceFilter};document.dispatchEvent(new CustomEvent('vibra-massage-filters-changed'));window.vibraFilterLocalProducts?.();
 }
 
-async function reviewUI(){if(typeof panelAccess==='undefined'||!(panelAccess.master||panelAccess.owner))return;const db=api();if(!db)return;const r=await db.from('vibra_independent_profiles').select('user_id,display_name,verification_document_path,verification_document_type').eq('verification_status','pending');if(r.error)throw r.error;modal('Solicitudes de verificación',`<div class="vi-panel"><h3>Documentos pendientes de aprobación</h3><div id="viReviews"></div></div>`);$('viReviews').innerHTML=(r.data||[]).map(p=>`<div class="vi-panel"><strong>${safe(p.display_name)}</strong> · ${safe(p.verification_document_type)}<div class="vi-actions"><button class="btn secondary" data-review="view" data-id="${p.user_id}">Consultar documento</button><button class="btn" data-review="yes" data-id="${p.user_id}">Aprobar</button><button class="btn danger" data-review="no" data-id="${p.user_id}">Rechazar</button></div></div>`).join('')||'<p>Sin solicitudes pendientes.</p>';$('viReviews').onclick=async e=>{const btn=e.target.closest('[data-review]');if(!btn)return;const p=r.data.find(x=>x.user_id===btn.dataset.id);if(!p)return;try{if(btn.dataset.review==='view'){const out=await db.storage.from('vibra-independent-ids').createSignedUrl(p.verification_document_path,60);if(out.error)throw out.error;window.open(out.data.signedUrl,'_blank','noopener');return}if(!confirm(btn.dataset.review==='yes'?'¿Aprobar identificación tras revisarla?':'¿Rechazar esta identificación?'))return;const out=await db.rpc('vibra_independent_review',{p_user_id:p.user_id,p_approve:btn.dataset.review==='yes'});if(out.error)throw out.error;await reviewUI()}catch(err){message(err)}}}
+async function reviewUI(){if(typeof panelAccess==='undefined'||!(panelAccess.master||panelAccess.owner))return;const db=api();if(!db)return;const r=await db.from('vibra_independent_profiles').select('user_id,display_name,verification_document_path,verification_document_type').eq('verification_status','pending');if(r.error)throw r.error;adminSecondaryDialog(modal('Solicitudes de verificación',`<div class="vi-panel"><h3>Documentos pendientes de aprobación</h3><div id="viReviews"></div></div>`));$('viReviews').innerHTML=(r.data||[]).map(p=>`<div class="vi-panel"><strong>${safe(p.display_name)}</strong> · ${safe(p.verification_document_type)}<div class="vi-actions"><button class="btn secondary" data-review="view" data-id="${p.user_id}">Consultar documento</button><button class="btn" data-review="yes" data-id="${p.user_id}">Aprobar</button><button class="btn danger" data-review="no" data-id="${p.user_id}">Rechazar</button></div></div>`).join('')||'<p>Sin solicitudes pendientes.</p>';$('viReviews').onclick=async e=>{const btn=e.target.closest('[data-review]');if(!btn)return;const p=r.data.find(x=>x.user_id===btn.dataset.id);if(!p)return;try{if(btn.dataset.review==='view'){const out=await db.storage.from('vibra-independent-ids').createSignedUrl(p.verification_document_path,60);if(out.error)throw out.error;window.open(out.data.signedUrl,'_blank','noopener');return}if(!confirm(btn.dataset.review==='yes'?'¿Aprobar identificación tras revisarla?':'¿Rechazar esta identificación?'))return;const out=await db.rpc('vibra_independent_review',{p_user_id:p.user_id,p_approve:btn.dataset.review==='yes'});if(out.error)throw out.error;await reviewUI()}catch(err){message(err)}}}
 function adminButton(){const c=$('adminContent');if(!c||!c.querySelector('.admin-pane,.section-card')||!c.querySelector('button'))return;if(typeof panelAccess==='undefined'||!(panelAccess.master||panelAccess.owner))return;if(c.querySelector('#viReviewAdmin'))return;const b=document.createElement('button');b.id='viReviewAdmin';b.className='btn secondary';b.textContent='Verificación de masajistas independientes';b.onclick=()=>reviewUI().catch(message);c.prepend(b)}
 function ageNote(){const age=$('vibraAccessAge');if(!age||age.querySelector('.vi-age-note'))return;const p=document.createElement('p');p.className='vi-age-note';p.textContent='Al ingresar aceptas interactuar con respeto, proteger la privacidad de otras personas y realizar consultas serias. No se tolera el acoso ni el uso indebido de información personal.';age.querySelector('.vibra-age-card')?.append(p)}
 let scheduled=false;function check(){scheduled=false;ageNote();if(user()&&typeof panelAccess!=='undefined'&&adminSession?.user?.id===user().id&&(panelAccess.owner||panelAccess.master||(panelAccess.modules||[]).length)){$('viCategoryPrompt')?.remove();checkedUser=user().id;accountCategory='privileged';}addAccountEntry();adminButton();if(user()&&checkedUser!==user().id&&!categoryPending)loadAccountCategory().catch(console.warn);if(!user()){checkedUser=null;accountCategory=null;$('viCategoryPrompt')?.remove()}}
@@ -7423,7 +7455,7 @@ function svg(parts){return '<svg viewBox="0 0 24 24" aria-hidden="true" stroke-w
 function socialIcons(){qa('#vsmProfileSocial a').forEach(a=>{const name=a.textContent.trim().toLowerCase();const id=['instagram','facebook','tiktok'].find(x=>name.includes(x));if(!id||a.dataset.vscopeIcon)return;a.dataset.vscopeIcon='1';a.innerHTML=svg(pict[id])+'<span>'+id[0].toUpperCase()+id.slice(1)+'</span>'})}
 // NUEVO: submenu de negocio, sedes y habitaciones; reutiliza las pantallas independientes ya existentes.
 function adminSubmenu(){const tabs=q('#adminTabs'),business=qa('#adminTabs .tab-btn').find(b=>/^Negocio\s*$/i.test(b.textContent.trim()));const rooms=q('#vscopeRoomsAdminTab'),sites=q('#vscopeSitesAdminTab');if(!tabs||!business||!rooms||!sites)return;
-let host=q('#vscopeBusinessSubmenu');if(!host){host=document.createElement('div');host.id='vscopeBusinessSubmenu';business.after(host);const arrow=document.createElement('button');arrow.id='vscopeBusinessToggle';arrow.type='button';arrow.setAttribute('aria-label','Abrir submódulos de negocio');arrow.setAttribute('aria-expanded','false');arrow.innerHTML=svg('<path d="m6 9 6 6 6-6"/>');business.append(arrow);arrow.onclick=e=>{e.stopPropagation();const open=host.classList.toggle('open');arrow.classList.toggle('open',open);arrow.setAttribute('aria-expanded',String(open))};}
+let host=q('#vscopeBusinessSubmenu');if(!host){host=document.createElement('div');host.id='vscopeBusinessSubmenu';business.after(host);const arrow=document.createElement('button');arrow.id='vscopeBusinessToggle';arrow.type='button';arrow.setAttribute('aria-label','Abrir submódulos de negocio');arrow.setAttribute('aria-expanded','false');arrow.innerHTML=svg('<path d="m6 9 6 6 6-6"/>');/* MODIFICADO: control hermano para evitar botones anidados. */const entry=document.createElement('div');entry.className='admin-business-entry';business.before(entry);entry.append(business,arrow);arrow.onclick=e=>{e.stopPropagation();const open=host.classList.toggle('open');arrow.classList.toggle('open',open);arrow.setAttribute('aria-expanded',String(open))};}
 for(const [button,title,symbol] of [[rooms,'Habitaciones','<path d="M3 9h18v11H3zM6 9V5h12v4M7 14h10"/>'],[sites,'Sedes','<path d="M12 21s7-7 7-12a7 7 0 0 0-14 0c0 5 7 12 7 12Z"/><circle cx="12" cy="9" r="2"/>']]){if(button.parentElement!==host)host.append(button);if(!button.dataset.vscopeLabel){button.innerHTML=svg(symbol)+'<span>'+title+'</span>';button.dataset.vscopeLabel='1'}}}
 // NUEVO: enlaces y selección de QR basados en redes ya guardadas.
 function ticketLinks(){const c=q('#adminContent');if(!c||!qa('#adminTabs .tab-btn.active').some(x=>/ticket/i.test(x.textContent)))return;/* MODIFICADO */ if(q('#vscopeTicketQrSocial')||q('.ve-ticket-design #foodTicketQrSource'))return;const field=q('#tvQrUrl')||q('#tvQRUrl')||q('#tvQrLink');if(!field)return;const box=document.createElement('label');box.id='vscopeTicketQrSocial';box.innerHTML='<strong>QR · enlace para compartir</strong><select><option value="">Enlace personalizado</option></select>';field.before(box);const list=box.querySelector('select');let socials={};try{socials=state.config?.socials||state.config?.business?.socials||{}}catch{};for(const [key,value] of Object.entries(socials)){if(typeof value==='string'&&/^https:\/\//i.test(value)){const opt=document.createElement('option');opt.textContent=key.charAt(0).toUpperCase()+key.slice(1);opt.value=value;list.append(opt)}}list.onchange=()=>{if(list.value){field.value=list.value;field.dispatchEvent(new Event('input',{bubbles:true}));field.dispatchEvent(new Event('change',{bubbles:true}))}}}
@@ -9624,9 +9656,8 @@ html body #adminModal{
  --au-panel:var(--ui-surface);--au-bg:var(--ui-page);--au-ink:var(--ui-text);--au-muted:var(--ui-muted);--au-edge:var(--ui-border);--au-accent:var(--ui-link);
  --card:var(--au-panel);--site-bg:var(--au-bg);--text:var(--au-ink);--muted:var(--au-muted);--line:var(--au-edge);--secondary:var(--au-bg);
 }/* MODIFICADO */ 
-html body.dark-mode #adminModal{--au-panel:var(--ui-surface);--au-bg:var(--ui-page);--au-ink:var(--ui-text);--au-muted:var(--ui-muted);--au-edge:var(--ui-border);--au-accent:var(--ui-link)}
 #adminModal .admin-ui-sprite{position:absolute;width:0;height:0;overflow:hidden}
-html body #adminModal .modal-head{gap:8px;padding:7px 12px;flex-wrap:wrap;background:var(--au-panel)!important}
+/* MODIFICADO */ html body #adminModal .modal-head{flex-wrap:wrap}
 html body #adminModal .modal-head>strong{font-size:1rem}
 .admin-ui-toolbar{display:flex;align-items:center;gap:5px;flex:1;min-width:0;justify-content:flex-end;flex-wrap:wrap;font-size:.8rem}
 .admin-ui-toolbar [data-au-crumb]{margin-right:auto;color:var(--au-muted);overflow-wrap:anywhere}
@@ -9641,7 +9672,7 @@ html body #adminModal .modal-head>strong{font-size:1rem}
 .admin-ui-user>div button{display:block;margin-top:8px}
 html body #adminModal .admin-layout{grid-template-columns:minmax(0,188px) minmax(0,1fr)}
 html body #adminModal.admin-ui-compact .admin-layout{grid-template-columns:64px minmax(0,1fr)}
-html body #adminModal #adminTabs{display:block;max-height:none;overflow:auto;padding:6px}
+/* MODIFICADO */ html body #adminModal #adminTabs{display:block;max-height:none;overflow:auto}
 #adminModal .admin-ui-group>summary{padding:8px 4px;min-height:38px;font-size:.73rem;font-weight:750;color:var(--au-muted);cursor:pointer}
 html body #adminModal #adminTabs .tab-btn{min-height:44px;font-size:.78rem}
 html body #adminModal #adminTabs .tab-btn[aria-current=page]{box-shadow:inset 3px 0 var(--au-accent);color:var(--au-accent)!important}
@@ -9681,6 +9712,79 @@ html body #adminModal #adminKpis .admin-kpi[aria-pressed=true]{outline:2px solid
 @media(prefers-reduced-motion:no-preference){
  #adminModal .admin-ui-toolbar button:active{transform:scale(.96)}
  #adminModal .admin-ui-toolbar button{transition:transform .22s ease}
+}
+/* NUEVO: componentes administrativos. El contenido del editor de ticket conserva sus reglas. */
+html body #adminModal .modal-head{background:var(--ui-header)!important;gap:12px;padding:10px clamp(12px,2vw,24px);border-bottom:1px solid var(--ui-border)}
+html body #adminModal #adminTabs{padding:12px 8px;background:var(--ui-surface);border-inline-end:1px solid var(--ui-border)}
+#adminModal .admin-ui-group+ .admin-ui-group{margin-top:8px;border-top:1px solid var(--ui-border)}
+#adminModal .admin-ui-group>summary{padding-inline:8px;text-transform:uppercase;letter-spacing:.045em}
+html body #adminModal #adminTabs .tab-btn[aria-current=page]{background:var(--ui-raised)!important;border-color:var(--ui-border)}
+#adminModal [data-au-connection]{padding:4px 8px;border:1px solid var(--ui-border);border-radius:999px;white-space:nowrap}
+#adminModal [data-au-connection][data-online=true]{color:var(--ui-success)}
+#adminModal [data-au-connection][data-online=false]{color:var(--ui-warning)}
+#adminModal .admin-workspace-heading{padding:clamp(12px,2vw,22px);margin:0 0 14px;background:var(--ui-header);border:1px solid var(--ui-border);border-radius:14px}
+#adminModal .admin-workspace-heading h2{display:flex;gap:10px;align-items:center;margin:0;font-size:1.18rem!important;color:var(--ui-text)!important}
+#adminModal .admin-workspace-heading svg{width:22px;height:22px;flex:none;fill:none;stroke:var(--ui-link);stroke-width:1.7}
+#adminModal .admin-workspace-heading p{margin:5px 0 0;color:var(--ui-muted)!important;font-size:.86rem}
+html body #adminModal #adminContent[data-admin-view]:not([data-admin-view=ticket],:has(.ticket-editor)) .section-card{border:1px solid var(--ui-border);border-radius:14px;padding:clamp(10px,1.4vw,16px);min-width:0;margin-bottom:12px}
+#adminModal #adminContent[data-admin-view]:not([data-admin-view=ticket],:has(.ticket-editor)) :is(.toolbar,.vi-actions,.vscope-admin-toolbar){gap:7px;align-items:center}
+#adminModal #adminContent[data-admin-view]:not([data-admin-view=ticket],:has(.ticket-editor)) :is(.admin-grid,.vscope-admin-fields,.permission-grid){gap:10px}
+#adminModal #adminContent[data-admin-view]:not([data-admin-view=ticket],:has(.ticket-editor)) :is(.field,.vscope-admin-fields label){min-width:0}
+#adminModal #adminContent[data-admin-view]:not([data-admin-view=ticket],:has(.ticket-editor)) .field label{font-size:.84rem;font-weight:700}
+html body #adminModal #adminContent[data-admin-view]:not([data-admin-view=ticket],:has(.ticket-editor)) :is(.btn,.v9action,.vibra-section-action){min-height:40px;border-radius:10px}
+html body #adminModal #adminContent[data-admin-view]:not([data-admin-view=ticket],:has(.ticket-editor)) .btn:not(.secondary,.ghost,.danger){background:var(--ui-action)!important;color:var(--ui-on-action)!important}
+html body #adminModal #adminContent[data-admin-view]:not([data-admin-view=ticket],:has(.ticket-editor)) .btn.danger{background:var(--ui-raised)!important;color:var(--ui-danger)!important;border:1px solid var(--ui-danger)}
+html body #adminModal #adminContent[data-admin-view]:not([data-admin-view=ticket],:has(.ticket-editor)) :is(button,input,textarea,select):disabled{opacity:1!important;cursor:not-allowed}
+#adminModal #adminContent[data-admin-view]:not([data-admin-view=ticket],:has(.ticket-editor)) input:is([type=checkbox],[type=radio]){accent-color:var(--ui-action)}
+#adminModal #adminContent[data-admin-view]:not([data-admin-view=ticket],:has(.ticket-editor)) input[type=file]::file-selector-button{background:var(--ui-raised);color:var(--ui-text);border:1px solid var(--ui-border);border-radius:7px;padding:6px 8px}
+#adminModal #adminContent[data-admin-view]:not([data-admin-view=ticket],:has(.ticket-editor)) :is(.table-wrap,.admin-table){max-width:100%}
+#adminModal #adminContent[data-admin-view]:not([data-admin-view=ticket],:has(.ticket-editor)) .table-wrap{overflow-x:auto;overscroll-behavior-inline:contain}
+html body #adminModal #adminContent[data-admin-view]:not([data-admin-view=ticket],:has(.ticket-editor)) .admin-table :is(td,th){padding:9px 10px;vertical-align:middle;border-color:var(--ui-border)}
+html body #adminModal #adminContent[data-admin-view]:not([data-admin-view=ticket],:has(.ticket-editor)) .admin-table thead th{background:var(--ui-raised)!important;color:var(--ui-text)!important;font-size:.77rem}
+#adminModal #adminContent[data-admin-view]:not([data-admin-view=ticket],:has(.ticket-editor)) .admin-table td{font-variant-numeric:tabular-nums}
+#adminModal #adminContent[data-admin-kind=records] :is(.audit-item,.payment-item,.vscope-admin-entry,.review-card){padding:10px 12px;margin-block:6px;border-radius:10px}
+#adminModal #adminContent[data-admin-kind=records] .admin-table tbody tr:focus-within{outline:2px solid var(--ui-focus);outline-offset:-2px}
+#adminModal #adminContent[data-admin-kind=editor] :is(.palette-grid,.vsm-list,.vibra-media-list){gap:10px}
+#adminModal #adminContent[data-admin-kind=config] :is(.notice,.vscope-status){padding:8px 10px;border-inline-start:3px solid var(--ui-link)}
+#adminModal #adminContent[data-admin-view=dashboard] .admin-dashboard{gap:10px}
+html body #adminModal #adminContent[data-admin-view=dashboard] .admin-kpi{border:1px solid var(--ui-border);border-radius:12px;padding:12px}
+html body .modal.admin-secondary{z-index:155;background:var(--ui-dialog)!important;color:var(--ui-text)!important;border:1px solid var(--ui-border);width:min(640px,calc(100% - 20px));max-height:94dvh}
+html body .modal.admin-secondary:is(#v14ReceiptModal,#v16CropModal){width:min(920px,calc(100% - 20px))}
+html body .modal.admin-secondary .modal-head{background:var(--ui-header)!important;color:var(--ui-text)!important;border-bottom:1px solid var(--ui-border)}
+html body .modal.admin-secondary .modal-body{max-height:calc(94dvh - 66px);overflow:auto;overscroll-behavior:contain}
+html body .modal.admin-secondary :is(.vi-panel,.section-card,.date-picker-fields,.v14-reject-form){color:var(--ui-text)!important;background:var(--ui-surface)!important;border-color:var(--ui-border)!important}
+html body .modal.admin-secondary :is(input:not([type=range],[type=checkbox],[type=radio]),select,textarea){color:var(--ui-text)!important;background:var(--ui-field)!important;border-color:var(--ui-border)!important}
+html body .modal.admin-secondary :is(input,textarea)::placeholder{color:var(--ui-muted);opacity:1}
+#adminModal #adminContent[data-admin-view]:not([data-admin-view=ticket],:has(.ticket-editor)) :is(button,input,textarea,select,summary,a):focus-visible,
+.modal.admin-secondary :is(button,input,textarea,select,summary,a):focus-visible{outline:2px solid var(--ui-focus);outline-offset:2px}
+@media(hover:hover){
+ #adminModal #adminContent[data-admin-kind=records] .admin-table tbody tr:hover{background:var(--ui-raised)}
+ html body #adminModal #adminContent[data-admin-view]:not([data-admin-view=ticket],:has(.ticket-editor)) .btn:not(.secondary,.ghost,.danger):hover{background:var(--ui-hover)!important}
+}
+@media(max-width:760px){
+ #adminModal .admin-workspace-heading{margin-bottom:10px}
+ #adminModal #adminContent[data-admin-view]:not([data-admin-view=ticket],:has(.ticket-editor)) .admin-grid.two{grid-template-columns:minmax(0,1fr)}
+ #adminModal #adminContent[data-admin-view]:not([data-admin-view=ticket],:has(.ticket-editor)) :is(.toolbar,.vscope-admin-toolbar)>button{max-width:100%;white-space:normal}
+}
+@media(prefers-reduced-motion:reduce){
+ #adminModal #adminContent[data-admin-view]:not([data-admin-view=ticket],:has(.ticket-editor)) *,
+ .modal.admin-secondary,.modal.admin-secondary *{animation:none!important;transition:none!important}
+}
+#adminModal #adminTabs .admin-business-entry{display:grid;grid-template-columns:minmax(0,1fr) auto;align-items:center;gap:4px}
+#adminModal #adminTabs .admin-business-entry #vscopeBusinessToggle{min-width:38px;min-height:38px;margin:0}
+#adminModal.admin-ui-compact #adminTabs .admin-business-entry{grid-template-columns:minmax(0,1fr)}
+#adminModal #adminContent[data-admin-kind=editor]:not(:has(.ticket-editor)) :is(.palette-grid,.vibra-media-list){grid-template-columns:repeat(auto-fit,minmax(min(100%,155px),1fr))}
+#adminModal #adminContent[data-admin-kind=editor]:not(:has(.ticket-editor)) #productFormWrap>.admin-grid{align-items:start}
+#adminModal #adminContent[data-admin-kind=records] .table-wrap{border:1px solid var(--ui-border);border-radius:12px;background:var(--ui-surface)}
+#adminModal #adminContent[data-admin-kind=records] .admin-table td:last-child .toolbar{margin:0}
+html body #adminModal #adminContent[data-admin-view]:not([data-admin-view=ticket],:has(.ticket-editor)) :is(.btn,.v9action)[disabled]{
+ background:var(--ui-raised)!important;color:var(--ui-muted)!important;border:1px dashed var(--ui-border)
+}
+html body .modal.admin-secondary:not(.show){visibility:hidden}
+html body .modal.admin-secondary.show{visibility:visible}
+@media(prefers-reduced-motion:no-preference){
+ #adminModal .admin-workspace-heading{animation:admin-workspace-in .18s ease-out}
+ @keyframes admin-workspace-in{from{opacity:.86;transform:translateY(4px)}to{opacity:1;transform:none}}
 }
 /* NUEVO: mostrar más catálogo mediante densidad, sin reducir el tamaño de toda la página. */
 @media(min-width:1050px){
@@ -9731,7 +9835,7 @@ html body main #catalogGrid :is(.desc,.meta,.vibra-service-content p){font-size:
  toolbar.innerHTML='<button type="button" data-au-nav aria-controls="adminTabs" aria-expanded="true" aria-label="Menú de módulos">'+svg('menu')+'</button><span data-au-crumb></span><span data-au-connection role="status"></span><button type="button" data-au-search title="Ctrl+K / Cmd+K" aria-label="Buscar módulos">'+svg('search')+'</button><button type="button" data-au-theme aria-label="Cambiar tema">'+svg('theme')+'</button><details class="admin-ui-user"><summary aria-label="Cuenta administrativa">'+svg('person')+'</summary><div><span data-au-user></span><button type="button" data-au-logout>Cerrar sesión</button></div></details>';
  head.insertBefore(toolbar,close);
  const palette=document.createElement('dialog');palette.className='admin-ui-palette';palette.setAttribute('aria-label','Buscar módulos');
- palette.innerHTML='<form method="dialog"><button aria-label="Cerrar búsqueda">×</button></form><label>Buscar módulos<input type="search" placeholder="Nombre del módulo"></label><div class="admin-ui-results"></div><small>Ctrl+K / Cmd+K abre la búsqueda. Esc la cierra.</small>';
+ palette.innerHTML='<form method="dialog"><button aria-label="Cerrar búsqueda">'+UI.close+'</button></form><label>Buscar módulos<input type="search" placeholder="Nombre del módulo"></label><div class="admin-ui-results"></div><small>Ctrl+K / Cmd+K abre la búsqueda. Esc la cierra.</small>';
  modal.append(palette);
  const input=palette.querySelector('input'),result=palette.querySelector('.admin-ui-results');
  let recent=[],favorites=new Set(),previousFocus=null,wasOpen=false,frame=0;
@@ -9782,6 +9886,53 @@ html body main #catalogGrid :is(.desc,.meta,.vibra-service-content p){font-size:
    tabs.append(group);
   }
  }
+ // NUEVO: clasificación de las vistas administrativas y cabecera contextual.
+ const viewInfo={
+  dashboard:['overview','Consulta el estado de los pedidos y sus pagos.'],
+  products:['editor','Administra productos, servicios y disponibilidad.'],
+  categories:['editor','Organiza las categorías del catálogo.'],
+  design:['editor','Configura la presentación del sitio.'],
+  business:['config','Gestiona la información y configuración del negocio.'],
+  profile:['editor','Administra la portada, el perfil y las redes del negocio.'],
+  trip:['config','Consulta y configura los costos de viaje.'],
+  orders:['records','Consulta y gestiona los pedidos registrados.'],
+  review:['records','Revisa pagos y comprobantes pendientes.'],
+  receipts:['records','Consulta los comprobantes registrados.'],
+  audit:['records','Consulta la actividad registrada en el panel.'],
+  integrations:['config','Configura las conexiones y servicios del sitio.'],
+  history:['records','Consulta los viajes registrados.'],
+  users:['records','Administra los accesos y permisos existentes.'],
+  commissions:['config','Gestiona las reglas de comisión y consulta las liquidaciones.'],
+  deliveries:['records','Consulta las entregas y su seguimiento.'],
+  customers:['records','Consulta los clientes y administra los bloqueos.'],
+  subscription:['config','Consulta el estado y la configuración del sitio.'],
+  promotions:['editor','Configura las ofertas del catálogo.'],
+  coupons:['editor','Gestiona los cupones y sus condiciones.'],
+  expenses:['records','Consulta y registra gastos e insumos.'],
+  tracking:['records','Gestiona el seguimiento y las conversaciones de pedidos.'],
+  vscopeRoomsAdminTab:['editor','Administra las habitaciones y sus detalles.'],
+  vscopeSitesAdminTab:['editor','Administra las sedes y sus ubicaciones.']
+ };
+ function syncWorkspace(tab){
+  const id=tab?.dataset.tab||tab?.id||'';
+  content.dataset.adminView=id;
+  content.dataset.adminKind=viewInfo[id]?.[0]||'';
+  let title=content.querySelector(':scope > .admin-workspace-heading');
+  if(!id||id==='ticket'){title?.remove();return}
+  if(!title){
+   title=document.createElement('header');title.className='admin-workspace-heading';
+   title.innerHTML='<h2></h2><p></p>';
+   content.prepend(title);
+  }
+  const name=moduleName(tab),heading=title.querySelector('h2'),description=title.querySelector('p');
+  if(title.dataset.module!==id||heading.textContent!==name){
+   const icon=tab.querySelector('svg')?.cloneNode(true);
+   heading.replaceChildren(...(icon?[icon]:[]),document.createTextNode(name));
+   title.dataset.module=id;
+   description.textContent=viewInfo[id]?.[1]||'';
+   description.hidden=!description.textContent;
+  }
+ }
  function sync(){
   frame=0;
   const open=modal.classList.contains('show');
@@ -9793,10 +9944,15 @@ html body main #catalogGrid :is(.desc,.meta,.vibra-service-content p){font-size:
    if(b.classList.contains('active'))b.setAttribute('aria-current','page');else b.removeAttribute('aria-current');
   }
   const current=tabs.querySelector('.tab-btn.active');
-  if(current?.closest('.admin-ui-group')&&recent[0]!==current.dataset.tab)current.closest('.admin-ui-group').open=true;
+  /* MODIFICADO: mantener accesibles los submódulos sin identificador data-tab. */
+  if(current?.closest('.admin-ui-group')&&recent[0]!==(current.dataset.tab||current.id))current.closest('.admin-ui-group').open=true;
   if(current?.dataset.tab&&recent[0]!==current.dataset.tab)recent=[current.dataset.tab,...recent.filter(id=>id!==current.dataset.tab)].slice(0,8);
+  // MODIFICADO: contexto de módulo y estado de conexión en el encabezado.
+  syncWorkspace(current);
   toolbar.querySelector('[data-au-crumb]').textContent=current?moduleName(current):'';
-  toolbar.querySelector('[data-au-connection]').textContent=navigator.onLine?'En línea':'Sin conexión';
+  const connection=toolbar.querySelector('[data-au-connection]');
+  connection.dataset.online=String(navigator.onLine);
+  connection.textContent=navigator.onLine?'En línea':'Sin conexión';
   toolbar.querySelector('[data-au-user]').textContent=(adminSession?.user?.email||'')+(panelAccess.owner?' · Propietario':panelAccess.master?' · Administrador':' · Colaborador');
   const review=content.querySelector('#viReviewAdmin');
   if(review){review.classList.add('admin-ui-review');if(!review.querySelector('svg'))review.insertAdjacentHTML('afterbegin',svg('person'))}
