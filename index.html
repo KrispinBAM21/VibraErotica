@@ -4412,8 +4412,9 @@ async function community(action,payload={}){
 }
 let summary={followers:0,following:false,scores:{overall:0,service:0,food:0,reviews:0}};
 async function refreshExperience(){
+ // MODIFICADO: actualizar con el renderizador vigente de reputación.
  try{summary=await community('summary',{})||summary}catch{}
- paintExperience();
+ (window.vibraPaintExperience||paintExperience)();
 }
 // NUEVO: presentar únicamente la puntuación y contadores reales.
 window.veRatingSummary=function(avg,reviews,followers){
@@ -4716,11 +4717,17 @@ async function submitBusinessReview(payload){return v16Community('review',payloa
 function starPicker(host,initial,onchange){let value=initial;const draw=()=>{host.innerHTML=[1,2,3,4,5].map(i=>`<button type="button" class="v14-star ${i<=value?'on':''}" data-star="${i}" aria-label="${i} de 5" aria-pressed="${i<=value}"><svg class="ve-dialog-icon" aria-hidden="true" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="m12 3 2.8 5.8 6.4.9-4.6 4.5 1.1 6.4-5.7-3-5.7 3 1.1-6.4-4.6-4.5 6.4-.9Z"/></svg></button>`).join('');host.querySelectorAll('button').forEach(b=>b.onclick=()=>{value=Number(b.dataset.star);draw();onchange(value)})};draw();}
 // MODIFICADO: editor y listado de opiniones con los componentes del sitio.
 let businessReviewDraft={owner:null,overall:5,service:5,food:5,comment:''};
+// MODIFICADO: valoración interactiva y resumen sobre las opiniones públicas.
+let businessReviewSaving=false;
 async function openRateBusinessModal(viewOnly=false){
  const trigger=document.activeElement;
  const m=v4Modal('v16RateBusinessModal','Opiniones del negocio');
  const title=m.querySelector('.modal-head strong');
  title.id='veBusinessReviewTitle';
+ const description=m.querySelector('.ve-review-description')||document.createElement('small');
+ description.className='ve-review-description';description.id='veReviewDescription';description.textContent='Vibra Erótica · Experiencias de la comunidad';
+ if(!description.isConnected)title.after(description);
+ m.setAttribute('aria-describedby',description.id);
  title.innerHTML=V12I.heart+'<span>'+(viewOnly?'Opiniones del negocio':'Calificar negocio')+'</span>';
  m.setAttribute('role','dialog');m.setAttribute('aria-modal','true');m.setAttribute('aria-labelledby',title.id);
  const body=m.querySelector('.modal-body');
@@ -4729,12 +4736,15 @@ async function openRateBusinessModal(viewOnly=false){
   businessReviewDraft=businessReviewDraft.owner===null?{...businessReviewDraft,owner}:{owner,overall:5,service:5,food:5,comment:''};
  }
  const draft=businessReviewDraft;
- const criteria=[['v16Overall','Negocio','overall'],['v16Service','Servicio','service'],['v16Food','Experiencia','food']];
+ const criteria=[['v16Overall','Negocio','overall','Instalaciones, higiene y privacidad'],['v16Service','Servicio','service','Atención y puntualidad'],['v16Food','Experiencia','food','Satisfacción general']];
+ const scoreLabel=['','Muy mala','Mala','Regular','Buena','Excelente'];
+ const scoreValue=value=>{const score=Number(value);return score>=1&&score<=5?score:null};
+ const send='<svg viewBox="0 0 24 24" aria-hidden="true"><path d="m3 4 18 8-18 8 4-8-4-8Zm4 8h14"/></svg>';
  body.innerHTML=`<!-- MODIFICADO --><section class="ve-review-summary section-card" aria-live="polite" hidden></section>
  ${viewOnly?'':`<section class="section-card ve-review-compose"><h3>¿Cómo fue tu experiencia?</h3>
- <div class="v14-review-grid">${criteria.map(([id,label])=>`<div class="v14-score"><strong>${label}</strong><div id="${id}" class="v14-stars" role="group" aria-label="${label}"></div><output class="ve-review-score"></output></div>`).join('')}</div>
+ <div class="v14-review-grid">${criteria.map(([id,label,,help])=>`<div class="v14-score"><strong>${label}</strong><small class="ve-review-help">${help}</small><div id="${id}" class="v14-stars" role="group" aria-label="${label}"></div><output class="ve-review-score"></output></div>`).join('')}</div>
  <label class="field" for="v16Comment">Tu comentario</label><textarea class="textarea" id="v16Comment" maxlength="1000" placeholder="Escribe tu comentario" aria-describedby="veReviewCount"></textarea>
- <div class="ve-review-compose-footer"><small id="veReviewCount"></small><div class="toolbar"><button type="button" class="btn ghost" id="v16OpenBusinessBack">${UI.arrowLeft}<span>Volver al perfil del negocio</span></button><button type="button" class="btn" id="v16PublishReview">${UI.edit}<span>Publicar opinión</span></button></div></div></section>`}
+ <div class="ve-review-compose-footer"><small id="veReviewCount"></small><div class="toolbar"><button type="button" class="btn ghost" id="v16OpenBusinessBack">${UI.arrowLeft}<span>Volver al perfil del negocio</span></button><button type="button" class="btn" id="v16PublishReview">${send}<span>Publicar opinión</span></button></div></div></section>`}
  <section class="ve-review-list"><div class="ve-review-list-head"><div><h3>Opiniones recientes</h3><p class="small muted">Se muestra el nombre público disponible en cada opinión.</p></div><div class="ve-review-filters" role="group" aria-label="Filtrar opiniones">${[['','Todas'],['5','5 estrellas'],['4','4 estrellas']].map(([value,label])=>`<button type="button" class="chip" data-review-score="${value}" aria-pressed="${!value}">${label}</button>`).join('')}</div></div><div id="v16ReviewRows" aria-live="polite"></div></section>`;
  const rows=body.querySelector('#v16ReviewRows'),summary=body.querySelector('.ve-review-summary');
  const filters=[...body.querySelectorAll('[data-review-score]')];
@@ -4743,8 +4753,11 @@ async function openRateBusinessModal(viewOnly=false){
   const visible=reviews.filter(row=>!filter||Number(row.overall_rating)===Number(filter));
   rows.innerHTML=visible.map(row=>{
    const name=String(row.display_name??'').trim();
-   const rating=Number(row.overall_rating);
-   return `<article class="section-card v16-review-card"><header><div class="ve-review-author"><span class="ve-review-avatar" aria-hidden="true">${name?esc(name.split(/\s+/).slice(0,2).map(x=>Array.from(x)[0]).join('').toLocaleUpperCase('es-MX')):V12I.heart}</span><strong>${esc(name||'Nombre no publicado')}</strong></div><span class="ve-review-result">${V12I.star} ${rating>0?esc(rating.toFixed(1))+'/5':'Sin dato'}</span></header><p>${esc(row.comment||'')}</p><small class="muted">Servicio ${row.service_rating==null?'Sin dato':esc(row.service_rating)+'/5'} · Experiencia ${row.food_rating==null?'Sin dato':esc(row.food_rating)+'/5'}</small></article>`;
+   const rating=scoreValue(row.overall_rating);
+   const date=row.created_at?new Date(row.created_at):null;
+   const dateMarkup=date&&!Number.isNaN(date.getTime())?`<time datetime="${date.toISOString()}">${esc(date.toLocaleDateString('es-MX',{dateStyle:'medium'}))}</time>`:'';
+   const scores=criteria.map(([,label,key])=>{const score=scoreValue(row[key+'_rating']);return score===null?'':`<span>${label} <strong>${score.toFixed(1)}</strong></span>`}).join('');
+   return `<article class="section-card v16-review-card"><header><div class="ve-review-author"><span class="ve-review-avatar" aria-hidden="true">${name?esc(name.split(/\s+/).slice(0,2).map(x=>Array.from(x)[0]).join('').toLocaleUpperCase('es-MX')):V12I.heart}</span><div><strong>${esc(name||'Nombre no publicado')}</strong>${dateMarkup}</div></div><span class="ve-review-result">${V12I.star} ${rating>0?esc(rating.toFixed(1))+'/5':'Sin dato'}</span></header><p>${esc(row.comment||'')}</p>${scores?`<div class="ve-review-breakdown">${scores}</div>`:''}</article>`;
   }).join('')||`<p class="section-card">${filter?'No hay opiniones con esta calificación.':'Aún no hay opiniones.'}</p>`;
  }
  async function loadV16Reviews(){
@@ -4754,9 +4767,12 @@ async function openRateBusinessModal(viewOnly=false){
    const result=await v16Community('reviews',{});
    if(!rows.isConnected)return;
    reviews=result.reviews||[];
-   const ratings=reviews.map(row=>Number(row.overall_rating)).filter(n=>n>=1&&n<=5);
+   function average(key){
+    const scores=reviews.map(row=>scoreValue(row[key+'_rating'])).filter(value=>value!==null);
+    return scores.length?(scores.reduce((a,b)=>a+b,0)/scores.length).toFixed(1)+'/5':null;
+   }
    summary.hidden=false;
-   summary.innerHTML=`<div class="ve-review-average">${V12I.star}<strong>${ratings.length?(ratings.reduce((a,b)=>a+b,0)/ratings.length).toFixed(1)+'/5':'Sin calificaciones'}</strong></div><span class="small muted">${reviews.length} ${reviews.length===1?'opinión mostrada':'opiniones mostradas'}</span>`;
+   summary.innerHTML=`<div><div class="ve-review-average">${V12I.star}<strong>${average('overall')||'Sin calificaciones'}</strong></div><p class="small muted">${reviews.length} ${reviews.length===1?'opinión mostrada':'opiniones mostradas'}</p></div><dl class="ve-review-stats">${criteria.map(([,label,key])=>`<div><dt>${label}</dt><dd>${average(key)||'Sin calificaciones'}</dd></div>`).join('')}</dl>`;
    filters.forEach(button=>button.disabled=false);
    drawReviews();
   }catch(e){
@@ -4777,15 +4793,28 @@ async function openRateBusinessModal(viewOnly=false){
     const button=document.createElement('button');button.type='button';button.className='v14-star';button.dataset.star=i+1;
     button.setAttribute('aria-label',(i+1)+' de 5');button.innerHTML=V12I.star;return button;
    });
-   function draw(){
+   function draw(preview=draft[key]){
     for(const button of buttons){
      const score=Number(button.dataset.star);
-     button.classList.toggle('on',score<=draft[key]);
+     button.classList.toggle('on',score<=preview);
      button.setAttribute('aria-pressed',String(score===draft[key]));
+     button.tabIndex=score===draft[key]?0:-1;
     }
-    output.textContent=draft[key].toFixed(1)+' de 5';
+    output.textContent=preview.toFixed(1)+' de 5 · '+scoreLabel[preview];
    }
    for(const button of buttons)button.onclick=()=>{draft[key]=Number(button.dataset.star);draw()};
+   host.onpointerover=event=>{
+    const star=event.target.closest('[data-star]');
+    if(event.pointerType==='mouse'&&star)draw(Number(star.dataset.star));
+   };
+   host.onpointerleave=()=>draw();
+   host.onkeydown=event=>{
+    const key=event.key;
+    if(!['ArrowRight','ArrowLeft','ArrowUp','ArrowDown','Home','End'].includes(key))return;
+    event.preventDefault();
+    const score=key==='Home'?1:key==='End'?5:Math.max(1,Math.min(5,Number(event.target.dataset.star)+(key==='ArrowRight'||key==='ArrowUp'?1:-1)));
+    buttons[score-1].click();buttons[score-1].focus();
+   };
    host.replaceChildren(...buttons);draw();
   }
   const comment=body.querySelector('#v16Comment'),count=body.querySelector('#veReviewCount');
@@ -4793,26 +4822,34 @@ async function openRateBusinessModal(viewOnly=false){
   const updateCount=()=>{draft.comment=comment.value;count.textContent=comment.value.length+' / '+comment.maxLength};
   comment.oninput=updateCount;updateCount();
   body.querySelector('#v16OpenBusinessBack').onclick=()=>{closeModal(m.id);openBusinessShowcase()};
-  body.querySelector('#v16PublishReview').onclick=e=>panelRun(e.currentTarget,async()=>{
+  body.querySelector('#v16PublishReview').onclick=e=>{if(businessReviewSaving)return;return panelRun(e.currentTarget,async()=>{
    if(!customerSession){closeModal(m.id);renderCustomerProfile();openModal('customerProfileModal');return toast('Inicia sesión para publicar tu opinión.','info')}
    const text=comment.value.trim();
    if(text.length<3){comment.focus();throw Error('Escribe un comentario.')}
-   await submitBusinessReview({overall:draft.overall,service:draft.service,food:draft.food,comment:text});
-   draft.comment='';if(comment.isConnected){comment.value='';updateCount()}
-   setRatedDone();renderTrackingButtons();await loadV16Reviews();
-  },'Opinión publicada.');
+   businessReviewSaving=true;
+   comment.readOnly=true;
+   try{
+    await submitBusinessReview({overall:draft.overall,service:draft.service,food:draft.food,comment:text});
+    if(draft.comment.trim()===text)draft.comment='';
+    const mounted=m.querySelector('#v16Comment');
+    if(draft===businessReviewDraft&&mounted?.value.trim()===text){mounted.value=draft.comment;mounted.dispatchEvent(new Event('input'))}
+    try{if(customerSession?.user?.id===owner)setRatedDone();renderTrackingButtons()}catch{}
+    if(rows.isConnected)loadV16Reviews();
+    refreshExperience().catch(()=>{});
+   }finally{businessReviewSaving=false;comment.readOnly=false}
+  },'Opinión publicada.');};
  }
  m.onkeydown=e=>{
   if(e.key==='Escape'){e.preventDefault();e.stopPropagation();closeModal(m.id);return}
   if(e.key!=='Tab')return;
-  const controls=[...m.querySelectorAll('button:not(:disabled),textarea')].filter(el=>el.getClientRects().length);
+  const controls=[...m.querySelectorAll('button:not(:disabled):not([tabindex="-1"]),textarea')].filter(el=>el.getClientRects().length);
   const first=controls[0],last=controls.at(-1);
   if(first&&(e.shiftKey?document.activeElement===first:document.activeElement===last)){e.preventDefault();(e.shiftKey?last:first).focus()}
  };
  const closeWatcher=new MutationObserver(()=>{
   if(m.classList.contains('show'))return;
   closeWatcher.disconnect();
-  if(trigger?.isConnected&&!document.querySelector('.modal.show'))trigger.focus({preventScroll:true});
+  if(!document.querySelector('.modal.show'))(trigger?.isConnected?trigger:document.getElementById(viewOnly?'veViewOpinions':'v17Rate'))?.focus({preventScroll:true});
  });
  openModal(m.id);closeWatcher.observe(m,{attributes:true,attributeFilter:['class']});
  body.scrollTop=0;m.querySelector('[data-close-modal]').focus({preventScroll:true});
@@ -5089,11 +5126,12 @@ const v17RenderAdminBase=renderAdmin;renderAdmin=function(){v17EnsureCouponTab()
 let paintExperience=window.vibraPaintExperience||function(){};
 paintExperience=function(){
   let h=document.getElementById('v15Experience');if(!h){h=document.createElement('section');h.id='v15Experience';document.querySelector('.container.controls')?.after(h) /* MODIFICADO: reputación debajo del panel de filtros. */}
-  h.className='container v17-experience open'; // MODIFICADO: mostrar la franja completa al abrir.const s=summary?.scores||{},avg=Number(s.overall||0);
+  h.className='container v17-experience open'; // MODIFICADO: recuperar el resumen antes de renderizar Calificar negocio.
+  const s=summary?.scores||{},avg=Number(s.overall||0);
   // MODIFICADO: iconos propios para las acciones y la puntuación de la barra.
   const experienceSvg=path=>`<svg aria-hidden="true" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round">${path}</svg>`;
   // MODIFICADO: fachada con ubicación, reseña destacada, seguimiento y apertura.
-  h.innerHTML=`<button class="v17-experience-toggle" id="v17ExperienceToggle" aria-expanded="true"><div class="ve-reputation-copy"><h3>Reputación y experiencia</h3><p>Califica el negocio, conoce el perfil, consulta opiniones y síguenos.</p></div><span class="v17-experience-chevron">${experienceSvg('<path d="M5 7h14v10H5z M9 10l3 3 3-3"/>')}</span></button><div class="v17-experience-panel"><div><div class="v17-experience-inner"><div class="v17-experience-summary ve-reputation-rating">${veRatingSummary(avg,s.reviews,summary?.followers)}</div><div class="v17-experience-actions"><button class="btn v16-glow-btn" id="v17KnowBusiness">${experienceSvg('<path d="M3 20h18M5 20V9l7-5 7 5v11M9 20v-5h6v5M10 10h4M12 2v2"/>')}<span>Conocer el negocio</span></button><button class="btn" id="v17Rate">${experienceSvg('<path d="M4 5h16v12H9l-4 3v-3H4z"/><path d="m12 7 1.1 2.3 2.6.4-1.9 1.8.5 2.6-2.3-1.2-2.3 1.2.5-2.6-1.9-1.8 2.6-.4z"/>')}<span>Calificar</span></button><button class="btn secondary" id="veViewOpinions">${experienceSvg('<path d="M4 5h16v12H9l-5 3zM8 9h8m-8 4h5"/>')}<span>Ver opiniones</span></button><button class="btn secondary" id="v17Follow">${experienceSvg(summary?.following?'<path d="M8 13a4 4 0 1 0 0-8 4 4 0 0 0 0 8ZM2 21v-2c0-2 3-4 6-4s6 2 6 4v2M16 11h6"/>':'<path d="M8 13a4 4 0 1 0 0-8 4 4 0 0 0 0 8ZM2 21v-2c0-2 3-4 6-4s6 2 6 4v2M16 11h6m-3-3v6"/>')}<span>${summary?.following?'Siguiendo':'Seguir'}</span></button></div></div></div></div>`;
+  h.innerHTML=`<button class="v17-experience-toggle" id="v17ExperienceToggle" aria-expanded="true"><div class="ve-reputation-copy"><h3>Reputación y experiencia</h3><p>Califica el negocio, conoce el perfil, consulta opiniones y síguenos.</p></div><span class="v17-experience-chevron">${experienceSvg('<path d="M5 7h14v10H5z M9 10l3 3 3-3"/>')}</span></button><div class="v17-experience-panel"><div><div class="v17-experience-inner"><div class="v17-experience-summary ve-reputation-rating">${veRatingSummary(avg,s.reviews,summary?.followers)}</div><div class="v17-experience-actions"><button class="btn v16-glow-btn" id="v17KnowBusiness">${experienceSvg('<path d="M3 20h18M5 20V9l7-5 7 5v11M9 20v-5h6v5M10 10h4M12 2v2"/>')}<span>Conocer el negocio</span></button><button class="btn" id="v17Rate">${experienceSvg('<path d="M4 5h16v12H9l-4 3v-3H4z"/><path d="m12 7 1.1 2.3 2.6.4-1.9 1.8.5 2.6-2.3-1.2-2.3 1.2.5-2.6-1.9-1.8 2.6-.4z"/>')}<span>Calificar negocio</span></button><button class="btn secondary" id="veViewOpinions">${experienceSvg('<path d="M4 5h16v12H9l-5 3zM8 9h8m-8 4h5"/>')}<span>Ver opiniones</span></button><button class="btn secondary" id="v17Follow">${experienceSvg(summary?.following?'<path d="M8 13a4 4 0 1 0 0-8 4 4 0 0 0 0 8ZM2 21v-2c0-2 3-4 6-4s6 2 6 4v2M16 11h6"/>':'<path d="M8 13a4 4 0 1 0 0-8 4 4 0 0 0 0 8ZM2 21v-2c0-2 3-4 6-4s6 2 6 4v2M16 11h6m-3-3v6"/>')}<span>${summary?.following?'Siguiendo':'Seguir'}</span></button></div></div></div></div>`;
   const toggle=document.getElementById('v17ExperienceToggle');toggle.onclick=()=>{const open=!h.classList.contains('open');h.classList.toggle('open',open);toggle.setAttribute('aria-expanded',String(open));clearTimeout(v17ExperienceTimer);if(open)v17ExperienceTimer=setTimeout(()=>{if(h.isConnected){h.classList.remove('open');toggle.setAttribute('aria-expanded','false')}},10*60*1000)};
   // NUEVO: el anillo refleja el seguimiento confirmado por el flujo existente.
   document.getElementById('v17Follow').setAttribute('aria-pressed',String(!!summary?.following));
@@ -10574,6 +10612,45 @@ html body #v16RateBusinessModal{width:min(880px,calc(100% - 24px));background:va
 #v16RateBusinessModal .ve-review-score{color:var(--ui-muted);font-size:.8rem}
 #v16RateBusinessModal #v16Comment{display:block;width:100%;min-height:82px;resize:vertical}
 #v16RateBusinessModal .ve-review-compose-footer{margin-top:8px}
+/* NUEVO: composición y microinteracciones de Opiniones con la paleta compartida. */
+html body #v16RateBusinessModal{box-shadow:0 18px 56px color-mix(in srgb,var(--ui-action) 30%,transparent),var(--ui-shadow);max-height:94dvh}
+#v16RateBusinessModal .modal-head{display:grid;grid-template-columns:minmax(0,1fr) auto;gap:3px 12px;background:var(--ui-header)!important}
+#v16RateBusinessModal .modal-head strong{grid-area:1/1}
+#v16RateBusinessModal .modal-head button{grid-area:1/2/span 2;align-self:center}
+#v16RateBusinessModal .ve-review-description{grid-area:2/1;color:var(--ui-muted);padding-inline-start:30px}
+#v16RateBusinessModal .modal-head strong svg{color:var(--ui-link)}
+#v16RateBusinessModal .ve-review-summary{display:grid;grid-template-columns:minmax(130px,.7fr) minmax(0,1.6fr);gap:12px;padding:14px}
+#v16RateBusinessModal .ve-review-summary p{margin:4px 0 0}
+#v16RateBusinessModal .ve-review-average{font-size:1.25rem;color:var(--art-gold)}
+#v16RateBusinessModal .ve-review-stats{margin:0;display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:6px}
+#v16RateBusinessModal .ve-review-stats div{background:var(--ui-raised);border:1px solid var(--ui-border);border-radius:9px;padding:8px}
+#v16RateBusinessModal .ve-review-stats dd{margin:3px 0 0;color:var(--ui-text);font-weight:700}
+#v16RateBusinessModal .ve-review-help,#v16RateBusinessModal time{display:block;color:var(--ui-muted)}
+#v16RateBusinessModal .v14-stars{display:grid;grid-template-columns:repeat(5,minmax(0,36px));gap:2px;margin-block:4px}
+html body #v16RateBusinessModal .v14-star{width:100%;height:40px;color:var(--ui-muted)!important}
+html body #v16RateBusinessModal .v14-star.on{color:var(--art-gold)!important}
+#v16RateBusinessModal .v14-star.on svg{filter:drop-shadow(0 0 4px color-mix(in srgb,var(--art-gold) 35%,transparent))}
+#v16RateBusinessModal #v16PublishReview{background:linear-gradient(110deg,var(--ui-action),var(--ui-purple))!important;color:var(--ui-on-action)!important;box-shadow:0 5px 18px color-mix(in srgb,var(--ui-action) 28%,transparent)}
+#v16RateBusinessModal #v16PublishReview svg{width:18px;height:18px;fill:none;stroke:currentColor;stroke-width:1.8;stroke-linejoin:round}
+#v16RateBusinessModal .ve-review-breakdown{display:flex;flex-wrap:wrap;gap:6px 14px;padding-top:8px;border-top:1px solid var(--ui-border);color:var(--ui-muted);font-size:.82rem}
+#v16RateBusinessModal .ve-review-breakdown strong{color:var(--art-gold)}
+#v16RateBusinessModal #v16Comment::placeholder{color:var(--ui-muted);opacity:1}
+@media(hover:hover){
+ #v16RateBusinessModal .v14-score:hover,#v16RateBusinessModal .v16-review-card:hover{border-color:var(--ui-link)!important}
+}
+@media(hover:hover) and (prefers-reduced-motion:no-preference){
+ #v16RateBusinessModal .v14-star svg{transition:transform .15s cubic-bezier(.34,1.56,.64,1),fill .15s ease,color .15s ease}
+ #v16RateBusinessModal .v14-star:hover svg{transform:scale(1.23)}
+}
+@media(max-width:660px){
+ #v16RateBusinessModal .ve-review-summary{grid-template-columns:minmax(0,1fr)}
+ #v16RateBusinessModal .ve-review-stats div{padding:5px;font-size:.78rem}
+}
+#v16RateBusinessModal .ve-review-stats dt{color:var(--ui-muted)}
+#v16RateBusinessModal .ve-review-stats dd{overflow-wrap:anywhere}
+#v16RateBusinessModal .ve-review-compose{box-shadow:0 0 18px color-mix(in srgb,var(--ui-action) 13%,transparent)}
+#v16RateBusinessModal #v16PublishReview:disabled{background:var(--ui-raised)!important;color:var(--ui-muted)!important;box-shadow:none}
+#v16RateBusinessModal #v16PublishReview:not(:disabled):hover{filter:brightness(1.08)}
 #v16RateBusinessModal .ve-review-list h3,#v16RateBusinessModal .ve-review-list-head p{margin:0 0 4px}
 #v16RateBusinessModal #v16ReviewRows{display:grid;gap:8px;margin-top:8px}
 #v16RateBusinessModal .ve-review-avatar{width:36px;height:36px;display:grid;place-items:center;flex:none;background:var(--ui-raised);color:var(--ui-link);border:1px solid var(--ui-border);border-radius:50%}
