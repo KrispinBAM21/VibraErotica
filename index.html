@@ -911,6 +911,17 @@ function save(){
     cloudSyncTimer=setTimeout(()=>syncAdminStateToCloud().catch(e=>console.error(e)),700);
   }
 }
+// NUEVO
+async function saveBusinessMapSetting(key, value){
+  if(!supabaseClient || !adminSession)throw Error('Se requiere una sesión administrativa activa.');
+  const current=await supabaseClient.from('catalog_settings').select('data').eq('id',1).maybeSingle();
+  if(current.error)throw current.error;
+  const data={...(current.data?.data||publicConfigForCloud()),[key]:value};
+  const {error}=await supabaseClient.from('catalog_settings').upsert({id:1,data,updated_at:new Date().toISOString()});
+  if(error)throw error;
+  state.config[key]=value;
+  saveLocal();
+}
 function publicConfigForCloud(){
   const cfg=deepClone(state.config);
   delete cfg.adminPin;
@@ -2265,8 +2276,78 @@ setInterval(()=>{if(!document.hidden&&supabaseClient){refreshSiteStatus().catch(
 
 /* Estructura del panel y ticket basada en el index de maniobras adjunto. */
 const SOCIAL_NAMES={facebook:'Facebook',instagram:'Instagram',tiktok:'TikTok',website:'Sitio web'};
-const v4Business=renderBusinessAdmin;renderBusinessAdmin=function(c){v4Business(c);const origin=document.getElementById('originMap').closest('.section-card');origin.insertAdjacentHTML('beforeend',`<div class="admin-grid two">${panelField('foodOriginLat','Latitud',state.config.origin.lat,'number')}${panelField('foodOriginLng','Longitud',state.config.origin.lng,'number')}</div><div class="toolbar">${panelButton('foodOriginGps','Mi ubicación',UI.pin,'secondary')}${panelButton('foodOriginConfirm','Confirmar punto de salida')}</div><p id="originSaveStatus" class="small" role="status"></p>`);c.insertAdjacentHTML('beforeend',`<div class="section-card"><h3>Redes sociales</h3><div class="admin-grid two">${Object.entries(SOCIAL_NAMES).map(([key,label])=>panelField('foodSocial_'+key,label,state.config.socials?.[key]||'','url')).join('')}</div>${panelButton('foodSaveSocials','Guardar redes')}</div>`);const oldGeo=document.getElementById('geocodeOrigin');oldGeo.onclick=e=>panelRun(e.currentTarget,async()=>{const p=await foodSearch(document.getElementById('originAddress').value);document.getElementById('foodOriginLat').value=p.lat;document.getElementById('foodOriginLng').value=p.lng;document.getElementById('originAddress').value=p.address;originMarker?.setLatLng([p.lat,p.lng]);originMap?.setView([p.lat,p.lng],16)});document.getElementById('foodOriginGps').onclick=e=>panelRun(e.currentTarget,async()=>{const p=await foodGps();document.getElementById('foodOriginLat').value=p.coords.latitude;document.getElementById('foodOriginLng').value=p.coords.longitude;originMarker?.setLatLng([p.coords.latitude,p.coords.longitude]);originMap?.setView([p.coords.latitude,p.coords.longitude],18);document.getElementById('originSaveStatus').textContent=`Precisión ${Math.round(p.coords.accuracy)} m. Ajusta el pin y confirma.`});document.getElementById('foodOriginConfirm').onclick=e=>panelRun(e.currentTarget,async()=>{const lat=Number(document.getElementById('foodOriginLat').value),lng=Number(document.getElementById('foodOriginLng').value),address=document.getElementById('originAddress').value.trim();if(!address||!Number.isFinite(lat)||Math.abs(lat)>90||!Number.isFinite(lng)||Math.abs(lng)>180)throw Error('Revisa dirección y coordenadas.');const cfg={...state.config,origin:{lat,lng,address,confirmed:true},deliveryEnabled:document.getElementById('deliveryEnabled').checked};const r=await supabaseClient.rpc('vibra_config_save_safe',{p_module:'business',p_data:cfg});if(r.error)throw r.error;state.config.origin=cfg.origin;state.config.deliveryEnabled=cfg.deliveryEnabled;saveLocal();publicFoodOrigin?.setLatLng([lat,lng]);publicFoodMap?.setView([lat,lng],15);document.getElementById('foodOriginLabel').textContent=address;document.getElementById('originSaveStatus').textContent='Punto de salida confirmado y guardado.'},'Punto de salida confirmado.');document.getElementById('foodSaveSocials').onclick=e=>panelRun(e.currentTarget,async()=>{const socials=Object.fromEntries(Object.keys(SOCIAL_NAMES).map(key=>[key,document.getElementById('foodSocial_'+key).value.trim()]));for(const v of Object.values(socials))if(v&&(!/^https:\/\//i.test(v)||v.length>500))throw Error('Los enlaces deben usar HTTPS.');const r=await supabaseClient.rpc('vibra_config_save_safe',{p_module:'business',p_data:{socials}});if(r.error)throw r.error;state.config.socials=socials;saveLocal();renderFoodSocials()},'Redes guardadas.')};
-initOriginMap=function(){const target=document.getElementById('originMap');if(!target||target.closest('[data-biz-view][hidden]')||typeof L==='undefined')return; /* MODIFICADO */if(originMap)originMap.remove();const o=state.config.origin;originMap=L.map('originMap',{rotate:true,touchRotate:true,dragRotate:true,shiftKeyRotate:true,rotateControl:{position:"topright",behavior:"reset",closeOnZeroBearing:false}}).setView([o.lat,o.lng],14);addConfiguredTileLayer(originMap,'originMap');originMarker=L.marker([o.lat,o.lng],{draggable:true,icon:labeledFoodPin('origin')}).addTo(originMap).bindTooltip('Salida',{permanent:true,direction:'top'});const set=ll=>{originMarker.setLatLng(ll);document.getElementById('foodOriginLat').value=ll.lat;document.getElementById('foodOriginLng').value=ll.lng;document.getElementById('originSaveStatus').textContent='Punto ajustado. Pulsa Confirmar punto de salida.'};originMap.on('click',e=>set(e.latlng));originMarker.on('dragend',e=>set(e.target.getLatLng()))};
+const v4Business=renderBusinessAdmin;renderBusinessAdmin=function(c){v4Business(c);const origin=document.getElementById('originMap').closest('.section-card');origin.insertAdjacentHTML('beforeend',`<div class="admin-grid two">${panelField('foodOriginLat','Latitud',state.config.origin.lat,'number')}${panelField('foodOriginLng','Longitud',state.config.origin.lng,'number')}</div><div class="toolbar">${panelButton('foodOriginGps','Mi ubicación',UI.pin,'secondary')}${panelButton('foodOriginConfirm','Confirmar punto de salida')}</div><p id="originSaveStatus" class="small" role="status"></p>`);c.insertAdjacentHTML('beforeend',`<div class="section-card"><h3>Redes sociales</h3><div class="admin-grid two">${Object.entries(SOCIAL_NAMES).map(([key,label])=>panelField('foodSocial_'+key,label,state.config.socials?.[key]||'','url')).join('')}</div>${panelButton('foodSaveSocials','Guardar redes')}</div>`);
+ const address=origin.querySelector('#originAddress'), lat=origin.querySelector('#foodOriginLat'), lng=origin.querySelector('#foodOriginLng');
+ const status=origin.querySelector('#originSaveStatus'), confirmPoint=origin.querySelector('#foodOriginConfirm');
+ // MODIFICADO
+ address.previousElementSibling.htmlFor=address.id;
+ [lat,lng].forEach(input=>input.step='any');
+ let revision=0;
+ const candidate=document.createElement('button');candidate.type='button';candidate.className='btn secondary';candidate.hidden=true;
+ address.parentElement.after(candidate);
+ candidate.onclick=()=>{address.value=candidate.dataset.address;candidate.hidden=true;status.textContent='Dirección de referencia y punto pendientes de guardar.';};
+ const read=()=>{
+   const point={lat:lat.valueAsNumber,lng:lng.valueAsNumber};
+   if(!Number.isFinite(point.lat)||!Number.isFinite(point.lng)||Math.abs(point.lat)>90||Math.abs(point.lng)>180)throw Error('Usa latitud entre −90 y 90 y longitud entre −180 y 180.');
+   return point;
+ };
+ const setPoint=(point,zoom)=>{
+   lat.value=point.lat; lng.value=point.lng;
+   if(originMap?.getContainer()===origin.querySelector('#originMap')){
+     originMarker?.setLatLng([point.lat,point.lng]);
+     if(zoom)originMap.setView([point.lat,point.lng],zoom);
+   }
+   status.textContent='Punto pendiente de guardar. Revisa las coordenadas.';
+ };
+ origin.veFindOrigin=async(task,zoom)=>{
+   const current=++revision;
+   candidate.hidden=true;status.textContent='Buscando ubicación…';
+   try{
+     const point=await task();
+     if(!origin.isConnected||current!==revision)return;
+     setPoint(point,zoom);
+     if(point.address&&point.address!==address.value){
+       candidate.dataset.address=point.address;
+       candidate.textContent='Usar como referencia: '+point.address;
+       candidate.hidden=false;
+     }
+     return point;
+   }catch(error){
+     if(origin.isConnected&&current===revision)status.textContent=error.message||'No se pudo obtener la ubicación.';
+   }
+ };
+ c.querySelector('#geocodeOrigin').onclick=e=>panelRun(e.currentTarget,()=>origin.veFindOrigin(()=>foodSearch(address.value),16));
+ c.querySelector('#foodOriginGps').onclick=e=>panelRun(e.currentTarget,()=>origin.veFindOrigin(async()=>{
+   const {coords}=await foodGps();
+   return {lat:coords.latitude,lng:coords.longitude};
+ },18));
+ [address,lat,lng].forEach(input=>input.addEventListener('input',()=>{
+   revision++;candidate.hidden=true;
+   status.textContent='Cambios pendientes.';
+   if(input!==address)try{setPoint(read());}catch(error){status.textContent=error.message;}
+ }));
+ origin.veMoveOrigin=point=>{revision++;candidate.hidden=true;setPoint(point);};
+ const actions=confirmPoint.parentElement;
+ actions.insertAdjacentHTML('beforeend',`<!-- NUEVO --><button type="button" class="btn secondary" data-ve-reset-origin>${UI.refresh}<span>Descartar punto</span></button>`);
+ actions.querySelector('[data-ve-reset-origin]').onclick=()=>{
+   const saved=state.config.origin;
+   revision++;candidate.hidden=true;address.value=saved.address;setPoint(saved,14);status.textContent='Punto guardado restaurado.';
+ };
+ confirmPoint.onclick=e=>panelRun(e.currentTarget,async()=>{
+   const point={...read(),address:address.value.trim(),confirmed:true};
+   if(!point.address)throw Error('Escribe la dirección de referencia del punto.');
+   revision++;
+   const r=await supabaseClient.rpc('vibra_config_save_safe',{p_module:'business',p_data:{origin:point}});
+   if(r.error)throw r.error;
+   state.config.origin=point;saveLocal();
+   publicFoodOrigin?.setLatLng([point.lat,point.lng]);publicFoodMap?.setView([point.lat,point.lng],15);
+   const publicLabel=document.getElementById('foodOriginLabel');if(publicLabel)publicLabel.textContent=point.address;
+   origin.veRefreshOriginStats?.();
+   status.textContent='Punto de salida confirmado y guardado.';
+ },'Punto de salida confirmado.');
+ document.getElementById('foodSaveSocials').onclick=e=>panelRun(e.currentTarget,async()=>{const socials=Object.fromEntries(Object.keys(SOCIAL_NAMES).map(key=>[key,document.getElementById('foodSocial_'+key).value.trim()]));for(const v of Object.values(socials))if(v&&(!/^https:\/\//i.test(v)||v.length>500))throw Error('Los enlaces deben usar HTTPS.');const r=await supabaseClient.rpc('vibra_config_save_safe',{p_module:'business',p_data:{socials}});if(r.error)throw r.error;state.config.socials=socials;saveLocal();renderFoodSocials()},'Redes guardadas.')};
+// MODIFICADO
+initOriginMap=function(){const target=document.getElementById('originMap');if(!target||target.closest('[data-biz-view][hidden]')||typeof L==='undefined')return; /* MODIFICADO */if(originMap?.getContainer()===target){originMap.invalidateSize();return;}if(originMap)originMap.remove();const lat=document.getElementById('foodOriginLat').valueAsNumber,lng=document.getElementById('foodOriginLng').valueAsNumber;const o=Number.isFinite(lat)&&Number.isFinite(lng)&&Math.abs(lat)<=90&&Math.abs(lng)<=180?{lat,lng}:state.config.origin;originMap=L.map('originMap',{rotate:true,touchRotate:true,dragRotate:true,shiftKeyRotate:true,rotateControl:{position:"topright",behavior:"reset",closeOnZeroBearing:false}}).setView([o.lat,o.lng],14);addConfiguredTileLayer(originMap,'originMap');originMarker=L.marker([o.lat,o.lng],{draggable:true,icon:labeledFoodPin('origin')}).addTo(originMap).bindTooltip('Salida',{permanent:true,direction:'top'});const set=ll=>target.closest('.section-card').veMoveOrigin?.(ll);originMap.on('click',e=>set(e.latlng));originMarker.on('dragend',e=>set(e.target.getLatLng()));if(typeof ResizeObserver==='function'){const map=originMap;const size=new ResizeObserver(()=>{if(target.clientWidth&&target.clientHeight)map.invalidateSize({pan:false});});size.observe(target);map.once('unload',()=>size.disconnect());}};
 function renderFoodSocials(){const c=document.getElementById('foodSocials');if(c)c.innerHTML=Object.entries(state.config.socials||{}).filter(([k,v])=>SOCIAL_NAMES[k]&&/^https:\/\//i.test(v)).map(([k,v])=>`<a class="btn ghost" href="${esc(v)}" target="_blank" rel="noopener">${UI.link||UI.file}<span>${SOCIAL_NAMES[k]}</span></a>`).join('')}
 const v4LoadSocial=loadPublicCloudState;loadPublicCloudState=async function(){await v4LoadSocial();renderFoodSocials()};
 // Conserva las opciones ampliadas dentro de la estructura vertical de la referencia.
@@ -3460,8 +3541,7 @@ function v11ProductCfg(id){
 function v11IsInternalProduct(p){
   return !!p && (state.config.internalExtraIds||[]).includes(String(p.id));
 }
-function v11FullAddress(){
-  const a=v11Config().businessAddress||{};
+function v11FullAddress(a=v11Config().businessAddress||{}){ // MODIFICADO
   const parts=[
     [a.street,a.ext].filter(Boolean).join(' '),
     a.int?('Interior '+a.int):'',
@@ -3545,29 +3625,18 @@ renderBusinessAdmin=function(c){
     state:document.getElementById('v11State').value.trim(),
     references:document.getElementById('v11References').value.trim()
   });
-  const saveAddress=async()=>{
-    state.config.businessAddress=collect();
-    const full=v11FullAddress();
-    if(full)state.config.origin.address=full;
-    saveLocal();
-    clearTimeout(cloudSyncTimer);
-    await syncAdminStateToCloud();
-    document.getElementById('v11AddressPreview').textContent=full;
-    const originInput=document.getElementById('originAddress');if(originInput)originInput.value=full;
-  };
-  document.getElementById('v11SaveBusinessAddress').onclick=e=>panelRun(e.currentTarget,saveAddress,'Domicilio guardado.');
+  // MODIFICADO
+  document.getElementById('v11SaveBusinessAddress').onclick=e=>panelRun(e.currentTarget,async()=>{
+    const draft=collect();
+    await saveBusinessMapSetting('businessAddress',draft);
+    wrap.querySelector('#v11AddressPreview').textContent=v11FullAddress(draft);
+  },'Domicilio guardado.');
   document.getElementById('v11GeocodeBusinessAddress').onclick=e=>panelRun(e.currentTarget,async()=>{
-    state.config.businessAddress=collect();
-    const full=v11FullAddress();
-    if(!full)throw Error('Completa al menos la calle y la localidad.');
-    const p=await foodSearch(full);
-    state.config.origin={...state.config.origin,address:p.address,lat:p.lat,lng:p.lng,confirmed:false};
-    const originInput=document.getElementById('originAddress');if(originInput)originInput.value=p.address;
-    document.getElementById('foodOriginLat') && (document.getElementById('foodOriginLat').value=p.lat);
-    document.getElementById('foodOriginLng') && (document.getElementById('foodOriginLng').value=p.lng);
-    originMarker?.setLatLng([p.lat,p.lng]);originMap?.setView([p.lat,p.lng],17);
-    saveLocal();
-  },'Pin actualizado; confirma el punto de salida.');
+    const draft=collect();
+    if(!draft.street && !draft.city && !draft.municipality)throw Error('Completa los datos del domicilio para buscarlo.');
+    const origin=document.getElementById('originMap').closest('.section-card');
+    await origin.veFindOrigin(()=>foodSearch(v11FullAddress(draft)),17);
+  });
   document.getElementById('v11DirectionsAdmin').onclick=e=>v11GoToBusiness(e.currentTarget);
 };
 
@@ -5323,8 +5392,8 @@ async function loadReviews(){
 }
 
 /* -------- Pin de negocio personalizable -------- */
-function pinHtml(){
- const p=cfg().businessPin||{},ico=PINS[p.icon]||PINS.store,color=p.color||'#16324f',label=p.label||'Local';
+function pinHtml(p=cfg().businessPin||{}){ // MODIFICADO
+ const ico=PINS[p.icon]||PINS.store,color=p.color||'#16324f',label=p.label||'Local';
  return `<div class="v15-business-pin"><div class="label" style="background:${esc(color)}">${esc(label)}</div><div class="bubble" style="background:${esc(color)}"><span>${ico}</span></div></div>`;
 }
 labeledFoodPin=function(kind){
@@ -5338,12 +5407,36 @@ renderBusinessAdmin=function(c){
  if(document.getElementById('v15PinSection'))return;
  const p=state.config.businessPin;
  const section=document.createElement('section');section.id='v15PinSection';section.className='section-card';
- section.innerHTML=`<h3>Pin del negocio</h3><p class="small muted">Personaliza cómo se identifica tu local en los mapas públicos.</p><div class="v15-pin-picker">${Object.entries(PINS).filter(([k])=>!['food','burger'].includes(k)).map(([k,svg])=>`<button type="button" class="v15-pin-option ${p.icon===k?'selected':''}" data-v15-pin="${k}" title="${k}">${svg}</button>`).join('')}</div><div class="admin-grid two"><label class="field"><span>Color del pin</span><input id="v15PinColor" type="color" value="${esc(p.color||'#16324f')}"></label><label class="field"><span>Texto del pin</span><input class="input" id="v15PinLabel" value="${esc(p.label||'Local')}" maxlength="24"></label></div><div class="v15-pin-preview"><div id="v15PinPreview">${pinHtml()}</div><button class="btn" id="v15SavePin">${UI.save}<span>Guardar pin</span></button></div>`;
+ // MODIFICADO
+ let draft={...p};
+ section.innerHTML=`<!-- MODIFICADO --><h3>Personalización del pin</h3><p class="small muted">Elige el marcador que se mostrará en los mapas del negocio.</p>
+ <div class="v15-pin-picker" role="group" aria-label="Icono del marcador">${Object.entries(PINS).filter(([k])=>!['food','burger'].includes(k)).map(([k,svg])=>`<button type="button" class="v15-pin-option" data-v15-pin="${k}" aria-label="Icono: ${k}" title="${k}">${svg}</button>`).join('')}</div>
+ <div class="ve-geo-pin-fields"><label class="field"><span>Color del pin</span><input id="v15PinColor" type="color" value="${esc(p.color||'#16324f')}"></label><label class="field"><span>Rótulo del pin</span><input class="input" id="v15PinLabel" value="${esc(p.label||'Local')}" maxlength="24"><small id="vePinLength"></small></label></div>
+ <div class="v15-pin-preview"><span>Vista previa</span><div id="v15PinPreview"></div></div>
+ <div class="toolbar"><button class="btn" id="v15SavePin">${UI.save}<span>Guardar pin</span></button><button type="button" data-ve-pin-reset class="btn secondary">${UI.refresh}<span>Descartar</span></button></div><p class="small" role="status" data-ve-pin-status></p>`;
  c.prepend(section);
- section.querySelectorAll('[data-v15-pin]').forEach(b=>b.onclick=()=>{section.querySelectorAll('[data-v15-pin]').forEach(x=>x.classList.remove('selected'));b.classList.add('selected');state.config.businessPin.icon=b.dataset.v15Pin;document.getElementById('v15PinPreview').innerHTML=pinHtml()});
- document.getElementById('v15PinColor').oninput=e=>{state.config.businessPin.color=e.target.value;document.getElementById('v15PinPreview').innerHTML=pinHtml()};
- document.getElementById('v15PinLabel').oninput=e=>{state.config.businessPin.label=e.target.value||'Local';document.getElementById('v15PinPreview').innerHTML=pinHtml()};
- document.getElementById('v15SavePin').onclick=async e=>panelRun(e.currentTarget,async()=>{saveLocal();await syncAdminStateToCloud();if(originMap){originMap.remove();originMap=null;setTimeout(initOriginMap,60)}if(window.publicFoodMap){try{publicFoodMap.remove();publicFoodMap=null;setTimeout(initFoodPublicMap,60)}catch{}}},'Pin actualizado.');
+ const q=sel=>section.querySelector(sel), color=q('#v15PinColor'), label=q('#v15PinLabel'), status=q('[data-ve-pin-status]');
+ const draw=()=>{
+   q('#v15PinPreview').innerHTML=pinHtml(draft);
+   q('#vePinLength').textContent=`${label.value.length} / ${label.maxLength}`;
+   section.querySelectorAll('[data-v15-pin]').forEach(b=>{
+     const selected=b.dataset.v15Pin===draft.icon;
+     b.classList.toggle('selected',selected);b.setAttribute('aria-pressed',String(selected));
+   });
+ };
+ const changed=()=>{draw();status.textContent='Cambios pendientes.';};
+ section.querySelectorAll('[data-v15-pin]').forEach(b=>b.onclick=()=>{draft.icon=b.dataset.v15Pin;changed();});
+ color.oninput=()=>{draft.color=color.value;changed();};
+ label.oninput=()=>{draft.label=label.value||'Local';changed();};
+ q('[data-ve-pin-reset]').onclick=()=>{draft={...state.config.businessPin};color.value=draft.color;label.value=draft.label;draw();status.textContent='Pin guardado restaurado.';};
+ q('#v15SavePin').onclick=e=>panelRun(e.currentTarget,async()=>{
+   const snapshot={...draft};
+   await saveBusinessMapSetting('businessPin',snapshot);
+   originMarker?.setIcon(labeledFoodPin('origin'));
+   publicFoodOrigin?.setIcon(labeledFoodPin('origin'));
+   status.textContent=JSON.stringify(snapshot)===JSON.stringify(draft)?'Pin guardado.':'Hay cambios posteriores pendientes.';
+ },'Pin actualizado.');
+ draw();
 };
 
 /* -------- Router admin robusto -------- */
@@ -6895,7 +6988,21 @@ if(r.error){msg.textContent=r.error.message;await refreshSlots();return}msg.text
 }
 function renderAdmin(){if(!admin)return;el('#v9ManageSites').innerHTML=locations.map(s=>`<p class="v9small">${esc(s.name)} — ${esc(s.address)} · ${s.is_active?'Visible':'Oculta'} <button class="v9action secondary" data-toggle="${s.id}">${s.is_active?'Ocultar':'Mostrar'}</button> <button class="v9action secondary" data-delete="${s.id}">Eliminar</button></p>`).join('');el('#v9ManageSites').querySelectorAll('[data-toggle]').forEach(b=>b.onclick=async()=>{const s=locations.find(x=>x.id===b.dataset.toggle);const r=await db().from('service_locations').update({is_active:!s.is_active}).eq('id',s.id);if(r.error)setMsg(r.error.message);else load()});el('#v9ManageSites').querySelectorAll('[data-delete]').forEach(b=>b.onclick=async()=>{if(!confirm('¿Eliminar esta sede?'))return;const r=await db().from('service_locations').delete().eq('id',b.dataset.delete);if(r.error)setMsg(r.error.message);else load()});el('#v9Practitioner').innerHTML=staff.map(p=>`<option value="${p.id}">${esc(p.display_name)}</option>`).join('');displayModeForm();if(price&&!el('#v9TravelEnabled').closest('[data-biz-draft]')){el('#v9TravelEnabled').value=String(price.enabled);el('#v9Vehicle').value=price.vehicle_name;el('#v9Consumption').value=price.km_per_liter;el('#v9Fuel').value=price.fuel_price_per_liter;el('#v9Fixed').value=price.fixed_departure_fee;el('#v9PerKm').value=price.extra_per_km;}if(theme&&!el('#v9Primary').closest('[data-biz-draft]')){el('#v9Primary').value=theme.primary_color;el('#v9Secondary').value=theme.secondary_color;el('#v9Template').value=theme.background_template;}}
 function displayModeForm(){const id=el('#v9Practitioner')?.value;if(!id)return;document.querySelectorAll('[data-mode]').forEach(c=>{c.checked=modes.some(m=>m.practitioner_id===id&&m.mode===c.dataset.mode&&m.enabled)})}
-async function saveLocation(){if(!admin)return;const p={name:el('#v9LocName').value.trim(),address:el('#v9LocAddress').value.trim(),latitude:Number(el('#v9LocLat').value),longitude:Number(el('#v9LocLng').value),is_active:el('#v9LocActive').value==='true'};if(!p.name||!p.address||!el('#v9LocLat').value||!el('#v9LocLng').value||Math.abs(p.latitude)>90||Math.abs(p.longitude)>180)return setMsg('Completa nombre, dirección y coordenadas válidas.');const r=await db().from('service_locations').insert(p);if(r.error)setMsg(r.error.message);else{setMsg('Sede guardada.');load();window.vibraBusinessViews?.refreshSites()}}
+// MODIFICADO
+async function saveLocation(){
+ const button=el('#v9SaveLoc');
+ if(!admin||!button||button.disabled)return;
+ const p={name:el('#v9LocName').value.trim(),address:el('#v9LocAddress').value.trim(),latitude:el('#v9LocLat').valueAsNumber,longitude:el('#v9LocLng').valueAsNumber,is_active:el('#v9LocActive').value==='true'};
+ if(!p.name||!p.address||!Number.isFinite(p.latitude)||!Number.isFinite(p.longitude)||Math.abs(p.latitude)>90||Math.abs(p.longitude)>180)return setMsg('Completa nombre, dirección y coordenadas válidas.');
+ button.disabled=true;
+ try{
+   const r=await db().from('service_locations').insert(p);
+   if(r.error)throw r.error;
+   setMsg('Sede guardada.');
+   load();window.vibraBusinessViews?.refreshSites();
+ }catch(error){setMsg(error.message);}
+ finally{button.disabled=false;}
+}
 async function saveModes(){if(!admin)return;const id=el('#v9Practitioner').value;if(!id)return setMsg('Primero crea una profesional en Servicios.');const list=[...document.querySelectorAll('[data-mode]')].map(c=>({practitioner_id:id,mode:c.dataset.mode,enabled:c.checked}));const r=await db().from('practitioner_service_modes').upsert(list);if(r.error)setMsg(r.error.message);else{setMsg('Modalidades guardadas.');load()}}
 function pricingData(){return {enabled:el('#v9TravelEnabled').value==='true',vehicle_name:el('#v9Vehicle').value.trim()||'Automóvil',km_per_liter:Number(el('#v9Consumption').value),fuel_price_per_liter:Number(el('#v9Fuel').value),fixed_departure_fee:Number(el('#v9Fixed').value),extra_per_km:Number(el('#v9PerKm').value)}}
 function calc(){const p=pricingData(),km=Number(el('#v9Distance').value);if(!el('#v9Distance').value||km<0||p.km_per_liter<=0||Object.values(p).some(x=>typeof x==='number'&&(!Number.isFinite(x)||x<0)))return el('#v9CostResult').textContent='Verifica km y precios no negativos, así como rendimiento mayor que cero.';const fuel=km/p.km_per_liter*p.fuel_price_per_liter,total=p.fixed_departure_fee+fuel+km*p.extra_per_km;el('#v9CostResult').textContent=`Gasolina estimada: $${fuel.toFixed(2)} MXN · Total estimado: $${total.toFixed(2)} MXN (para ${km.toFixed(1)} km de ruta introducidos)`;}
@@ -8676,7 +8783,89 @@ function registerBusinessSites(){window.vibraBusinessViews?.registerSites(async 
 document.addEventListener('DOMContentLoaded',registerBusinessSites,{once:true});
 async function showAdmin(key){const content=one('#adminContent');if(!content)return;all('#adminTabs .tab-btn').forEach(x=>x.classList.remove('active'));one('#vscope'+key+'AdminTab')?.classList.add('active');all('#adminContent>.admin-pane').forEach(x=>x.classList.remove('active'));let host=one('#vscopeAdminStandalone');if(!host){host=document.createElement('section');host.id='vscopeAdminStandalone';host.className='section-card vscope-admin-box';content.prepend(host)}host.style.display='block';host.innerHTML='<h3>'+ (key==='Rooms'?'Gestión de habitaciones':'Gestión de sedes')+'</h3><p class="vscope-status">Cargando registros de Supabase…</p>';const db=client();if(!db){host.querySelector('p').textContent='No hay conexión a Supabase.';return;}if(key==='Rooms')await roomsAdmin(host,db);else await sitesAdmin(host,db);content.scrollTop=0;}
 async function roomsAdmin(host,db){const r=await db.from('rooms').select('id,name,description,active').order('name');if(!host.isConnected)return;if(r.error){host.querySelector('p').textContent=r.error.message;return;}roomItems=r.data||[];host.innerHTML='<h3>Habitaciones</h3><div id="vscopeRoomsList"></div><details><summary>Crear habitación</summary><label>Nombre<input id="vscopeNewRoom"></label><label>Descripción<textarea id="vscopeNewRoomDesc"></textarea></label><button id="vscopeCreateRoom">Guardar habitación</button></details><p id="vscopeRoomMsg" class="vscope-status"></p>';const list=one('#vscopeRoomsList');list.innerHTML=roomItems.map(x=>'<article class="vscope-admin-entry" data-id="'+esc(x.id)+'"><strong>'+esc(x.name)+'</strong><div class="vscope-admin-fields"><label>Nombre<input data-name value="'+esc(x.name)+'"></label><label>Descripción<textarea data-desc>'+esc(x.description||'')+'</textarea></label></div><div class="vscope-admin-toolbar"><button data-action="save">Guardar</button><button data-action="pause">'+(x.active?'Pausar':'Publicar')+'</button><button data-action="delete">Eliminar</button></div></article>').join('')||'<p>No hay habitaciones registradas.</p>';list.onclick=async e=>{const btn=e.target.closest('[data-action]'),card=btn?.closest('[data-id]');if(!card||adminBusy)return;const id=card.dataset.id;let op;const action=btn.dataset.action;if(action==='delete'&&!confirm('¿Eliminar definitivamente esta habitación?'))return;adminBusy=true;btn.disabled=true;try{if(action==='save')op=await db.from('rooms').update({name:card.querySelector('[data-name]').value.trim(),description:card.querySelector('[data-desc]').value.trim()}).eq('id',id);else if(action==='pause'){const item=roomItems.find(x=>x.id===id);op=await db.from('rooms').update({active:!item.active}).eq('id',id)}else op=await db.from('rooms').delete().eq('id',id);if(op.error)throw op.error;await roomsAdmin(host,db)}catch(err){one('#vscopeRoomMsg').textContent=err.message}finally{adminBusy=false;if(btn.isConnected)btn.disabled=false}};one('#vscopeCreateRoom').onclick=async()=>{if(adminBusy)return;const name=one('#vscopeNewRoom').value.trim();if(!name)return;adminBusy=true;try{const r=await db.from('rooms').insert({name,description:one('#vscopeNewRoomDesc').value.trim(),active:true});if(r.error)throw r.error;await roomsAdmin(host,db)}catch(err){one('#vscopeRoomMsg').textContent=err.message}finally{adminBusy=false}};}
-async function sitesAdmin(host,db){await getSites();if(!host.isConnected||activeAdmin!=='business')return;host.innerHTML='<h3>Sedes oficiales</h3><div id="vscopeSiteList"></div><p id="vscopeSiteMsg" class="vscope-status"></p>';const list=one('#vscopeSiteList');list.innerHTML=sites.map(s=>'<details class="vscope-admin-entry" data-id="'+esc(s.id)+'"><summary><strong>'+esc(s.name)+'</strong></summary><div class="vscope-admin-fields"><label>Nombre<input data-name value="'+esc(s.name)+'"></label><label>Dirección<input data-address value="'+esc(s.address)+'"></label><label>Latitud<input data-lat type="number" step="any" value="'+esc(s.latitude)+'"></label><label>Longitud<input data-lon type="number" step="any" value="'+esc(s.longitude)+'"></label></div><div class="vscope-admin-toolbar"><button data-action="save">Guardar</button><button data-action="pause">'+(s.is_active?'Pausar':'Publicar')+'</button><button data-action="delete">Eliminar</button></div></details>').join('')||'<p>No hay sedes registradas.</p>';list.onclick=async e=>{const b=e.target.closest('[data-action]'),card=b?.closest('[data-id]');if(!card||adminBusy)return;const site=sites.find(x=>x.id===card.dataset.id);if(b.dataset.action==='delete'&&!confirm('¿Eliminar esta sede?'))return;adminBusy=true;b.disabled=true;try{let result;if(b.dataset.action==='save'){const data={name:card.querySelector('[data-name]').value.trim(),address:card.querySelector('[data-address]').value.trim(),latitude:Number(card.querySelector('[data-lat]').value),longitude:Number(card.querySelector('[data-lon]').value)};if(!data.name||!data.address||!coords(data))throw Error('Completa los datos y coordenadas válidas.');result=await db.from('service_locations').update(data).eq('id',site.id)}else if(b.dataset.action==='pause')result=await db.from('service_locations').update({is_active:!site.is_active}).eq('id',site.id);else result=await db.from('service_locations').delete().eq('id',site.id);if(result.error)throw result.error;await sitesAdmin(host,db)}catch(err){one('#vscopeSiteMsg').textContent=err.message}finally{adminBusy=false;if(b.isConnected)b.disabled=false}};}
+// MODIFICADO
+async function sitesAdmin(host,db){
+  const revision=(host.veSiteRevision||0)+1;host.veSiteRevision=revision;
+  const response=await db.from('service_locations').select('id,name,address,latitude,longitude,is_active');
+  if(response.error)throw response.error;
+  if(revision!==host.veSiteRevision||!host.isConnected||activeAdmin!=='business')return;
+  const records=response.data||[];
+  sites=records;
+  if(!host.querySelector('#vscopeSiteList')){
+    host.innerHTML=`<!-- MODIFICADO --><div class="ve-geo-heading"><div><h3>Sedes oficiales registradas</h3><p class="small">Consulta y administra las ubicaciones del negocio.</p></div><button type="button" class="btn" data-ve-add-site>${UI.plus}<span>Registrar nueva sede</span></button></div>
+      <div class="ve-geo-stats" data-ve-sites-stats></div>
+      <div class="ve-geo-fields"><label class="field">Buscar por nombre o dirección<input class="input" type="search" data-ve-site-search></label><label class="field">Estado operativo<select class="input" data-ve-site-filter><option value="">Todos</option><option value="active">Activas</option><option value="paused">Pausadas</option></select></label></div>
+      <div id="vscopeSiteList"></div><button type="button" class="btn secondary" data-ve-site-more>Mostrar más</button><p id="vscopeSiteMsg" role="status"></p>`;
+  }
+  const q=sel=>host.querySelector(sel), list=q('#vscopeSiteList'), message=q('#vscopeSiteMsg');
+  const search=q('[data-ve-site-search]'), filter=q('[data-ve-site-filter]'), more=q('[data-ve-site-more]');
+  q('[data-ve-add-site]').onclick=()=>{
+    const create=document.querySelector('#veBiz-sites [data-ve-site-create]');
+    if(create){create.open=true;create.querySelector('#v9LocName').focus();}
+  };
+  q('[data-ve-sites-stats]').innerHTML=`<div><span>Total de sedes</span><strong>${sites.length}</strong></div><div><span>Activas</span><strong>${sites.filter(x=>x.is_active).length}</strong></div><div><span>Pausadas</span><strong>${sites.filter(x=>!x.is_active).length}</strong></div>`;
+  const normalize=value=>String(value??'').normalize('NFD').replace(/[\u0300-\u036f]/g,'').toLowerCase().trim();
+  const existing=new Map([...list.querySelectorAll('[data-id]')].map(row=>[row.dataset.id,row]));
+  const styleAction=(action,label,icon,style='secondary')=>`<button type="button" class="btn ${style}" data-action="${action}">${icon}<span>${label}</span></button>`;
+  for(const site of sites){
+    const id=String(site.id), old=existing.get(id), signature=JSON.stringify(site);
+    existing.delete(id);
+    if(old?.dataset.signature===signature)continue;
+    const row=document.createElement('details');
+    row.className='vscope-admin-entry ve-geo-site';
+    row.dataset.id=id;row.dataset.signature=signature;
+    row.innerHTML=`<summary><span class="ve-geo-site-symbol">${UI.map}</span><span><strong>${esc(site.name)}</strong><span class="ve-geo-site-address">${esc(site.address)}</span><small>${esc(site.latitude)}, ${esc(site.longitude)}</small></span><span class="ve-geo-state">${site.is_active?'Activa':'Pausada'}</span></summary>
+      <div class="ve-geo-fields"><label class="field">Nombre<input class="input" data-name value="${esc(site.name)}"></label><label class="field">Dirección<input class="input" data-address value="${esc(site.address)}"></label><label class="field">Latitud<input class="input" data-lat type="number" min="-90" max="90" step="any" value="${esc(site.latitude)}"></label><label class="field">Longitud<input class="input" data-lon type="number" min="-180" max="180" step="any" value="${esc(site.longitude)}"></label></div>
+      <div class="ve-geo-site-map" data-ve-location-map></div>
+      <div class="toolbar">${styleAction('save','Guardar sede',UI.save,'')}${styleAction('pause',site.is_active?'Pausar':'Activar',UI.clock||UI.refresh)}${styleAction('delete','Eliminar',UI.trash)}</div>`;
+    if(old){old.dispatchEvent(new Event('ve-remove-map'));old.replaceWith(row);}else list.append(row);
+    row.addEventListener('toggle',()=>{
+      if(row.open)mountSiteMap(row,row.querySelector('[data-address]'),row.querySelector('[data-lat]'),row.querySelector('[data-lon]'));
+    });
+  }
+  existing.forEach(row=>{row.dispatchEvent(new Event('ve-remove-map'));row.remove();});
+  const empty=document.createElement('p');empty.setAttribute('data-ve-site-empty','');
+  list.querySelector('p[data-ve-site-empty]')?.remove();list.append(empty);
+  let limit=Number(list.dataset.limit)||8;
+  const update=()=>{
+    const term=normalize(search.value), stateFilter=filter.value;
+    let count=0;
+    for(const row of list.querySelectorAll('[data-id]')){
+      const site=sites.find(x=>String(x.id)===row.dataset.id);
+      const match=site&&normalize(site.name+' '+site.address).includes(term)&&(!stateFilter||(site.is_active?'active':'paused')===stateFilter);
+      row.hidden=!match||++count>limit;
+    }
+    more.hidden=count<=limit;empty.hidden=count>0;empty.textContent=sites.length?'No hay sedes que coincidan con estos filtros.':'No hay sedes registradas.';
+    list.dataset.limit=limit;
+  };
+  search.oninput=filter.onchange=()=>{limit=8;update();};
+  more.onclick=()=>{limit+=8;update();};update();
+  list.onclick=async e=>{
+    const button=e.target.closest('[data-action]'),card=button?.closest('[data-id]');
+    if(!card||adminBusy)return;
+    const site=sites.find(x=>String(x.id)===card.dataset.id);
+    if(!site)return;
+    const action=button.dataset.action;
+    if(action==='delete'&&!confirm(`¿Eliminar «${site.name}»? La operación está sujeta a las relaciones y restricciones de esta sede.`))return;
+    adminBusy=true;button.disabled=true;message.textContent='Procesando…';
+    try{
+      const query=db.from('service_locations');
+      let result;
+      if(action==='save'){
+        const field=sel=>card.querySelector(sel);
+        const data={name:field('[data-name]').value.trim(),address:field('[data-address]').value.trim(),latitude:field('[data-lat]').valueAsNumber,longitude:field('[data-lon]').valueAsNumber};
+        if(!data.name||!data.address||!coords(data))throw Error('Completa los datos y coordenadas válidas.');
+        result=await query.update(data).eq('id',site.id).select('id');
+      }else if(action==='pause')result=await query.update({is_active:!site.is_active}).eq('id',site.id).select('id');
+      else result=await query.delete().eq('id',site.id).select('id');
+      if(result.error)throw result.error;
+      if(!result.data?.length)throw Error('No se pudo confirmar la operación. Comprueba los permisos.');
+      await sitesAdmin(host,db);
+      message.textContent=action==='delete'?'Sede eliminada.':'Cambios guardados.';
+    }catch(error){message.textContent=error.message;}
+    finally{adminBusy=false;if(button.isConnected)button.disabled=false;}
+  };
+}
 // NUEVO: cortesías sugeridas en editor original; no cambia el registro guardado salvo al pulsar.
 function courtesySuggestions(){const target=one('#vibraNewRoomCourtesy');if(!target||one('#vscopeCourtesies'))return;const box=document.createElement('div');box.id='vscopeCourtesies';box.className='vscope-courtesies';for(const value of ['Agua de cortesía','Cerveza de cortesía','Wi-Fi','Climatización','Toallas','Amenidades de baño']){const button=document.createElement('button');button.type='button';button.textContent=value;button.onclick=()=>{target.value=[target.value.trim(),value].filter(Boolean).join(', ')};box.append(button)}target.after(box);}
 function themeContrast(){for(const selector of ['#vsmGallery .vsm-viewer-sidebar','#vibraReserveShell']){const node=one(selector);if(node){node.style.setProperty('color','var(--art-ink)','important') /* MODIFICADO */}}}
@@ -12644,6 +12833,52 @@ html body #adminModal #adminContent .ve-cat .btn[aria-pressed=true]{background:v
 .ve-business [data-biz-view]{display:grid;gap:10px;min-width:0;align-content:start}
 .ve-business [data-biz-view]>h2{margin:0;font-size:1.2rem}
 .ve-business [data-biz-group],.ve-business #veBizRooms,.ve-business #veBizDestinations{padding:12px;border:1px solid var(--ui-border);border-radius:12px;background:var(--ui-surface);min-width:0}
+/* NUEVO */
+.ve-business :is(#veBiz-location,#veBiz-sites){container-type:inline-size;min-width:0}
+.ve-business :is(#veBiz-location,#veBiz-sites) [hidden]{display:none!important}
+.ve-business .ve-geo-layout{display:grid;grid-template-columns:minmax(0, .86fr) minmax(0, 1.14fr);gap:14px;align-items:start}
+.ve-business .ve-geo-site-layout{grid-template-columns:minmax(0,1.15fr) minmax(0,.85fr);margin-block:12px}
+.ve-business .ve-geo-layout>*,.ve-business .ve-geo-fields>*,.ve-business .ve-geo-stats>*{min-width:0}
+.ve-business .ve-geo-layout>div:not([data-biz-site-editor]){display:grid;gap:12px}
+.ve-business :is(.ve-geo-layout .section-card,[data-biz-site-editor],.ve-geo-site){padding:14px;border:1px solid var(--ui-border);border-radius:14px;background:var(--ui-surface);margin:0;color:var(--ui-text)}
+.ve-business :is(#veBiz-location,#veBiz-sites) :is(h3,p){margin-block:0 8px}
+.ve-business .ve-geo-heading{display:flex;align-items:flex-start;justify-content:space-between;gap:10px;flex-wrap:wrap}
+.ve-business .ve-geo-stats,.ve-business .ve-geo-fields,.ve-business .ve-geo-pin-fields{display:grid;gap:9px;margin-block:10px;grid-template-columns:repeat(2,minmax(0,1fr))}
+.ve-business .ve-geo-stats{grid-template-columns:repeat(auto-fit,minmax(min(100%,130px),1fr))}
+.ve-business .ve-geo-stats>div{display:grid;gap:5px;padding:10px 12px;border:1px solid var(--ui-border);border-radius:10px;background:color-mix(in srgb,var(--ui-surface) 94%,var(--primary));overflow-wrap:anywhere}
+.ve-business .ve-geo-stats span,.ve-business .ve-geo-site small{font-size:.82em;color:var(--ui-muted,var(--ui-text))}
+.ve-business .ve-geo-stats strong{font-size:1.03em}
+.ve-business :is(#veBiz-location,#veBiz-sites) :is(input:not([type=checkbox]),select,textarea){min-width:0;max-width:100%;box-sizing:border-box}
+.ve-business :is(#veBiz-location,#veBiz-sites) .toolbar{display:flex;flex-wrap:wrap;gap:8px;align-items:center;margin-block:9px}
+.ve-business :is(#veBiz-location,#veBiz-sites) .btn{gap:7px;max-width:100%;white-space:normal}
+.ve-business :is(#veBiz-location,#veBiz-sites) .btn svg,.ve-business .ve-geo-site-symbol svg{width:17px;height:17px;flex:0 0 17px}
+.ve-business #veBiz-location #originMap,.ve-business .ve-geo-site-map{height:clamp(235px,35vh,410px);width:100%;margin-block:10px;border:1px solid var(--ui-border);border-radius:12px;isolation:isolate;background:var(--ui-surface);position:relative}
+.ve-business .ve-geo-site-map{height:220px}
+.ve-business .v15-pin-picker{display:grid;grid-template-columns:repeat(auto-fit,minmax(37px,1fr));gap:7px;margin:12px 0}
+.ve-business .v15-pin-picker .v15-pin-option{width:100%;height:37px;min-width:0;padding:5px;display:grid;place-items:center;border:1px solid var(--ui-border);background:var(--ui-surface);color:var(--ui-text);transition:background .16s,border-color .16s,box-shadow .16s}
+.ve-business .v15-pin-picker .v15-pin-option:is(:hover,.selected){border-color:var(--primary);background:color-mix(in srgb,var(--primary) 16%,var(--ui-surface));box-shadow:0 0 10px color-mix(in srgb,var(--primary) 22%,transparent)}
+.ve-business #v15PinSection .v15-pin-preview{display:flex;align-items:center;justify-content:space-between;gap:10px;min-height:88px;padding:9px 18px;border:1px dashed var(--ui-border);border-radius:10px;margin-block:10px}
+.ve-business .ve-geo-site{padding:0}
+.ve-business .ve-geo-site summary{cursor:pointer;display:grid;grid-template-columns:auto minmax(0,1fr) auto;gap:10px;align-items:center;padding:12px;list-style:none}
+.ve-business .ve-geo-site :is(.ve-geo-fields,.toolbar,.ve-geo-site-map){margin-inline:12px}
+.ve-business .ve-geo-site .ve-geo-site-map{width:calc(100% - 24px)}
+.ve-business .ve-geo-site-address{display:block}
+.ve-business .ve-geo-site-symbol,.ve-business .ve-geo-state{display:inline-flex;align-items:center;padding:6px;border:1px solid var(--ui-border);border-radius:8px;color:var(--ui-text)}
+.ve-business :is(.ve-geo-site,[data-ve-site-create]) summary:hover{background:color-mix(in srgb,var(--primary) 12%,var(--ui-surface))}
+.ve-business [data-ve-site-create]>summary{cursor:pointer;padding:8px;font-weight:700}
+.ve-business :is(#veBiz-location,#veBiz-sites) :is(button,summary,input,select,textarea):focus-visible{outline:2px solid var(--primary);outline-offset:2px}
+@container (max-width:720px){.ve-business .ve-geo-layout{grid-template-columns:minmax(0,1fr)}.ve-business #veBiz-location .ve-geo-layout>div:last-child{grid-row:1}}
+@container (max-width:390px){.ve-business .ve-geo-fields,.ve-business #veBiz-location .v11-address-grid{grid-template-columns:minmax(0,1fr)}.ve-business #veBiz-location .v11-address-grid .span-2{grid-column:auto}.ve-business .ve-geo-state{grid-column:2;justify-self:start}}
+@media(prefers-reduced-motion:reduce){.ve-business .v15-pin-picker .v15-pin-option{transition:none}}
+#adminModal .ve-business :is(#veBiz-location,#veBiz-sites) :is(h3,p,strong,label,input:not([type=color]),select,textarea){color:var(--ui-text)!important}
+#adminModal .ve-business :is(#veBiz-location,#veBiz-sites) :is(.small.muted,small){color:var(--ui-muted)!important;opacity:1}
+#adminModal .ve-business :is(#veBiz-location,#veBiz-sites) :is(.btn.secondary,.leaflet-bar a){background:var(--ui-raised,var(--ui-surface))!important;color:var(--ui-text)!important;border-color:var(--ui-border)!important}
+#adminModal .ve-business :is(#veBiz-location,#veBiz-sites) :is(.btn.secondary,.leaflet-bar a):hover{border-color:var(--primary)!important;background:color-mix(in srgb,var(--ui-surface),var(--primary) 14%)!important}
+#adminModal .ve-business :is(#veBiz-location,#veBiz-sites) :is(button,input,select):disabled{opacity:1}
+#adminModal .ve-business :is(#veBiz-location,#veBiz-sites) :is(input,textarea)::placeholder{color:var(--ui-muted);opacity:1}
+.ve-business #veBiz-location .ve-geo-layout .field{min-width:0}
+.ve-business #veBiz-location .ve-geo-layout :is(.input,.textarea,.select){width:100%}
+.ve-business #veBiz-location #v15PinColor{width:100%;height:42px;border:1px solid var(--ui-border);border-radius:8px;background:var(--ui-raised,var(--ui-surface));padding:5px}
 .ve-business :is(#vibraVenueAdminList,#vibraRoomAdminList,#vscopeSiteList){display:grid;gap:7px;margin-block:8px}
 .ve-business :is(#vibraVenueAdminList,#vibraRoomAdminList,#vscopeSiteList)>*{min-width:0;overflow-wrap:anywhere}
 .ve-business summary{color:var(--ui-link);cursor:pointer;padding:6px 0}
@@ -12848,6 +13083,132 @@ function mountBusinessGeneral(view){
  }
  stats();paintLogo();draw();
 }
+// NUEVO
+function mountSiteMap(scope,address,lat,lng){
+ const container=scope.querySelector('[data-ve-location-map]');
+ if(!container||!scope.open||!container.clientWidth)return;
+ if(container.veMap){container.veMap.invalidateSize();return;}
+ if(typeof L==='undefined'){container.textContent='El mapa no está disponible.';return;}
+ const point=()=>{
+   const a=lat.valueAsNumber,b=lng.valueAsNumber;
+   return Number.isFinite(a)&&Number.isFinite(b)&&Math.abs(a)<=90&&Math.abs(b)<=180?[a,b]:null;
+ };
+ const saved=point(),origin=state.config.origin;
+ const map=L.map(container).setView(saved||[origin.lat,origin.lng],15);
+ container.veMap=map;
+ addConfiguredTileLayer(map,container.id);
+ let marker,revision=0;
+ const draw=position=>{
+   if(!position){if(marker){marker.remove();marker=null;}return;}
+   if(marker){marker.setLatLng(position);return;}
+   marker=L.marker(position,{draggable:true}).addTo(map);
+   marker.on('dragend',()=>set(marker.getLatLng()));
+ };
+ const set=position=>{
+   revision++;lat.value=position.lat;lng.value=position.lng;draw(point());
+ };
+ draw(saved);map.on('click',event=>set(event.latlng));
+ [lat,lng,address].forEach(field=>field.addEventListener('input',()=>{revision++;draw(point());}));
+ const actions=document.createElement('div');actions.className='toolbar';
+ actions.innerHTML=`<!-- NUEVO --><button type="button" class="btn secondary" data-ve-find>${UI.search}<span>Buscar dirección</span></button><button type="button" class="btn secondary" data-ve-gps>${UI.pin}<span>Mi ubicación</span></button><span role="status"></span>`;
+ container.before(actions);
+ const run=(task,event)=>panelRun(event.currentTarget,async()=>{
+   const serial=++revision, status=actions.querySelector('[role=status]');
+   status.textContent='Buscando ubicación…';
+   try{
+     const position=await task();
+     if(!scope.isConnected||serial!==revision)return;
+     set(position);map.setView([position.lat,position.lng],16);
+     status.textContent='Punto pendiente de guardar.';
+   }catch(error){if(scope.isConnected&&serial===revision)status.textContent=error.message;}
+ });
+ actions.querySelector('[data-ve-find]').onclick=e=>run(()=>foodSearch(address.value),e);
+ actions.querySelector('[data-ve-gps]').onclick=e=>run(async()=>{const {coords}=await foodGps();return {lat:coords.latitude,lng:coords.longitude};},e);
+ if(typeof ResizeObserver==='function'){
+   const size=new ResizeObserver(()=>{if(!scope.isConnected){size.disconnect();map.remove();}else if(container.clientWidth)map.invalidateSize({pan:false});});
+   size.observe(container);map.once('unload',()=>size.disconnect());
+ }
+ scope.addEventListener('ve-remove-map',()=>map.remove(),{once:true});
+}
+function mountBusinessGeography(location,sites,delivery){
+ const destinations=delivery.querySelector('#veBizDestinations');
+ if(destinations&&!destinations.querySelector('[data-ve-destinations-title]')){
+   const title=document.createElement('h3');title.dataset.veDestinationsTitle='';title.textContent='Hoteles y establecimientos';
+   const note=document.createElement('p');note.className='small muted';note.textContent='Destinos externos para las reservas y entregas del negocio.';
+   destinations.prepend(title,note);
+ }
+
+ const mapCard=location.querySelector('#originMap')?.closest('.section-card');
+ if(mapCard&&!location.querySelector('.ve-geo-layout')){
+   const pin=location.querySelector('#v15PinSection'), provider=location.querySelector('#cartoApiKey')?.closest('.section-card'), address=location.querySelector('#v11BusinessAddress');
+   if(pin&&provider&&address){
+     const layout=document.createElement('div');layout.className='ve-geo-layout';
+     const left=document.createElement('div'), right=document.createElement('div');
+     layout.append(left,right);location.append(layout);
+     const summary=document.createElement('div');summary.className='ve-geo-stats';
+     const origin=state.config.origin;
+     summary.innerHTML=`<!-- NUEVO --><div><span>Coordenadas guardadas</span><strong>${esc(origin.lat)}, ${esc(origin.lng)}</strong></div><div><span>Marcador del origen</span><strong>${origin.confirmed?'Confirmado':'Pendiente de confirmar'}</strong></div>`;
+     layout.before(summary);
+     left.append(pin,provider);right.append(mapCard,address);address.classList.add('section-card');
+     address.querySelector('hr')?.remove();
+     const discard=document.createElement('button');discard.type='button';discard.className='btn secondary';
+     discard.innerHTML=`<!-- NUEVO -->${UI.refresh}<span>Descartar domicilio</span>`;
+     discard.onclick=()=>{
+       const saved=state.config.businessAddress||{};
+       for(const [key,id] of Object.entries({street:'Street',ext:'Ext',int:'Int',neighborhood:'Neighborhood',postalCode:'PostalCode',city:'City',municipality:'Municipality',state:'State',references:'References'})){
+         address.querySelector('#v11'+id).value=saved[key]||'';
+       }
+       address.querySelector('#v11AddressPreview').textContent=v11FullAddress(saved);
+     };
+     address.querySelector('.v11-map-actions').append(discard);
+     mapCard.querySelector('h3').textContent='Mapa y punto de origen';
+     provider.querySelector('h3').textContent='Proveedor cartográfico';
+     const test=document.createElement('button');test.type='button';test.className='btn secondary';
+     test.innerHTML=`<!-- NUEVO -->${UI.refresh}<span>Probar proveedor guardado</span>`;
+     const testStatus=document.createElement('p');testStatus.setAttribute('role','status');
+     provider.querySelector('#saveMapConfig').after(test,testStatus);
+     test.onclick=e=>panelRun(e.currentTarget,async()=>{
+       testStatus.textContent='Comprobando una tesela de CARTO…';
+       try{
+         const url=cartoTileUrl();
+         if(!url)throw Error('No hay una ruta de teselas configurada.');
+         const response=await fetch(url.replace('{z}',0).replace('{x}',0).replace('{y}',0),{signal:AbortSignal.timeout(6000)});
+         if(!response.ok||response.headers.get('X-Vibra-Carto-Proxy')!=='2'||!response.headers.get('Content-Type')?.startsWith('image/'))throw Error('CARTO no devolvió una tesela válida.');
+         const tile=await createImageBitmap(await response.blob());tile.close();
+         testStatus.textContent='El proveedor guardado devolvió una tesela válida.';
+       }catch(error){testStatus.textContent=error.message||'No se pudo consultar el proveedor.';}
+     });
+     provider.querySelector('.notice').textContent='CARTO Basemaps usa teselas raster. El mapa conserva la atribución y utiliza OpenStreetMap si CARTO no está disponible.';
+     for(const id of ['cartoApiKey','cartoStyle','cartoBaseUrl']){
+       provider.querySelector('#'+id).previousElementSibling.htmlFor=id;
+     }
+     mapCard.querySelector('#foodOriginConfirm').addEventListener('click',()=>{
+       mapCard.veRefreshOriginStats=()=>{summary.querySelector('strong').textContent=`${state.config.origin.lat}, ${state.config.origin.lng}`;summary.lastElementChild.querySelector('strong').textContent='Confirmado';};
+     });
+   }
+ }
+ if(!sites.querySelector('[data-ve-sites-links]')){
+   const links=document.createElement('div');links.dataset.veSitesLinks='';links.className='toolbar';
+   links.innerHTML=`<!-- NUEVO --><button type="button" class="btn secondary" data-ve-delivery>${UI.map}<span>Hoteles y establecimientos en Destinos</span></button><button type="button" class="btn secondary" data-ve-assignments>${UI.users||UI.user}<span>Asignaciones</span></button>`;
+   links.querySelector('[data-ve-delivery]').onclick=()=>window.vibraBusinessViews.open('delivery');
+   links.querySelector('[data-ve-assignments]').onclick=()=>window.vibraBusinessViews.open('assignments');
+   sites.querySelector('h2').after(links);
+ }
+ const group=sites.querySelector('[data-biz-group="sites"]'), editor=sites.querySelector('[data-biz-site-editor]'), coverage=sites.querySelector('#vibraLocalAdmin');
+ if(group&&!group.querySelector('[data-ve-site-create]')){
+   const create=document.createElement('details');create.dataset.veSiteCreate='';
+   const summary=document.createElement('summary');summary.textContent='Registrar nueva sede';
+   const map=document.createElement('div');map.dataset.veLocationMap='';map.className='ve-geo-site-map';map.id='veNewSiteMap';
+   const fields=group.querySelector('.v9fields'),save=group.querySelector('#v9SaveLoc');
+   create.append(summary,fields,map,save);group.querySelector('h3').replaceWith(create);
+   create.addEventListener('toggle',()=>{if(create.open)mountSiteMap(create,create.querySelector('#v9LocAddress'),create.querySelector('#v9LocLat'),create.querySelector('#v9LocLng'));});
+ }
+ if(group&&editor.parentElement===sites){
+   const grid=document.createElement('div');grid.className='ve-geo-layout ve-geo-site-layout';
+   editor.before(grid);grid.append(editor,group);
+ }
+ if(coverage&&coverage.parentElement===sites&&sites.lastElementChild!==coverage)sites.append(coverage);
+}
 // NUEVO: vistas internas de Negocio que conservan los formularios y sus eventos.
 (()=>{
  const host=document.getElementById('adminContent'), modal=document.getElementById('adminModal');
@@ -12958,9 +13319,10 @@ function mountBusinessGeneral(view){
    }
    const delivery=host.querySelector('#deliveryEnabled');
    if(delivery)place(view('delivery'),delivery.closest('label'));
-   for(const id of ['vibraRoomAdminList','vibraVenueAdminList','vscopeSiteList']){
+   for(const id of ['vibraRoomAdminList','vibraVenueAdminList'] /* MODIFICADO */){
      const list=root.querySelector('#'+id);enhanceList(list);list?.veSearch?.();
    }
+   mountBusinessGeography(view('location'),view('sites'),view('delivery')); // NUEVO
    if(initial)select(active);
    for(const id of ['vibraAdminFeedback','v9AdminStatus']){
      const status=root.querySelector('#'+id);
@@ -12973,7 +13335,8 @@ function mountBusinessGeneral(view){
  window.vibraBusinessViews={
    open(key){active=key;mount();select(key);},
    registerSites(fn){requestSites=fn;},
-   refreshSites(){const target=host.querySelector('[data-biz-site-editor]');if(target&&!target.querySelector('details[open]')){delete target.dataset.requested;if(active==='sites')select('sites');}},
+   // MODIFICADO
+   refreshSites(){const target=host.querySelector('[data-biz-site-editor]');if(target&&active==='sites'&&requestSites){requestSites(target).catch(error=>toast(error.message,'error'));}},
    detach(){if(sharedAdmin&&host.contains(sharedAdmin)){sharedAdmin.append(...host.querySelectorAll('[data-biz-group],#v9AdminStatus'));document.querySelector('main').append(sharedAdmin);}}
  };
  const render=renderBusinessAdmin;
