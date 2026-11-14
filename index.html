@@ -8032,9 +8032,9 @@ const roomStatus={free:'Libre',pending:'Pendiente',occupied:'Ocupada'};
 function renderRoomWorkspace(root){
  if(root.roomDraw){root.roomDraw();return;}
  root.innerHTML=`<!-- NUEVO --><div class="ra-stats" data-room-stats></div>
+ <!-- MODIFICADO --><div class="ra-card ra-room-toolbar"><div class="ra-fields"><label>Buscar por nombre<input type="search" class="input" data-room-search></label><label>Sede<select class="select" data-room-site></select></label><label>Publicación<select class="select" data-room-pub><option value="">Todas</option><option value="yes">Publicadas</option><option value="no">Ocultas</option></select></label><label>Estado operativo<select class="select" data-room-state><option value="">Todos</option>${Object.entries(roomStatus).map(([key,label])=>`<option value="${key}">${label}</option>`).join('')}</select></label></div><button type="button" class="btn" data-room-new>${UI.plus}<span>Añadir habitación</span></button></div>
  <div class="ra-room-layout"><section class="ra-card">
- <div class="ra-head"><div><h3>Habitaciones registradas</h3><p data-room-count role="status"></p></div><button type="button" class="btn" data-room-new>${UI.plus}<span>Añadir habitación</span></button></div>
- <div class="ra-fields"><label>Buscar por nombre<input type="search" class="input" data-room-search></label><label>Sede<select class="select" data-room-site></select></label><label>Publicación<select class="select" data-room-pub><option value="">Todas</option><option value="yes">Publicadas</option><option value="no">Ocultas</option></select></label><label>Estado operativo<select class="select" data-room-state><option value="">Todos</option>${Object.entries(roomStatus).map(([key,label])=>`<option value="${key}">${label}</option>`).join('')}</select></label></div>
+ <div class="ra-head"><h3>Habitaciones registradas</h3><p data-room-count role="status"></p></div>
  <div data-room-cards></div><p data-room-message role="status"></p></section>
  <section class="ra-card" data-room-editor hidden></section></div>`;
  const q=sel=>root.querySelector(sel), list=q('[data-room-cards]'), editor=q('[data-room-editor]'), siteFilter=q('[data-room-site]'), message=q('[data-room-message]');
@@ -8062,7 +8062,7 @@ function renderRoomWorkspace(root){
    q('[data-room-count]').textContent=`${results.length} de ${rooms.length} habitaciones`;
    list.innerHTML=results.map(r=>{
      const d=detail(r.id), image=d?.photos?.[0],site=siteList.find(x=>String(x.id)===String(r.service_location_id));
-     return `<article class="ra-room" data-room-id="${esc(r.id)}">
+     return `<article class="ra-room" data-room-id="${esc(r.id)}" ${draft?.room?.id===r.id?'data-room-selected':''}>
       <div class="ra-room-photo">${image?`<img src="${esc(image)}" alt="Portada de ${esc(r.name)}" loading="lazy">`:UI.image||UI.camera||UI.map}</div>
       <div class="ra-room-info"><h4>${esc(r.name)}</h4><p>${esc(site?.name||(r.service_location_id?'Sede no disponible':'Sin sede asignada'))}</p>
       <!-- MODIFICADO --><div class="ra-chips"><span data-room-published="${r.active!==false}">${r.active!==false?'Publicada':'Oculta'}</span><span data-room-state-chip="${esc(d?.status||'')}">${statusText(d)}</span></div>
@@ -8075,6 +8075,7 @@ function renderRoomWorkspace(root){
  }
  function close(){
    const id=draft?.room?.id;
+   list.querySelector('[data-room-selected]')?.removeAttribute('data-room-selected'); // NUEVO
    const scroll=draft?.scroll;
    draft?.photos.filter(item=>item.file).forEach(item=>URL.revokeObjectURL(item.url)); // MODIFICADO
    draft=null;editor.hidden=true;editor.replaceChildren();
@@ -8087,6 +8088,7 @@ function renderRoomWorkspace(root){
    if(draft?.dirty&&!confirm('¿Descartar los cambios de la habitación actual?'))return;
    if(draft)close();
    trigger=source;
+   source.closest('[data-room-id]')?.setAttribute('data-room-selected',''); // NUEVO
    const d=room?detail(room.id):null;
    draft={room,id:room?.id,photos:(d?.photos||[]).map(url=>({url})),replacement:null,dirty:false,scroll:root.closest('#adminContent')?.scrollTop};
    editor.hidden=false;
@@ -8095,11 +8097,11 @@ function renderRoomWorkspace(root){
     <fieldset><legend>Información general</legend><label>Nombre<input class="input" name="name" required value="${esc(room?.name)}"></label><label>Descripción<textarea class="textarea" name="description" rows="3">${esc(room?.description)}</textarea></label></fieldset>
     <fieldset><legend>Sede y estado</legend><div class="ra-fields">
     <label>Sede<select class="select" name="site"><option value="">Sin asignar</option>${opts()}${room?.service_location_id&&!siteList.some(x=>String(x.id)===String(room.service_location_id))?`<option value="${esc(room.service_location_id)}">Sede guardada</option>`:''}</select></label>
-    <label>Estado operativo<select class="select" name="status">${Object.entries(roomStatus).map(([key,label])=>`<option value="${key}">${label}</option>`).join('')}</select></label></div>
+    </div><fieldset class="ra-room-status"><legend>Estado operativo</legend>${Object.entries(roomStatus).map(([key,label])=>`<label><input type="radio" name="status" value="${key}"><span>${label}</span></label>`).join('')}</fieldset>
     <label class="ra-check"><input type="checkbox" name="published" ${room?.active!==false?'checked':''}> Publicar en el catálogo</label>
     <p class="small">La disponibilidad por fecha y hora se comprueba al reservar.</p></fieldset>
-    <!-- MODIFICADO --><fieldset><legend>Servicios y cortesías</legend><div data-room-suggestions class="ra-chips"></div><label>Servicios incluidos (separados por comas)<input class="input" name="amenities" value="${esc(d?.amenities?.join(', '))}"></label><label>Cortesía<input class="input" name="courtesy" value="${esc(d?.courtesy)}"></label></fieldset>
-    <!-- MODIFICADO --><fieldset><legend>Fotografías</legend><p class="small">La primera imagen es la portada. Los cambios se aplican al guardar.</p><div class="ra-thumbs" data-room-thumbs></div><label>Añadir fotografías<input type="file" name="photos" accept="image/*" multiple></label></fieldset>
+    <!-- MODIFICADO --><fieldset><legend>Servicios y cortesías</legend><div data-room-suggestions class="ra-chips"></div><label>Servicios incluidos (separados por comas)<input class="input" name="amenities" value="${esc(d?.amenities?.join(', '))}"></label><label>Cortesía<input class="input" name="courtesy" value="${esc(d?.courtesy)}"></label><div class="ra-chips" data-room-courtesy></div></fieldset>
+    <!-- MODIFICADO --><fieldset><legend>Fotografías</legend><p class="small">La primera imagen es la portada. Los cambios se aplican al guardar.</p><div data-room-cover></div><div class="ra-thumbs" data-room-thumbs></div><label>Añadir fotografías<input type="file" name="photos" accept="image/*" multiple></label></fieldset>
     <p data-room-feedback role="status"></p>
     <div class="ra-actions"><button class="btn" type="submit">${UI.save}<span>${room?'Guardar cambios':'Guardar habitación'}</span></button>
     <button class="btn secondary" type="button" data-room-discard>Descartar</button>
@@ -8127,7 +8129,22 @@ function renderRoomWorkspace(root){
      fields.amenities.addEventListener('input',sync);sync();suggestions.append(button);
    }
    // MODIFICADO
+   // NUEVO: reutilizar valores guardados, sin marcarlos por defecto.
+   const courtesy=editor.querySelector('[data-room-courtesy]');
+   for(const value of [...new Set(roomDetails.map(row=>row.courtesy).filter(Boolean))]){
+     const button=document.createElement('button');button.type='button';button.className='btn secondary';
+     button.innerHTML=`<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" aria-hidden="true"><path d="M3 9h18v4H3zm2 4v8h14v-8m-7-4v12m0-12C4 9 6 2 9 4c2 1 3 5 3 5zm0 0c8 0 6-7 3-5-2 1-3 5-3 5z"/></svg><span>${esc(value)}</span>`;
+     const sync=()=>button.setAttribute('aria-pressed',String(fields.courtesy.value===value));
+     button.onclick=()=>{
+       fields.courtesy.value=fields.courtesy.value===value?'':value;
+       fields.courtesy.dispatchEvent(new Event('input',{bubbles:true}));
+     };
+     fields.courtesy.addEventListener('input',sync);sync();courtesy.append(button);
+   }
+   // MODIFICADO
    const gallery=()=>{
+     const cover=draft.photos[0];
+     editor.querySelector('[data-room-cover]').innerHTML=cover?`<figure><img src="${esc(cover.url)}" alt="Portada del borrador"><figcaption>Portada${cover.file?' · Pendiente':''}</figcaption></figure>`:'';
      thumbs.innerHTML=draft.photos.map((item,i)=>`<figure><img src="${esc(item.url)}" alt="Fotografía ${i+1}"><figcaption>${i===0?'Portada':'Foto '+(i+1)}${item.file?' · Pendiente':''}</figcaption><div class="ra-photo-actions">
      ${i?`<button type="button" class="btn secondary" data-photo-op="cover" data-room-photo-index="${i}">Hacer portada</button>`:''}
      <button type="button" class="btn secondary" data-photo-op="replace" data-room-photo-index="${i}">Sustituir</button>
@@ -13449,6 +13466,18 @@ html body #adminModal #adminContent .ve-cat .btn[aria-pressed=true]{background:v
 #vroomOverlay[data-ra-admin-viewer] .vroom-button:focus-visible{outline:2px solid var(--primary);outline-offset:2px}
 #adminModal .ve-business :is(#veBiz-rooms,#veBiz-assignments) :is(input,textarea)::placeholder{color:var(--ui-muted);opacity:1}
 /* NUEVO */
+/* NUEVO */
+#veBiz-rooms .ra-room-toolbar{display:flex;gap:10px;align-items:end;flex-wrap:wrap;margin-bottom:12px}
+#veBiz-rooms .ra-room-toolbar .ra-fields{flex:1 1 490px;grid-template-columns:minmax(0,1.4fr) repeat(3,minmax(0,1fr));margin:0}
+#veBiz-rooms [data-room-selected]{border-color:var(--primary);box-shadow:0 0 14px color-mix(in srgb,var(--primary),transparent 82%)}
+#veBiz-rooms [data-room-editor] .ra-room-status{grid-template-columns:repeat(auto-fit,minmax(min(100%,95px),1fr))}
+#veBiz-rooms .ra-room-status label{display:flex;align-items:center;gap:5px;padding:6px;border:1px solid var(--ui-border);border-radius:7px}
+#veBiz-rooms .ra-room-status input{width:auto;accent-color:var(--primary)}
+#veBiz-rooms :is(.ra-room-status label:has(:checked),[data-room-courtesy] [aria-pressed=true],[data-room-suggestions] [aria-pressed=true]){border-color:var(--primary);background:color-mix(in srgb,var(--ui-surface),var(--primary) 15%)}
+#veBiz-rooms [data-room-cover] figure{margin:0;padding:5px;border:1px solid var(--ui-border);border-radius:8px}
+#veBiz-rooms [data-room-cover] img{display:block;width:100%;height:clamp(120px,22vh,240px);object-fit:contain}
+#veBiz-rooms [data-room-cover] figcaption{color:var(--ui-muted);margin-top:5px}
+@container(max-width:600px){#veBiz-rooms .ra-room-toolbar .ra-fields{grid-template-columns:repeat(2,minmax(0,1fr))}}
 #veBiz-rooms .ra-room-photo{aspect-ratio:4/3;overflow:hidden}
 #veBiz-rooms .ra-room-photo img{display:block;max-height:150px}
 #veBiz-rooms .ra-room:focus-within,#veBiz-assignments .vab-row:focus-within{border-color:var(--primary)}
