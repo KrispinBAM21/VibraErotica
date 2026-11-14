@@ -9276,10 +9276,11 @@ async function sitesAdmin(host,db){
   const records=response.data||[];
   sites=records;
   if(!host.querySelector('#vscopeSiteList')){
-    host.innerHTML=`<!-- MODIFICADO --><div class="ve-geo-heading"><div><h3>Sedes oficiales registradas</h3><p class="small">Consulta y administra las ubicaciones del negocio.</p></div><button type="button" class="btn" data-ve-add-site>${UI.plus}<span>Registrar nueva sede</span></button></div>
+    host.innerHTML=`<!-- MODIFICADO --><header class="ve-geo-heading ve-site-header"><div><h3>Sedes oficiales</h3><p class="small">Ubicaciones propias y su publicación en el catálogo.</p></div><button type="button" class="btn" data-ve-add-site>${UI.plus}<span>Registrar nueva sede</span></button></header>
       <div class="ve-geo-stats" data-ve-sites-stats></div>
-      <div class="ve-geo-fields"><label class="field">Buscar por nombre o dirección<input class="input" type="search" data-ve-site-search></label><label class="field">Publicación<select class="input" data-ve-site-filter><option value="">Todos</option><option value="active">Visibles</option><option value="paused">Ocultas</option></select></label><label class="field">Municipio<select class="input" data-ve-municipality></select></label></div><p data-ve-site-count role="status"></p>
-      <div id="vscopeSiteList"></div><button type="button" class="btn secondary" data-ve-site-more>Mostrar más</button><p id="vscopeSiteMsg" role="status"></p>`;
+      <div class="ve-geo-fields ve-site-filters"><label class="field">Buscar por nombre o dirección<input class="input" type="search" data-ve-site-search></label><label class="field">Publicación<select class="input" data-ve-site-filter><option value="">Todos</option><option value="active">Visibles</option><option value="paused">Ocultas</option></select></label><label class="field">Municipio<select class="input" data-ve-municipality></select></label></div>
+      <section class="ve-site-results" aria-label="Sedes registradas"><div class="ve-geo-heading"><h4>Sedes registradas</h4><p data-ve-site-count role="status"></p></div><p id="vscopeSiteMsg" role="status"></p>
+      <div id="vscopeSiteList"></div><button type="button" class="btn secondary" data-ve-site-more>Mostrar más</button></section>`;
   }
   const q=sel=>host.querySelector(sel), list=q('#vscopeSiteList'), message=q('#vscopeSiteMsg');
   const search=q('[data-ve-site-search]'), filter=q('[data-ve-site-filter]'), more=q('[data-ve-site-more]');
@@ -9305,10 +9306,14 @@ async function sitesAdmin(host,db){
     row.dataset.id=id;row.dataset.signature=signature;
     row.innerHTML=`<summary><span class="ve-geo-site-symbol">${UI.map}</span><span><strong>${esc(site.name)}</strong><span class="ve-geo-site-address">${esc(site.address)}</span><small>${esc([site.municipality,site.state_name].filter(Boolean).join(', '))} · ${esc(site.latitude)}, ${esc(site.longitude)}</small></span><span class="ve-geo-state">${site.is_active?'Visible':'Oculta'}</span></summary>
       <div class="ve-geo-fields"><label class="field">Nombre<input class="input" data-name value="${esc(site.name)}"></label><label class="field">Dirección<input class="input" data-address value="${esc(site.address)}"></label><label class="field">Latitud<input class="input" data-lat type="number" min="-90" max="90" step="any" value="${esc(site.latitude)}"></label><label class="field">Longitud<input class="input" data-lon type="number" min="-180" max="180" step="any" value="${esc(site.longitude)}"></label></div>
-      <div class="ve-geo-site-map" data-ve-location-map></div>
+      <div class="ve-geo-site-map" data-ve-location-map></div><p class="ve-site-feedback" data-ve-site-pending role="status"></p>
       <div class="toolbar">${styleAction('save','Guardar sede',UI.save,'')}${styleAction('discard','Descartar',UI.refresh)}${styleAction('pause',site.is_active?'Ocultar':'Mostrar',UI.clock||UI.refresh)}${styleAction('delete','Eliminar',UI.trash)}</div>`;
     if(old){old.dispatchEvent(new Event('ve-remove-map'));old.replaceWith(row);}else list.append(row);
-    row.addEventListener('input',()=>row.setAttribute('data-ve-site-draft',''));
+    // MODIFICADO
+    row.addEventListener('input',()=>{
+      row.setAttribute('data-ve-site-draft','');
+      row.querySelector('[data-ve-site-pending]').textContent='Cambios pendientes';
+    });
     row.addEventListener('toggle',()=>{
       if(!row.open)return;
       list.querySelectorAll('details[open]').forEach(other=>{if(other!==row)other.open=false;});
@@ -9339,6 +9344,7 @@ async function sitesAdmin(host,db){
     const site=sites.find(x=>String(x.id)===card.dataset.id);
     if(!site)return;
     const action=button.dataset.action;
+    const feedback=card.querySelector('[data-ve-site-pending]'); // NUEVO
     // NUEVO
     if(action==='discard'){
       if(!confirm('¿Descartar cambios de esta sede?'))return;
@@ -9370,7 +9376,7 @@ async function sitesAdmin(host,db){
       if(action==='save')card.removeAttribute('data-ve-site-draft');
       try{await sitesAdmin(host,db);}catch{message.textContent='Operación guardada. No se pudo actualizar el listado.';return;}
       message.textContent=action==='delete'?'Sede eliminada.':'Cambios guardados.';
-    }catch(error){message.textContent=error.message;}
+    }catch(error){message.textContent='';feedback.textContent=error.message;}
     finally{adminBusy=false;if(button.isConnected)button.disabled=false;}
   };
 }
@@ -13510,8 +13516,18 @@ body:not(.dark-mode) #v18HoursAdmin input[type=time]{color-scheme:light}
 #veBiz-assignments [data-ra-pending]{border-inline-start:3px solid var(--primary);padding-inline-start:8px}
 #veBiz-assignments [data-assign-refresh]{margin-top:8px}
 /* NUEVO */
-#veBiz-sites [data-biz-site-editor]{container-type:inline-size}
-#veBiz-sites .ve-geo-site-layout{grid-template-columns:minmax(0,1.2fr) minmax(0,.8fr)}
+/* MODIFICADO */
+#veBiz-sites .ve-geo-site-layout{grid-template-columns:minmax(0,1.25fr) minmax(0,.85fr);align-items:start}
+#veBiz-sites [data-biz-site-editor]{display:contents}
+#veBiz-sites :is(.ve-site-header,.ve-site-filters,.ve-geo-stats){grid-column:1/-1}
+#veBiz-sites .ve-geo-stats{margin:0}
+#veBiz-sites .ve-site-filters,#veBiz-sites .ve-site-results{padding:12px;border:1px solid var(--ui-border);border-radius:12px;background:var(--ui-surface);min-width:0;margin:0}
+#veBiz-sites .ve-site-filters{grid-template-columns:repeat(auto-fit,minmax(min(100%,150px),1fr))}
+#veBiz-sites .ve-site-results h4{margin:0}
+#veBiz-sites .ve-site-feedback{padding-inline:12px}
+#veBiz-sites [data-biz-group="sites"]{box-shadow:0 8px 20px color-mix(in srgb,var(--primary) 10%,transparent)}
+#veBiz-sites [data-ve-site-create]>summary{border-bottom:1px solid var(--ui-border);margin-block-end:8px}
+#veBizDestinations>button.btn{margin-block:6px 10px}
 #veBiz-sites [data-ve-coverage]{border:1px solid var(--ui-border);border-radius:12px;padding:12px;margin-top:12px;background:var(--ui-surface)}
 #veBiz-sites [data-ve-coverage]>summary{cursor:pointer;font-weight:700;color:var(--ui-text)}
 #veBiz-sites .ve-geo-site{transition:border-color .16s,box-shadow .16s;background:linear-gradient(145deg,var(--ui-surface),color-mix(in srgb,var(--ui-surface),var(--primary) 8%))}
@@ -13825,7 +13841,23 @@ function mountBusinessGeography(location,sites,delivery){
    };
    search.oninput=kind.onchange=visibility.onchange=()=>{limit=8;update();};
    more.onclick=()=>{limit+=8;update();};
+   // MODIFICADO
    list.addEventListener('ve-destinations-render',update);update();
+   const add=document.createElement('button');add.type='button';add.className='btn';
+   add.innerHTML=`${UI.plus}<span>Agregar establecimiento</span>`;
+   note.after(add);
+   add.onclick=()=>{
+     const editing=form.querySelector('#vibraVenueEditing');
+     if(editing.value){
+       if(!confirm('¿Descartar la edición actual para agregar un establecimiento?'))return;
+       editing.value='';
+       for(const field of form.querySelectorAll('input:not([type="hidden"])'))field.value='';
+       form.querySelector('#vibraVenueKind').selectedIndex=0;
+       form.querySelector('#vibraVenueSave').textContent='Guardar destino';
+       lat.dispatchEvent(new Event('input'));
+     }
+     form.open=true;form.querySelector('#vibraVenueName').focus();
+   };
    const mount=()=>mountSiteMap(form,address,lat,lng);
    form.addEventListener('toggle',mount);
    destinations.addEventListener('click',event=>{
@@ -13896,7 +13928,10 @@ function mountBusinessGeography(location,sites,delivery){
    const summary=document.createElement('summary');summary.textContent='Registrar nueva sede';
    const map=document.createElement('div');map.dataset.veLocationMap='';map.className='ve-geo-site-map';map.id='veNewSiteMap';
    const fields=group.querySelector('.v9fields'),save=group.querySelector('#v9SaveLoc');
+   // MODIFICADO
    create.append(summary,fields,map,save);group.querySelector('h3').replaceWith(create);
+   const help=document.createElement('p');help.className='small muted';help.textContent='Revisa el punto en el mapa antes de guardar. Estado y municipio se editan en Cobertura geográfica.';
+   summary.after(help);
    // NUEVO
    const discard=document.createElement('button');discard.type='button';discard.className='btn secondary';discard.textContent='Descartar alta';
    save.after(discard);
@@ -13923,7 +13958,10 @@ function mountBusinessGeography(location,sites,delivery){
      section.innerHTML='<!-- NUEVO --><summary>Cobertura geográfica · estado y municipio</summary>';
      sites.append(section);
    }
+   // MODIFICADO
    section.append(coverage);
+   const grid=sites.querySelector('.ve-geo-site-layout');
+   if(grid&&grid.nextElementSibling!==section)grid.after(section);
  }
 }
 // NUEVO: vistas internas de Negocio que conservan los formularios y sus eventos.
