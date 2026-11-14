@@ -6470,10 +6470,91 @@ const v18BusinessAdminBase=renderBusinessAdmin;
 renderBusinessAdmin=function(c){
   v18Cfg();v18BusinessAdminBase(c); if(!c||document.getElementById('v18HoursAdmin'))return;
   const sec=document.createElement('section');sec.id='v18HoursAdmin';sec.className='section-card';
-  sec.innerHTML=`<h3>Horarios del negocio</h3><p class="small muted">Configura por día si el local abre, trabaja 24 horas o tiene un horario específico. Esto se mostrará a los clientes en el perfil del negocio.</p><div class="v18-hours-admin">${['mon','tue','wed','thu','fri','sat','sun'].map(k=>{const r=state.config.businessHours[k];return `<div class="v18-hours-row" data-day="${k}"><strong>${DAY_NAMES[k]}</strong><label class="row"><input type="checkbox" data-open ${r.open?'checked':''}> Abierto</label><label class="field"><span>Desde</span><input class="input" type="time" data-start value="${esc(r.start||'09:00')}" ${!r.open||r.allDay?'disabled':''}></label><label class="field"><span>Hasta</span><input class="input" type="time" data-end value="${esc(r.end||'20:00')}" ${!r.open||r.allDay?'disabled':''}></label><label class="row"><input type="checkbox" data-all-day ${r.allDay?'checked':''} ${!r.open?'disabled':''}> 24 horas</label></div>`}).join('')}</div><button class="btn" id="v18SaveHours">${UI.save}<span>Guardar horarios</span></button>`;
-  const target=document.getElementById('v15PinSection')||c.firstElementChild; target?.after(sec);
-  sec.querySelectorAll('[data-day]').forEach(row=>{const op=row.querySelector('[data-open]'),all=row.querySelector('[data-all-day]'),start=row.querySelector('[data-start]'),end=row.querySelector('[data-end]');const sync=()=>{all.disabled=!op.checked;start.disabled=!op.checked||all.checked;end.disabled=!op.checked||all.checked};op.onchange=sync;all.onchange=sync;sync()});
-  document.getElementById('v18SaveHours').onclick=e=>panelRun(e.currentTarget,async()=>{sec.querySelectorAll('[data-day]').forEach(row=>{state.config.businessHours[row.dataset.day]={open:row.querySelector('[data-open]').checked,allDay:row.querySelector('[data-all-day]').checked,start:row.querySelector('[data-start]').value||'09:00',end:row.querySelector('[data-end]').value||'20:00'}});saveLocal();await syncAdminStateToCloud()},'Horarios guardados.');
+  // MODIFICADO
+  const days=['mon','tue','wed','thu','fri','sat','sun'];
+  const clock='<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" aria-hidden="true"><circle cx="12" cy="12" r="9"/><path d="M12 7v5l3 2"/></svg>';
+  sec.innerHTML=`<!-- MODIFICADO --><header class="vh-head"><div><h3>Horarios comerciales</h3><p>Horario semanal del negocio que se muestra en el perfil público.</p></div><div class="vh-actions"><button type="button" class="btn secondary" data-vh-reset>Descartar cambios</button><button type="button" class="btn" id="v18SaveHours">${UI.save}<span>Guardar horarios</span></button></div></header>
+    <div class="vh-stats"><div>${clock}<span>Días activos</span><strong data-vh-active></strong></div><div><span>Jornadas de 24 horas</span><strong data-vh-all></strong></div><div><span>Configuración del editor</span><strong data-vh-pending></strong></div></div>
+    <details class="vh-quick"><summary>Acciones rápidas</summary><p>Los cambios se aplican al borrador. Revísalos antes de guardar.</p><div class="vh-actions"><button type="button" class="btn secondary" data-vh-open="all">Abrir todos los días</button><button type="button" class="btn secondary" data-vh-open="weekend">Abrir sábado y domingo</button></div>
+    <div class="vh-copy"><label>Día de origen<select class="select" data-vh-source>${days.map(key=>`<option value="${key}">${DAY_NAMES[key]}</option>`).join('')}</select></label><fieldset><legend>Días que se reemplazarán</legend>${days.map(key=>`<label><input type="checkbox" data-vh-destination="${key}"> ${DAY_NAMES[key]}</label>`).join('')}</fieldset><button type="button" class="btn secondary" data-vh-copy>Copiar al borrador</button></div></details>
+    <div class="vh-week"><h4>Horario semanal</h4><p>Los intervalos nocturnos se muestran con el cierre al día siguiente.</p><div class="v18-hours-admin">${days.map(key=>`<div class="v18-hours-row" data-day="${key}">
+      <div class="vh-day"><strong>${DAY_NAMES[key]}</strong><span data-vh-state></span></div>
+      <label class="vh-toggle"><input type="checkbox" data-open aria-label="Abrir el ${DAY_NAMES[key]}"> Abierto</label>
+      <label class="vh-time"><span>Apertura</span><input class="input" type="time" data-start aria-describedby="vh-note-${key}" aria-label="Apertura del ${DAY_NAMES[key]}"></label>
+      <label class="vh-time"><span>Cierre</span><input class="input" type="time" data-end aria-describedby="vh-note-${key}" aria-label="Cierre del ${DAY_NAMES[key]}"></label>
+      <label class="vh-toggle"><input type="checkbox" data-all-day aria-label="Atención 24 horas el ${DAY_NAMES[key]}"> 24 horas</label><small data-vh-note id="vh-note-${key}"></small></div>`).join('')}</div></div>
+    <p data-vh-status role="status"></p>`;
+  const target=document.getElementById('v15PinSection')||c.firstElementChild;
+  target?.after(sec);
+  const q=sel=>sec.querySelector(sel), rows=[...sec.querySelectorAll('[data-day]')];
+  const save=q('#v18SaveHours'), reset=q('[data-vh-reset]'), status=q('[data-vh-status]');
+  const inputs=row=>[...row.querySelectorAll('[data-open],[data-start],[data-end],[data-all-day]')];
+  let saving=false, saved, draft;
+  const normalize=hours=>Object.fromEntries(days.map(key=>{
+    const r=hours[key];return [key,{open:!!r.open,allDay:!!r.allDay,start:r.start||'09:00',end:r.end||'20:00'}];
+  }));
+  const problem=r=>r.open&&!r.allDay&&(!r.start||!r.end)?'Completa apertura y cierre.':'';
+  const sync=()=>{
+    const dirty=JSON.stringify(saved)!==JSON.stringify(draft);
+    let invalid=false;
+    for(const row of rows){
+      const r=draft[row.dataset.day], [open,start,end,all]=inputs(row), error=problem(r);
+      open.checked=r.open;start.value=r.start;end.value=r.end;all.checked=r.open&&r.allDay;
+      open.disabled=saving;all.disabled=saving||!r.open;start.disabled=end.disabled=saving||!r.open||r.allDay;
+      [start,end].forEach(input=>input.setAttribute('aria-invalid',String(!!error&&!input.value)));
+      row.querySelector('[data-vh-state]').textContent=!r.open?'Cerrado':r.allDay?'24 horas':'Horario definido';
+      row.querySelector('[data-vh-note]').textContent=error||(r.open&&!r.allDay&&r.end<r.start?'Cierre al día siguiente':r.open&&!r.allDay&&r.end===r.start?'Apertura y cierre coinciden. Para atención continua usa «24 horas».':'');
+      invalid ||= !!error;
+    }
+    q('[data-vh-active]').textContent=days.filter(key=>draft[key].open).length+' de 7';
+    q('[data-vh-all]').textContent=days.filter(key=>draft[key].open&&draft[key].allDay).length;
+    q('[data-vh-pending]').textContent=saving?'Guardando…':dirty?'Cambios pendientes':'Valores guardados';
+    save.disabled=saving||!dirty||invalid;reset.disabled=saving||!dirty;
+    sec.toggleAttribute('data-vh-dirty',dirty);
+  };
+  const restore=()=>{saved=normalize(state.config.businessHours);draft=structuredClone(saved);sync();};
+  const changed=message=>{status.textContent=message;sync();};
+  sec.oninput=event=>{
+    const row=event.target.closest('[data-day]');
+    if(!row||saving)return;
+    const r=draft[row.dataset.day], [open,start,end,all]=inputs(row);
+    Object.assign(r,{open:open.checked,start:start.value,end:end.value,allDay:event.target===all?all.checked:r.allDay});
+    changed('');
+  };
+  const source=q('[data-vh-source]'), destinations=[...sec.querySelectorAll('[data-vh-destination]')];
+  const copyScope=()=>destinations.forEach(input=>{
+    input.disabled=input.dataset.vhDestination===source.value;
+    if(input.disabled)input.checked=false;
+  });
+  source.onchange=copyScope;copyScope();
+  sec.onclick=event=>{
+    if(saving)return;
+    const batch=event.target.closest('[data-vh-open]');
+    if(batch){
+      const keys=batch.dataset.vhOpen==='all'?days:['sat','sun'];
+      keys.forEach(key=>{if(!draft[key].open){draft[key].open=true;draft[key].allDay=false;}});
+      changed('Revisa los días abiertos en el borrador.');
+    }
+    if(event.target.closest('[data-vh-copy]')){
+      const keys=destinations.filter(input=>input.checked&&!input.disabled).map(input=>input.dataset.vhDestination);
+      const r=draft[source.value];
+      if(!keys.length||problem(r))return changed(!keys.length?'Selecciona al menos un día de destino.':'Completa el horario del día de origen.');
+      if(!confirm(`¿Copiar el horario de ${DAY_NAMES[source.value]} a ${keys.map(key=>DAY_NAMES[key]).join(', ')}?`))return;
+      keys.forEach(key=>{draft[key]={...r};});changed('Horario copiado al borrador.');
+    }
+  };
+  reset.onclick=()=>{restore();status.textContent='Se restauraron los horarios guardados.';};
+  save.onclick=async()=>{
+    if(save.disabled)return;
+    saving=true;sync();status.textContent='Guardando horario semanal…';
+    try{
+      const next=Object.fromEntries(days.map(key=>[key,{...draft[key],allDay:draft[key].open&&draft[key].allDay}]));
+      await saveBusinessMapSetting('businessHours',next);
+      restore();status.textContent='Horarios guardados.';
+    }catch(error){status.textContent='No se guardó: '+error.message;}
+    finally{saving=false;sync();}
+  };
+  restore();
 };
 
 /* ---------- Perfil del negocio con horarios ---------- */
@@ -6986,8 +7067,72 @@ if(!el('#v9Terms').checked)return msg.textContent='Debes aceptar las condiciones
 const r=await db().rpc('create_reservation',{p_service_id:el('#v9Service').value,p_practitioner_id:el('#v9Modalities').dataset.practitioner,p_room_id:el('#v9Room').value,p_starts_at:start,p_duration_minutes:Number(el('#v9Duration').value),p_contact_name:el('#v9ClientName').value.trim(),p_contact_phone:el('#v9ClientPhone').value.trim(),p_contact_email:user.email||null,p_accept_terms:true});
 if(r.error){msg.textContent=r.error.message;await refreshSlots();return}msg.textContent='Solicitud creada. Folio interno: '+r.data+'. Espera la confirmación de pago y del local.';await refreshSlots();
 }
-function renderAdmin(){if(!admin)return;el('#v9ManageSites').innerHTML=locations.map(s=>`<p class="v9small">${esc(s.name)} — ${esc(s.address)} · ${s.is_active?'Visible':'Oculta'} <button class="v9action secondary" data-toggle="${s.id}">${s.is_active?'Ocultar':'Mostrar'}</button> <button class="v9action secondary" data-delete="${s.id}">Eliminar</button></p>`).join('');el('#v9ManageSites').querySelectorAll('[data-toggle]').forEach(b=>b.onclick=async()=>{const s=locations.find(x=>x.id===b.dataset.toggle);const r=await db().from('service_locations').update({is_active:!s.is_active}).eq('id',s.id);if(r.error)setMsg(r.error.message);else load()});el('#v9ManageSites').querySelectorAll('[data-delete]').forEach(b=>b.onclick=async()=>{if(!confirm('¿Eliminar esta sede?'))return;const r=await db().from('service_locations').delete().eq('id',b.dataset.delete);if(r.error)setMsg(r.error.message);else load()});el('#v9Practitioner').innerHTML=staff.map(p=>`<option value="${p.id}">${esc(p.display_name)}</option>`).join('');displayModeForm();if(price&&!el('#v9TravelEnabled').closest('[data-biz-draft]')){el('#v9TravelEnabled').value=String(price.enabled);el('#v9Vehicle').value=price.vehicle_name;el('#v9Consumption').value=price.km_per_liter;el('#v9Fuel').value=price.fuel_price_per_liter;el('#v9Fixed').value=price.fixed_departure_fee;el('#v9PerKm').value=price.extra_per_km;}if(theme&&!el('#v9Primary').closest('[data-biz-draft]')){el('#v9Primary').value=theme.primary_color;el('#v9Secondary').value=theme.secondary_color;el('#v9Template').value=theme.background_template;}}
-function displayModeForm(){const id=el('#v9Practitioner')?.value;if(!id)return;document.querySelectorAll('[data-mode]').forEach(c=>{c.checked=modes.some(m=>m.practitioner_id===id&&m.mode===c.dataset.mode&&m.enabled)})}
+// MODIFICADO
+function renderAdmin(){if(!admin)return;el('#v9ManageSites').innerHTML=locations.map(s=>`<p class="v9small">${esc(s.name)} — ${esc(s.address)} · ${s.is_active?'Visible':'Oculta'} <button class="v9action secondary" data-toggle="${s.id}">${s.is_active?'Ocultar':'Mostrar'}</button> <button class="v9action secondary" data-delete="${s.id}">Eliminar</button></p>`).join('');el('#v9ManageSites').querySelectorAll('[data-toggle]').forEach(b=>b.onclick=async()=>{const s=locations.find(x=>x.id===b.dataset.toggle);const r=await db().from('service_locations').update({is_active:!s.is_active}).eq('id',s.id);if(r.error)setMsg(r.error.message);else load()});el('#v9ManageSites').querySelectorAll('[data-delete]').forEach(b=>b.onclick=async()=>{if(!confirm('¿Eliminar esta sede?'))return;const r=await db().from('service_locations').delete().eq('id',b.dataset.delete);if(r.error)setMsg(r.error.message);else load()});renderModeOptions();if(price&&!el('#v9TravelEnabled').closest('[data-biz-draft]')){el('#v9TravelEnabled').value=String(price.enabled);el('#v9Vehicle').value=price.vehicle_name;el('#v9Consumption').value=price.km_per_liter;el('#v9Fuel').value=price.fuel_price_per_liter;el('#v9Fixed').value=price.fixed_departure_fee;el('#v9PerKm').value=price.extra_per_km;}if(theme&&!el('#v9Primary').closest('[data-biz-draft]')){el('#v9Primary').value=theme.primary_color;el('#v9Secondary').value=theme.secondary_color;el('#v9Template').value=theme.background_template;}}
+// NUEVO
+const modeDrafts=new Map();
+const modeMeta={
+ local:['M3 10l2-6h14l2 6M5 10v10h14V10M9 20v-6h6v6','Atención en las instalaciones.'],
+ domicilio:['M3 11l9-8 9 8M5 10v10h14V10M10 20v-5h4v5','Atención en el domicilio del cliente.'],
+ hotel:['M3 21V4h18v17M8 8h2m4 0h2M8 12h2m4 0h2M10 21v-5h4v5','Atención en destino de tipo hotel.'],
+ motel:['M3 20V8m18 12v-8H3m0 5h18M6 12V8h5v4','Atención en destino de tipo motel.']
+};
+function renderModeOptions(){
+ const picker=el('#v9Practitioner'), group=picker.closest('[data-biz-group]');
+ if(!group.querySelector('[data-ra-prof-search]')){
+   const label=document.createElement('label');
+   label.innerHTML='<!-- NUEVO -->Buscar profesional<input class="input" type="search" data-ra-prof-search>';
+   picker.closest('label').before(label);
+   const info=document.createElement('div');info.className='ra-card ra-prof-card';info.dataset.raProfessional='';
+   picker.closest('label').after(info);
+   const discard=document.createElement('button');discard.type='button';discard.className='btn secondary';discard.dataset.raDiscardModes='';discard.textContent='Descartar cambios de esta profesional';
+   group.append(discard);
+   discard.onclick=()=>{if(confirm('¿Descartar las modalidades pendientes de esta profesional?')){modeDrafts.delete(picker.value);displayModeForm();}};
+   label.querySelector('input').oninput=renderModeOptions;
+   const cards=document.createElement('div');cards.className='ra-mode-grid';
+   const fields=[...group.querySelectorAll('[data-mode]')];
+   fields[0]?.closest('label').before(cards);
+   for(const input of fields){
+     const card=input.closest('label'),[path,note]=modeMeta[input.dataset.mode]||[];
+     card.classList.add('ra-mode');cards.append(card);
+     card.insertAdjacentHTML('afterbegin',`<svg aria-hidden="true" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7"><path d="${path}"/></svg>`);
+     const text=document.createElement('small');text.textContent=note;card.append(text);
+     // NUEVO
+     const badge=document.createElement('span');badge.dataset.vaModeState='';card.append(badge);
+     input.onchange=()=>{
+       const id=picker.value;if(!id)return;
+       modeDrafts.set(id,Object.fromEntries(fields.map(c=>[c.dataset.mode,c.checked])));
+       displayModeForm();
+     };
+   }
+ }
+ const search=group.querySelector('[data-ra-prof-search]'),id=picker.value,term=search.value.trim().toLowerCase();
+ picker.innerHTML=staff.filter(p=>String(p.id)===id||String(p.display_name||'').toLowerCase().includes(term)).map(p=>`<option value="${esc(p.id)}">${esc(p.display_name)}</option>`).join('');
+ if([...picker.options].some(option=>option.value===id))picker.value=id;
+ displayModeForm();
+}
+// MODIFICADO
+function displayModeForm(){
+ const picker=el('#v9Practitioner'),id=picker?.value;if(!picker)return;
+ const group=picker.closest('[data-biz-group]'), person=staff.find(p=>String(p.id)===id);
+ const draft=modeDrafts.get(id);
+ const fields=[...group.querySelectorAll('[data-mode]')];
+ fields.forEach(c=>{
+   c.checked=draft?.[c.dataset.mode]??modes.some(m=>String(m.practitioner_id)===id&&m.mode===c.dataset.mode&&m.enabled);
+   c.disabled=!id||picker.disabled;
+   // NUEVO
+   const badge=c.closest('label').querySelector('[data-va-mode-state]');
+   if(badge)badge.textContent=id?(c.checked?'Habilitada':'Deshabilitada'):'Selecciona una profesional';
+ });
+ el('#v9SaveModes').disabled=!person;
+ const discard=group.querySelector('[data-ra-discard-modes]');if(discard)discard.hidden=!draft;
+ const info=group.querySelector('[data-ra-professional]');
+ if(!info)return;
+ const initials=String(person?.display_name||'').split(/\s+/).slice(0,2).map(word=>word[0]||'').join('');
+ const names=links.filter(link=>String(link.practitioner_id)===id).map(link=>services.find(service=>String(service.id)===String(link.service_id))?.name).filter(Boolean);
+ info.innerHTML=person?`<div class="ra-initials">${esc(initials)}</div><div><strong>${esc(person.display_name)}</strong>${names.length?`<p>${esc(names.join(' · '))}</p>`:''}<small>${fields.filter(c=>c.checked).length} de ${fields.length} modalidades habilitadas${draft?' · Cambios pendientes':''}</small></div>`:'<p>No hay profesionales para la búsqueda.</p>';
+}
+
 // MODIFICADO
 async function saveLocation(){
  const button=el('#v9SaveLoc');
@@ -7003,7 +7148,25 @@ async function saveLocation(){
  }catch(error){setMsg(error.message);}
  finally{button.disabled=false;}
 }
-async function saveModes(){if(!admin)return;const id=el('#v9Practitioner').value;if(!id)return setMsg('Primero crea una profesional en Servicios.');const list=[...document.querySelectorAll('[data-mode]')].map(c=>({practitioner_id:id,mode:c.dataset.mode,enabled:c.checked}));const r=await db().from('practitioner_service_modes').upsert(list);if(r.error)setMsg(r.error.message);else{setMsg('Modalidades guardadas.');load()}}
+// MODIFICADO
+async function saveModes(){
+ const picker=el('#v9Practitioner'),button=el('#v9SaveModes'),id=picker.value;
+ if(!admin||button.disabled)return;
+ if(!id)return setMsg('Primero crea una profesional en Servicios.');
+ const fields=[...picker.closest('[data-biz-group]').querySelectorAll('[data-mode]')];
+ const list=fields.map(c=>({practitioner_id:id,mode:c.dataset.mode,enabled:c.checked}));
+ const search=picker.closest('[data-biz-group]').querySelector('[data-ra-prof-search]');
+ button.disabled=true;picker.disabled=true;search.disabled=true;fields.forEach(c=>c.disabled=true);
+ try{
+   const r=await db().from('practitioner_service_modes').upsert(list);
+   if(r.error)throw r.error;
+   modes=modes.filter(m=>m.practitioner_id!==id||!list.some(x=>x.mode===m.mode)).concat(list);
+   modeDrafts.delete(id);
+   setMsg('Modalidades guardadas.');
+   load();
+ }catch(error){setMsg('No se guardaron las modalidades: '+error.message);}
+ finally{button.disabled=false;picker.disabled=false;search.disabled=false;displayModeForm();}
+}
 function pricingData(){return {enabled:el('#v9TravelEnabled').value==='true',vehicle_name:el('#v9Vehicle').value.trim()||'Automóvil',km_per_liter:Number(el('#v9Consumption').value),fuel_price_per_liter:Number(el('#v9Fuel').value),fixed_departure_fee:Number(el('#v9Fixed').value),extra_per_km:Number(el('#v9PerKm').value)}}
 function calc(){const p=pricingData(),km=Number(el('#v9Distance').value);if(!el('#v9Distance').value||km<0||p.km_per_liter<=0||Object.values(p).some(x=>typeof x==='number'&&(!Number.isFinite(x)||x<0)))return el('#v9CostResult').textContent='Verifica km y precios no negativos, así como rendimiento mayor que cero.';const fuel=km/p.km_per_liter*p.fuel_price_per_liter,total=p.fixed_departure_fee+fuel+km*p.extra_per_km;el('#v9CostResult').textContent=`Gasolina estimada: $${fuel.toFixed(2)} MXN · Total estimado: $${total.toFixed(2)} MXN (para ${km.toFixed(1)} km de ruta introducidos)`;}
 async function saveTravel(){if(!admin)return;const p=pricingData();if(p.km_per_liter<=0||Object.values(p).some(x=>typeof x==='number'&&(!Number.isFinite(x)||x<0)))return setMsg('Revisa los datos del vehículo.');const r=await db().from('travel_pricing').upsert({id:1,...p});setMsg(r.error?r.error.message:'Cotizador guardado en Supabase.');if(!r.error)price=p}
@@ -7808,7 +7971,15 @@ const esc=s=>String(s??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&
 const db=()=>typeof supabaseClient!=='undefined'?supabaseClient:null;
 let roomDetails=[],venues=[],rooms=[],adminLoaded=false,opening=false,roomBusy=false,siteList=[];
 async function table(name){const s=db();if(!s)return [];const {data,error}=await s.from(name).select('*');if(error){console.warn('[Reservas] '+name,error.message);return []}return data||[]}
-async function hydrate(){[roomDetails,venues,rooms,siteList]=await Promise.all(['vibra_room_details','vibra_destinations','rooms','service_locations'].map(table));renderPublic();if(adminLoaded)renderAdmin();}
+// MODIFICADO
+let roomReadRevision=0;
+async function hydrate(){
+ const revision=++roomReadRevision;
+ const next=await Promise.all(['vibra_room_details','vibra_destinations','rooms','service_locations'].map(table));
+ if(revision!==roomReadRevision)return;
+ [roomDetails,venues,rooms,siteList]=next;
+ renderPublic();if(adminLoaded)renderAdmin();
+}
 const detail=id=>roomDetails.find(x=>String(x.room_id)===String(id));
 function roomAllowed(r){return r.active!==false && (!detail(r.id)||detail(r.id).status==='free')}
 function setInfo(text){const p=$('#vibraRoomFeedback');if(p)p.textContent=text}
@@ -7823,13 +7994,182 @@ let wrap=$('#vibraRoomCards');if(!wrap){wrap=document.createElement('div');wrap.
 let d=$('#vibraDestinationControls');if(!d){d=document.createElement('div');d.id='vibraDestinationControls';d.className='vibra-modal-inline';$('#v9Mode')?.closest('label')?.insertAdjacentElement('afterend',d)}const mode=$('#v9Mode')?.value;d.hidden=!['domicilio','hotel','motel'].includes(mode);if(d.hidden)return;let options=venues.filter(v=>v.active&&v.kind===mode);d.innerHTML='<h3>Destino '+esc(mode)+'</h3>'+(mode==='domicilio'?'<label>Dirección de atención <input id="vibraHomeAddress" class="input" placeholder="Dirección completa del cliente"></label><p>La ubicación y el costo deben confirmarse antes de reservar.</p>':'<label>Selecciona destino<select id="vibraVenueSelected" class="select"><option value="">Selecciona '+esc(mode)+'</option>'+options.map(v=>'<option value="'+esc(v.id)+'">'+esc(v.name)+' — '+esc(v.address)+'</option>').join('')+'</select></label><p id="vibraRouteDistance">Selecciona un destino para estimar la ruta desde la sede.</p><div id="vibraVenueMap" class="vibra-venue-map"></div>')+'<p>Las solicitudes fuera del local requieren confirmación. No se cobrará ni reservará automáticamente un horario externo.</p>';const v=$('#vibraVenueSelected');if(v)v.onchange=()=>updateVenueRoute(options.find(x=>x.id===v.value));}
 async function updateVenueRoute(dest){const output=$('#vibraRouteDistance'),map=$('#vibraVenueMap');if(!output||!map)return;map.replaceChildren();if(!dest){output.textContent='Selecciona un destino';return}const loc=siteList.find(x=>x.is_active&&Number.isFinite(Number(x.latitude))&&Number.isFinite(Number(x.longitude)));if(!loc){output.textContent='Configura las coordenadas de la sede de salida en Negocio.';return}const points=[[loc.longitude,loc.latitude],[dest.longitude,dest.latitude]];if(typeof L!=='undefined'){const m=L.map(map,{zoomControl:true}).setView([dest.latitude,dest.longitude],13);L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png',{attribution:'© OpenStreetMap contributors'}).addTo(m);points.forEach(p=>L.marker([p[1],p[0]]).addTo(m));setTimeout(()=>m.invalidateSize(),200)}output.textContent='Consultando distancia por carretera…';try{const u='https://router.project-osrm.org/route/v1/driving/'+points.map(x=>x.join(',')).join(';')+'?overview=false';const r=await fetch(u,{signal:AbortSignal.timeout(10000)});if(!r.ok)throw Error('Servicio de rutas no disponible');const j=await r.json();if(j.routes?.[0])output.textContent='Distancia aproximada por carretera: '+(j.routes[0].distance/1000).toFixed(1)+' km. Precio sujeto a confirmación.';else throw Error('No se encontró ruta por carretera')}catch(e){output.textContent='No se pudo verificar el recorrido: '+e.message}}
 function bind(){document.addEventListener('click',e=>{const b=e.target.closest('#vibraServiceCatalog button,[data-vibra-book],.vibra-service-card button');if(!b)return;if(!/reservar/i.test(b.textContent||''))return;setTimeout(()=>{const m=$('#v9Modalities');if(m&&!m.hidden)show()},120)},true);document.addEventListener('click',e=>{if(e.target.closest('#v9Continue')){setTimeout(()=>{renderPublic();const mode=$('#v9Mode')?.value;if(mode==='local'&&!$('#v9Booking')?.hidden)void 0},120)}},true);document.addEventListener('change',e=>{if(e.target?.id==='v9Mode'){setTimeout(renderPublic,0)}},true);document.addEventListener('keydown',e=>{if(e.key==='Escape'&&$('#vibraReserveOverlay')?.classList.contains('open'))close()});}
-function adminSection(){const el=$('#adminContent');if(!el || (typeof activeAdmin!=='undefined' && activeAdmin!=='business'))return;let host=$('#vibraAdvancedBookingAdmin');if(host)return;host=document.createElement('section');host.id='vibraAdvancedBookingAdmin';host.className='section-card';host.innerHTML='<div id="veBizRooms"><!-- MODIFICADO --><details class="vibra-inline-admin"><summary>Añadir habitación</summary><div class="vibra-form-row"><label>Nombre<input id="vibraNewRoomName"></label><label>Descripción<input id="vibraNewRoomDesc"></label><label>Fotos antes de guardar<input id="vibraNewRoomPhotos" type="file" accept="image/*" multiple></label><label>Servicios incluidos<input id="vibraNewRoomAmenities" placeholder="Clima, baño, wifi"></label><label>Cortesía<input id="vibraNewRoomCourtesy" placeholder="Agua de cortesía"></label></div><div id="vibraNewRoomPreview" class="vroom-thumbs"></div><button class="vibra-section-action" id="vibraAddRoom">Guardar habitación</button></details><div id="vibraRoomAdminList"></div></div><div id="veBizDestinations"><h3>Directorio de hoteles y moteles</h3><details id="veBizVenueForm"><summary>Agregar o editar destino</summary><div class="vibra-form-row"><label>Nombre<input id="vibraVenueName"></label><label>Tipo<select id="vibraVenueKind"><option value="hotel">Hotel</option><option value="motel">Motel</option></select></label><label>Dirección<input id="vibraVenueAddress"></label><label>Latitud<input id="vibraVenueLat" type="number" step="any"></label><label>Longitud<input id="vibraVenueLng" type="number" step="any"></label></div><button class="vibra-section-action" id="vibraVenueSave">Guardar destino</button><input id="vibraVenueEditing" type="hidden"></details><div id="vibraVenueAdminList"></div></div><div class="vibra-feedback" id="vibraAdminFeedback"></div>';el.append(host);$('#vibraAddRoom').onclick=addRoom;$('#vibraVenueSave').onclick=saveVenue;adminLoaded=true;hydrate().catch(console.warn)}
+function adminSection(){const el=$('#adminContent');if(!el || (typeof activeAdmin!=='undefined' && activeAdmin!=='business'))return;let host=$('#vibraAdvancedBookingAdmin');if(host)return;host=document.createElement('section');host.id='vibraAdvancedBookingAdmin';host.className='section-card';host.innerHTML='<div id="veBizRooms"><!-- MODIFICADO --><div id="vibraRoomAdminList"></div></div><div id="veBizDestinations"><h3>Directorio de hoteles y moteles</h3><details id="veBizVenueForm"><summary>Agregar o editar destino</summary><div class="vibra-form-row"><label>Nombre<input id="vibraVenueName"></label><label>Tipo<select id="vibraVenueKind"><option value="hotel">Hotel</option><option value="motel">Motel</option></select></label><label>Dirección<input id="vibraVenueAddress"></label><label>Latitud<input id="vibraVenueLat" type="number" step="any"></label><label>Longitud<input id="vibraVenueLng" type="number" step="any"></label></div><button class="vibra-section-action" id="vibraVenueSave">Guardar destino</button><input id="vibraVenueEditing" type="hidden"></details><div id="vibraVenueAdminList"></div></div><div class="vibra-feedback" id="vibraAdminFeedback"></div>';el.append(host);$('#vibraVenueSave').onclick=saveVenue;adminLoaded=true;hydrate().catch(console.warn)}
 function msg(t){const p=$('#vibraAdminFeedback');if(p)p.textContent=t}
-async function addRoom(){const b=$('#vibraAddRoom'),name=$('#vibraNewRoomName').value.trim();if(!name)return msg('Introduce el nombre');b.disabled=true;b.textContent='Guardando…';try{const client=db();const r=await client.from('rooms').insert({name,description:$('#vibraNewRoomDesc').value,active:true}).select('id').single();if(r.error)throw r.error;const photos=[];for(const f of ($('#vibraNewRoomPhotos').files||[])){if(!f.type.startsWith('image/'))throw Error('Solo fotografías');if(f.size>8*1024*1024)throw Error('Cada fotografía debe pesar máximo 8 MB');const path='room-media/'+r.data.id+'/'+crypto.randomUUID()+'-'+f.name.replace(/[^\w.\-]/g,'_');const up=await client.storage.from('catalog-media').upload(path,f,{contentType:f.type});if(up.error)throw up.error;photos.push(client.storage.from('catalog-media').getPublicUrl(path).data.publicUrl)}const d=await client.from('vibra_room_details').upsert({room_id:r.data.id,status:'free',photos,amenities:$('#vibraNewRoomAmenities').value.split(',').map(x=>x.trim()).filter(Boolean),courtesy:$('#vibraNewRoomCourtesy').value.trim()});if(d.error)throw d.error;['vibraNewRoomName','vibraNewRoomDesc','vibraNewRoomAmenities','vibraNewRoomCourtesy','vibraNewRoomPhotos'].forEach(id=>{$('#'+id).value=''});$('#vibraNewRoomPreview').replaceChildren();msg('Habitación creada con sus fotografías');await hydrate()}catch(e){msg('No se completó la operación: '+e.message)}finally{b.disabled=false;b.textContent='Guardar habitación'}}
-async function changeRoom(id,payload){try{const r=await db().from('rooms').update(payload).eq('id',id);if(r.error)throw r.error;await hydrate();msg('Habitación actualizada')}catch(e){msg(e.message)}}
-async function saveDetails(id,container){if(roomBusy)return;roomBusy=true;try{const roomUpdate=await db().from('rooms').update({name:(container.querySelector('[data-room-name]')?.value||'').trim(),description:container.querySelector('[data-room-description]')?.value||''}).eq('id',id);if(roomUpdate.error)throw roomUpdate.error;const payload={room_id:id,status:container.querySelector('[data-status]').value,amenities:container.querySelector('[data-amenities]').value.split(',').map(x=>x.trim()).filter(Boolean),courtesy:container.querySelector('[data-courtesy]').value,photos:[...(detail(id)?.photos||[])]};const file=container.querySelector('[data-photos]');if(file.files?.length){for(const f of file.files){if(!f.type.startsWith('image/'))throw Error('Solo imágenes');const path='room-media/'+crypto.randomUUID()+'-'+f.name.replace(/[^\w.\-]/g,'_');const r=await db().storage.from('catalog-media').upload(path,f);if(r.error)throw r.error;payload.photos.push(db().storage.from('catalog-media').getPublicUrl(path).data.publicUrl)}}const r=await db().from('vibra_room_details').upsert(payload);if(r.error)throw r.error;container.removeAttribute('data-biz-room-draft');msg('Detalles guardados');await hydrate()}catch(e){msg(e.message)}finally{roomBusy=false}}
-function renderAdmin(){const rm=$('#vibraRoomAdminList'),ve=$('#vibraVenueAdminList');if(!rm||!ve)return;const drafts=new Map([...rm.querySelectorAll('[data-room-edit][data-biz-room-draft]')].map(node=>[node.dataset.roomEdit,node]));rm.innerHTML=rooms.map(r=>{const d=detail(r.id);return '<details class="vibra-inline-admin" data-room-edit="'+esc(r.id)+'"><summary>'+esc(r.name)+'</summary><div class="vibra-manage-item"><label><input type="checkbox" data-active '+(r.active?'checked':'')+'> Publicada</label></div><div class="vibra-form-row"><label>Nombre<input data-room-name value="'+esc(r.name)+'"></label><label>Descripción<textarea data-room-description rows="2">'+esc(r.description||'')+'</textarea></label></div><div class="vibra-form-row"><label>Estado<select data-status><option value="free">Libre</option><option value="pending">Pendiente</option><option value="occupied">Ocupada</option></select></label><label>Servicios (separa por comas)<input data-amenities value="'+esc((d?.amenities||[]).join(', '))+'" placeholder="Clima, wifi, baño"></label><label>Cortesía<input data-courtesy value="'+esc(d?.courtesy||'')+'" placeholder="1 agua o cerveza"></label><label>Añadir fotografías (conserva las anteriores)<input type="file" data-photos accept="image/*" multiple></label></div><div class="vibra-manage-buttons"><button data-save>Guardar cambios</button><button data-view-room="'+esc(r.id)+'">Ver galería</button><button data-delete-room="'+esc(r.id)+'">Eliminar habitación</button></div><div class="vibra-form-row"><div class="vroom-thumbs">'+(d?.photos||[]).map(x=>'<img alt="Fotografía existente" src="'+esc(x)+'" style="width:92px;height:88px;object-fit:cover;border-radius:10px">').join('')+'</div></div></details>'}).join('')||'<p>No hay habitaciones configuradas.</p>';
-rm.querySelectorAll('[data-room-edit]').forEach(c=>{const id=c.dataset.roomEdit;if(drafts.has(id)){c.replaceWith(drafts.get(id));return;}c.oninput=e=>{if(!e.target.matches('[data-active]'))c.setAttribute('data-biz-room-draft','');};const sel=c.querySelector('[data-status]');sel.value=detail(id)?.status||'free';c.querySelector('[data-save]').onclick=async()=>{const b=c.querySelector('[data-save]');if(b.disabled)return;b.disabled=true;b.textContent='Guardando…';try{await saveDetails(id,c)}finally{if(b.isConnected){b.disabled=false;b.textContent='Guardar cambios'}}};c.querySelector('[data-active]').onchange=e=>changeRoom(id,{active:e.target.checked});c.querySelector('[data-delete-room]').onclick=async()=>{if(!confirm('¿Eliminar definitivamente esta habitación? Se puede impedir si tiene reservas.'))return;const b=c.querySelector('[data-delete-room]');b.disabled=true;try{const a=await db().from('vibra_room_details').delete().eq('room_id',id);if(a.error)throw a.error;const r=await db().from('rooms').delete().eq('id',id);if(r.error)throw r.error;msg('Habitación eliminada');await hydrate()}catch(e){msg('No se pudo eliminar: '+e.message)}finally{b.disabled=false}};c.querySelector('[data-view-room]').onclick=()=>window.vibraOpenRoomViewer?.(id)});ve.innerHTML=venues.map(v=>'<div class="vibra-manage-item"><div><strong>'+esc(v.name)+'</strong><p>'+esc(v.kind)+' · '+esc(v.address)+'</p></div><div class="vibra-manage-buttons"><button data-edit="'+esc(v.id)+'">Editar</button><button data-pause="'+esc(v.id)+'">'+(v.active?'Pausar':'Publicar')+'</button><button data-delete="'+esc(v.id)+'">Eliminar</button></div></div>').join('')||'<p>Sin destinos registrados.</p>';ve.querySelectorAll('[data-edit]').forEach(b=>b.onclick=()=>{const v=venues.find(x=>x.id===b.dataset.edit);$('#vibraVenueEditing').value=v.id;$('#vibraVenueName').value=v.name;$('#vibraVenueKind').value=v.kind;$('#vibraVenueAddress').value=v.address;$('#vibraVenueLat').value=v.latitude;$('#vibraVenueLng').value=v.longitude;$('#vibraVenueSave').textContent='Actualizar destino';const editor=$('#veBizVenueForm');if(editor){editor.open=true;$('#vibraVenueName').focus()}});ve.querySelectorAll('[data-pause]').forEach(b=>b.onclick=async()=>{const v=venues.find(x=>x.id===b.dataset.pause);const r=await db().from('vibra_destinations').update({active:!v.active}).eq('id',v.id);if(r.error)msg(r.error.message);else hydrate()});ve.querySelectorAll('[data-delete]').forEach(b=>b.onclick=async()=>{if(!confirm('¿Eliminar este destino?'))return;const r=await db().from('vibra_destinations').delete().eq('id',b.dataset.delete);if(r.error)msg(r.error.message);else hydrate()})}
+// NUEVO
+const roomStatus={free:'Libre',pending:'Pendiente',occupied:'Ocupada'};
+function renderRoomWorkspace(root){
+ if(root.roomDraw){root.roomDraw();return;}
+ root.innerHTML=`<!-- NUEVO --><div class="ra-stats" data-room-stats></div>
+ <div class="ra-room-layout"><section class="ra-card">
+ <div class="ra-head"><div><h3>Habitaciones registradas</h3><p data-room-count role="status"></p></div><button type="button" class="btn" data-room-new>${UI.plus}<span>Añadir habitación</span></button></div>
+ <div class="ra-fields"><label>Buscar por nombre<input type="search" class="input" data-room-search></label><label>Sede<select class="select" data-room-site></select></label><label>Publicación<select class="select" data-room-pub><option value="">Todas</option><option value="yes">Publicadas</option><option value="no">Ocultas</option></select></label><label>Estado operativo<select class="select" data-room-state><option value="">Todos</option>${Object.entries(roomStatus).map(([key,label])=>`<option value="${key}">${label}</option>`).join('')}</select></label></div>
+ <div data-room-cards></div><p data-room-message role="status"></p></section>
+ <section class="ra-card" data-room-editor hidden></section></div>`;
+ const q=sel=>root.querySelector(sel), list=q('[data-room-cards]'), editor=q('[data-room-editor]'), siteFilter=q('[data-room-site]'), message=q('[data-room-message]');
+ const opts=()=>siteList.map(site=>`<option value="${esc(site.id)}">${esc(site.name)}${site.is_active===false?' (pausada)':''}</option>`).join('');
+ const norm=text=>String(text??'').normalize('NFD').replace(/[\u0300-\u036f]/g,'').toLowerCase();
+ let draft,trigger,busy=false;
+ const statusText=(details)=>roomStatus[details?.status]||(!details?'Libre':'Sin estado');
+ const buttons=(action,icon,label)=>`<button type="button" class="btn secondary" data-room-action="${action}">${icon||''}<span>${label}</span></button>`;
+ const stat=(label,value)=>`<div><span>${label}</span><strong>${value}</strong></div>`;
+ function draw(){
+   const previous=siteFilter.value;
+   siteFilter.innerHTML='<option value="">Todas</option><option value="unassigned">Sin sede</option>'+opts();
+   siteFilter.value=[...siteFilter.options].some(option=>option.value===previous)?previous:'';
+   q('[data-room-stats]').innerHTML=[
+     stat('Total de habitaciones',rooms.length),stat('Publicadas',rooms.filter(r=>r.active!==false).length),
+     ...Object.values(roomStatus).map(label=>stat(label,rooms.filter(r=>statusText(detail(r.id))===label).length))
+   ].join('');
+   const results=rooms.filter(r=>{
+     const site=siteFilter.value,pub=q('[data-room-pub]').value,status=q('[data-room-state]').value;
+     return norm(r.name).includes(norm(q('[data-room-search]').value.trim()))
+       &&(!site||site===String(r.service_location_id||'unassigned'))
+       &&(!pub||(r.active!==false?'yes':'no')===pub)
+       &&(!status||statusText(detail(r.id))===roomStatus[status]);
+   });
+   q('[data-room-count]').textContent=`${results.length} de ${rooms.length} habitaciones`;
+   list.innerHTML=results.map(r=>{
+     const d=detail(r.id), image=d?.photos?.[0],site=siteList.find(x=>String(x.id)===String(r.service_location_id));
+     return `<article class="ra-room" data-room-id="${esc(r.id)}">
+      <div class="ra-room-photo">${image?`<img src="${esc(image)}" alt="Portada de ${esc(r.name)}" loading="lazy">`:UI.image||UI.camera||UI.map}</div>
+      <div class="ra-room-info"><h4>${esc(r.name)}</h4><p>${esc(site?.name||(r.service_location_id?'Sede no disponible':'Sin sede asignada'))}</p>
+      <div class="ra-chips"><span>${r.active!==false?'Publicada':'Oculta'}</span><span>${statusText(d)}</span></div>
+      ${r.description?`<p class="ra-room-summary">${esc(r.description)}</p>`:''}
+      ${d?.amenities?.length?`<p class="ra-room-summary"><strong>Servicios</strong> · ${esc(d.amenities.join(', '))}</p>`:''}
+      ${d?.courtesy?`<p class="ra-room-summary"><strong>Cortesía</strong> · ${esc(d.courtesy)}</p>`:''}
+      <div class="ra-actions">${buttons('edit',UI.edit,'Editar')}${buttons('view',UI.image||UI.camera,'Detalles y galería')}</div></div>
+     </article>`;
+   }).join('')||'<p class="ra-empty">No hay habitaciones que coincidan con los filtros.</p>';
+ }
+ function close(){
+   const id=draft?.room?.id;
+   const scroll=draft?.scroll;
+   draft?.files.forEach(item=>URL.revokeObjectURL(item.url));
+   draft=null;editor.hidden=true;editor.replaceChildren();
+   const fallback=id&&[...list.querySelectorAll('[data-room-id]')].find(el=>el.dataset.roomId===String(id))?.querySelector('[data-room-action=edit]');
+   (trigger?.isConnected?trigger:fallback||q('[data-room-new]')).focus({preventScroll:true});
+   if(scroll!==undefined)root.closest('#adminContent').scrollTop=scroll;
+ }
+ function open(room,source){
+   if(busy)return;
+   if(draft?.dirty&&!confirm('¿Descartar los cambios de la habitación actual?'))return;
+   if(draft)close();
+   trigger=source;
+   const d=room?detail(room.id):null;
+   draft={room,id:room?.id,photos:[...(d?.photos||[])],files:[],dirty:false,scroll:root.closest('#adminContent')?.scrollTop};
+   editor.hidden=false;
+   editor.innerHTML=`<!-- NUEVO --><div class="ra-head"><h3>${room?'Editar habitación':'Añadir habitación'}</h3><button type="button" class="btn secondary" data-room-cancel aria-label="Cerrar editor">${UI.close}</button></div>
+    <form>
+    <fieldset><legend>Información general</legend><label>Nombre<input class="input" name="name" required value="${esc(room?.name)}"></label><label>Descripción<textarea class="textarea" name="description" rows="3">${esc(room?.description)}</textarea></label></fieldset>
+    <fieldset><legend>Sede y estado</legend><div class="ra-fields">
+    <label>Sede<select class="select" name="site"><option value="">Sin asignar</option>${opts()}${room?.service_location_id&&!siteList.some(x=>String(x.id)===String(room.service_location_id))?`<option value="${esc(room.service_location_id)}">Sede guardada</option>`:''}</select></label>
+    <label>Estado operativo<select class="select" name="status">${Object.entries(roomStatus).map(([key,label])=>`<option value="${key}">${label}</option>`).join('')}</select></label></div>
+    <label class="ra-check"><input type="checkbox" name="published" ${room?.active!==false?'checked':''}> Publicar en el catálogo</label>
+    <p class="small">La disponibilidad por fecha y hora se comprueba al reservar.</p></fieldset>
+    <fieldset><legend>Servicios y cortesías</legend><label>Servicios incluidos (separados por comas)<input class="input" name="amenities" value="${esc(d?.amenities?.join(', '))}"></label><label>Cortesía<input class="input" name="courtesy" value="${esc(d?.courtesy)}"></label></fieldset>
+    <fieldset><legend>Fotografías</legend><div class="ra-thumbs" data-room-thumbs></div><label>Añadir fotografías<input type="file" name="photos" accept="image/*" multiple></label></fieldset>
+    <p data-room-feedback role="status"></p>
+    <div class="ra-actions"><button class="btn" type="submit">${UI.save}<span>${room?'Guardar cambios':'Guardar habitación'}</span></button>
+    <button class="btn secondary" type="button" data-room-discard>Descartar</button>
+    ${room?`<button class="btn secondary" type="button" data-room-delete>${UI.trash}<span>Eliminar habitación</span></button>`:''}</div></form>`;
+   const form=editor.querySelector('form'), fields=form.elements, feedback=editor.querySelector('[data-room-feedback]');
+   fields.site.value=room?.service_location_id||'';
+   fields.status.value=roomStatus[d?.status]?d.status:'free';
+   const changed=()=>{draft.dirty=true;root.closest('.ve-business')?.setAttribute('data-pending','1');feedback.textContent='Cambios pendientes.';};
+   const cancel=()=>{if(!busy&&(!draft.dirty||confirm('¿Descartar los cambios de esta habitación?')))close();};
+   editor.querySelector('[data-room-cancel]').onclick=editor.querySelector('[data-room-discard]').onclick=cancel;
+   editor.onkeydown=e=>{if(e.key==='Escape'){e.stopPropagation();cancel();}};
+   form.oninput=e=>{if(e.target!==fields.photos)changed();};
+   const thumbs=editor.querySelector('[data-room-thumbs]');
+   const gallery=()=>{
+     const combined=[...draft.photos.map(url=>({url})),...draft.files];
+     thumbs.innerHTML=combined.map((item,i)=>`<figure><img src="${esc(item.url)}" alt="Fotografía ${i+1}"><figcaption>${i===0?'Portada':'Foto '+(i+1)}${item.file?' · Pendiente':''}</figcaption><button type="button" class="btn secondary" data-room-photo-index="${i}">Retirar</button></figure>`).join('')||'<p>Sin fotografías.</p>';
+   };
+   thumbs.onclick=e=>{
+     const button=e.target.closest('[data-room-photo-index]');if(!button||busy)return;
+     const i=Number(button.dataset.roomPhotoIndex);
+     if(i<draft.photos.length)draft.photos.splice(i,1);
+     else URL.revokeObjectURL(draft.files.splice(i-draft.photos.length,1)[0].url);
+     changed();gallery();
+   };
+   fields.photos.onchange=()=>{
+     const errors=[];
+     for(const file of fields.photos.files){
+       if(!file.type.startsWith('image/')||(!room&&file.size>8*1024*1024)){errors.push(file.name);continue;}
+       if(draft.files.some(x=>x.file.name===file.name&&x.file.size===file.size&&x.file.lastModified===file.lastModified))continue;
+       draft.files.push({file,url:URL.createObjectURL(file)});changed();
+     }
+     fields.photos.value='';gallery();
+     if(errors.length)feedback.textContent='Fotografías rechazadas por formato o tamaño: '+errors.join(', ');
+   };
+   gallery();
+   const execute=async work=>{
+     if(busy)return;
+     busy=true;
+     const controls=[...form.querySelectorAll('input,select,textarea,button')];
+     controls.forEach(el=>el.disabled=true);
+     try{await work();}
+     catch(error){feedback.textContent=error.message||'No se pudo completar la operación.';}
+     finally{busy=false;controls.forEach(el=>el.disabled=false);}
+   };
+   form.onsubmit=e=>{
+     e.preventDefault();
+     execute(async()=>{
+       const name=fields.name.value.trim();
+       if(!name)throw Error('Introduce el nombre.');
+       const client=db(), base={name,description:fields.description.value,active:fields.published.checked};
+       if(fields.site.value||(draft.id&&draft.siteWasWritten)||draft.room?.service_location_id)base.service_location_id=fields.site.value||null;
+       const photoUrls=[...draft.photos];
+       for(const item of draft.files){
+         const file=item.file;
+         feedback.textContent='Subiendo '+file.name+'…';
+         if(!item.uploaded){
+           const path='room-media/'+crypto.randomUUID()+'-'+file.name.replace(/[^\w.\-]/g,'_');
+           const result=await client.storage.from('catalog-media').upload(path,file,{contentType:file.type});
+           if(result.error)throw Error(file.name+': '+result.error.message);
+           item.uploaded=client.storage.from('catalog-media').getPublicUrl(path).data.publicUrl;
+         }
+         photoUrls.push(item.uploaded);
+       }
+       feedback.textContent='Guardando habitación…';
+       const result=draft.id?await client.from('rooms').update(base).eq('id',draft.id).select('id').single():await client.from('rooms').insert(base).select('id').single();
+       if(result.error)throw result.error;
+       draft.id=result.data.id;draft.siteWasWritten=Object.hasOwn(base,'service_location_id');
+       const detailResult=await client.from('vibra_room_details').upsert({room_id:draft.id,status:fields.status.value,amenities:fields.amenities.value.split(',').map(x=>x.trim()).filter(Boolean),courtesy:fields.courtesy.value,photos:photoUrls});
+       if(detailResult.error)throw Error('Se guardó la ficha básica. Los detalles y las fotografías siguen pendientes: '+detailResult.error.message);
+       const savedId=draft.id;await hydrate();draft.room=rooms.find(item=>item.id===savedId)||draft.room;close();message.textContent='Habitación guardada.';
+     });
+   };
+   const remove=editor.querySelector('[data-room-delete]');
+   if(remove)remove.onclick=()=>{
+     if(!confirm('¿Eliminar esta habitación? Las restricciones del servidor pueden impedirlo si tiene registros asociados.'))return;
+     execute(async()=>{
+       const result=await db().from('rooms').delete().eq('id',room.id).select('id').single();
+       if(result.error)throw result.error;
+       close();message.textContent='Habitación eliminada.';await hydrate();
+     });
+   };
+   fields.name.focus();
+ }
+ root.roomDraw=draw;
+ root.addEventListener('input',e=>{if(e.target.matches('[data-room-search]'))draw();});
+ root.addEventListener('change',e=>{if(e.target.matches('[data-room-state],[data-room-site],[data-room-pub]'))draw();});
+ root.addEventListener('click',e=>{
+   const button=e.target.closest('[data-room-new],[data-room-action]');
+   if(!button)return;
+   if(button.matches('[data-room-new]')){open(null,button);return;}
+   const room=rooms.find(r=>String(r.id)===button.closest('[data-room-id]').dataset.roomId);
+   if(!room)return;
+   if(button.dataset.roomAction==='edit')open(room,button);
+   else window.vibraOpenRoomViewer?.(room.id);
+ });
+ draw();
+}
+
+// MODIFICADO
+function renderAdmin(){const rm=$('#vibraRoomAdminList'),ve=$('#vibraVenueAdminList');if(!rm||!ve)return;renderRoomWorkspace(rm);
+ve.innerHTML=venues.map(v=>'<div class="vibra-manage-item"><div><strong>'+esc(v.name)+'</strong><p>'+esc(v.kind)+' · '+esc(v.address)+'</p></div><div class="vibra-manage-buttons"><button data-edit="'+esc(v.id)+'">Editar</button><button data-pause="'+esc(v.id)+'">'+(v.active?'Pausar':'Publicar')+'</button><button data-delete="'+esc(v.id)+'">Eliminar</button></div></div>').join('')||'<p>Sin destinos registrados.</p>';ve.querySelectorAll('[data-edit]').forEach(b=>b.onclick=()=>{const v=venues.find(x=>x.id===b.dataset.edit);$('#vibraVenueEditing').value=v.id;$('#vibraVenueName').value=v.name;$('#vibraVenueKind').value=v.kind;$('#vibraVenueAddress').value=v.address;$('#vibraVenueLat').value=v.latitude;$('#vibraVenueLng').value=v.longitude;$('#vibraVenueSave').textContent='Actualizar destino';const editor=$('#veBizVenueForm');if(editor){editor.open=true;$('#vibraVenueName').focus()}});ve.querySelectorAll('[data-pause]').forEach(b=>b.onclick=async()=>{const v=venues.find(x=>x.id===b.dataset.pause);const r=await db().from('vibra_destinations').update({active:!v.active}).eq('id',v.id);if(r.error)msg(r.error.message);else hydrate()});ve.querySelectorAll('[data-delete]').forEach(b=>b.onclick=async()=>{if(!confirm('¿Eliminar este destino?'))return;const r=await db().from('vibra_destinations').delete().eq('id',b.dataset.delete);if(r.error)msg(r.error.message);else hydrate()})}
 async function saveVenue(){const b=$('#vibraVenueSave'),id=$('#vibraVenueEditing').value;const v={name:$('#vibraVenueName').value.trim(),kind:$('#vibraVenueKind').value,address:$('#vibraVenueAddress').value.trim(),latitude:Number($('#vibraVenueLat').value),longitude:Number($('#vibraVenueLng').value),verified:false};if(!v.name||!v.address||!$('#vibraVenueLat').value||!$('#vibraVenueLng').value||Math.abs(v.latitude)>90||Math.abs(v.longitude)>180)return msg('Datos incompletos o coordenadas inválidas');b.disabled=true;try{const r=id?await db().from('vibra_destinations').update(v).eq('id',id):await db().from('vibra_destinations').insert(v);if(r.error)throw r.error;$('#vibraVenueEditing').value='';b.textContent='Guardar destino';msg('Destino guardado');await hydrate()}catch(e){msg(e.message)}finally{b.disabled=false}}
 function init(){bind();shell();const ob=new MutationObserver(()=>{if(!adminLoaded)adminSection();else if(!$('#vibraAdvancedBookingAdmin')){adminLoaded=false;adminSection()}});ob.observe($('#adminContent')||document.body,{childList:true});setTimeout(()=>hydrate().catch(console.warn),1700)}
 if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',init);else init();
@@ -7892,14 +8232,32 @@ if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',
 </style>
 <script id="vroom-enhancements">
 (()=>{'use strict';const $=s=>document.querySelector(s);const esc=s=>String(s??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));const svg=(path)=>'<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">'+path+'</svg>';let photos=[],position=0,room=null;const db=()=>typeof supabaseClient!=='undefined'?supabaseClient:null;
-async function show(id){const client=db();if(!client)return;const [base,det]=await Promise.all([client.from('rooms').select('*').eq('id',id).single(),client.from('vibra_room_details').select('*').eq('room_id',id).maybeSingle()]);if(base.error)return;room=base.data;const d=det.data||{};photos=Array.isArray(d.photos)?d.photos:[];position=0;let wrap=$('#vroomOverlay');if(!wrap){wrap=document.createElement('div');wrap.id='vroomOverlay';wrap.innerHTML='<div id="vroomDialog" role="dialog" aria-modal="true"><div id="vroomHead"><h2 id="vroomTitle"></h2><button class="vroom-button" id="vroomClose" aria-label="Cerrar">'+svg('<path d="M5 5l14 14M19 5L5 19"/>')+'</button></div><div id="vroomGrid"><div><img id="vroomPhoto" alt="Fotografía de habitación"><div class="vroom-controls"><button class="vroom-button" id="vroomPrev">'+svg('<path d="M15 18l-6-6 6-6"/>')+' Anterior</button><span id="vroomCount"></span><button class="vroom-button" id="vroomNext">Siguiente '+svg('<path d="m9 18 6-6-6-6"/>')+'</button></div></div><div id="vroomInfo"></div></div></div>';document.body.append(wrap);$('#vroomClose').onclick=close;wrap.onclick=e=>{if(e.target===wrap)close()};$('#vroomPrev').onclick=()=>{position=(position+photos.length-1)%photos.length;paint()};$('#vroomNext').onclick=()=>{position=(position+1)%photos.length;paint()}}$('#vroomTitle').textContent=room.name;$('#vroomInfo').innerHTML='<p>'+esc(room.description||'Sin descripción adicional')+'</p><p><strong>Estado:</strong> '+esc(d.status==='free'?'Libre':d.status==='occupied'?'Ocupada':'Pendiente')+'</p><p><strong>Servicios:</strong> '+esc((d.amenities||[]).join(', ')||'Sin datos')+'</p><p><strong>Cortesía:</strong> '+esc(d.courtesy||'No especificada')+'</p><p id="vroomLikeCount">Me gusta: consultando…</p><button class="vroom-button vroom-primary" id="vroomLike">'+svg('<path d="M20.8 4.6a5.5 5.5 0 0 0-7.8 0L12 5.7l-1.1-1.1a5.5 5.5 0 0 0-7.8 7.8L12 21l8.8-8.6a5.5 5.5 0 0 0 0-7.8z"/>')+' Me gusta</button>';$('#vroomLike').onclick=like;wrap.classList.add('open');/* NUEVO */if($('#vibraReserveOverlay.open'))bindReservationRoomViewer(wrap);paint();counts()}
+// MODIFICADO
+async function show(id){const trigger=document.activeElement, fromAdmin=!!trigger?.closest('#veBiz-rooms');const client=db();if(!client)return;const [base,det]=await Promise.all([client.from('rooms').select('*').eq('id',id).single(),client.from('vibra_room_details').select('*').eq('room_id',id).maybeSingle()]);if(base.error)return;room=base.data;const d=det.data||{};photos=Array.isArray(d.photos)?d.photos:[];position=0;let wrap=$('#vroomOverlay');if(!wrap){wrap=document.createElement('div');wrap.id='vroomOverlay';wrap.innerHTML='<div id="vroomDialog" role="dialog" aria-modal="true"><div id="vroomHead"><h2 id="vroomTitle"></h2><button class="vroom-button" id="vroomClose" aria-label="Cerrar">'+svg('<path d="M5 5l14 14M19 5L5 19"/>')+'</button></div><div id="vroomGrid"><div><img id="vroomPhoto" alt="Fotografía de habitación"><div class="vroom-controls"><button class="vroom-button" id="vroomPrev">'+svg('<path d="M15 18l-6-6 6-6"/>')+' Anterior</button><span id="vroomCount"></span><button class="vroom-button" id="vroomNext">Siguiente '+svg('<path d="m9 18 6-6-6-6"/>')+'</button></div></div><div id="vroomInfo"></div></div></div>';document.body.append(wrap);$('#vroomClose').onclick=close;wrap.onclick=e=>{if(e.target===wrap)close()};$('#vroomPrev').onclick=()=>{position=(position+photos.length-1)%photos.length;paint()};$('#vroomNext').onclick=()=>{position=(position+1)%photos.length;paint()}}$('#vroomTitle').textContent=room.name;$('#vroomInfo').innerHTML='<p>'+esc(room.description||'Sin descripción adicional')+'</p><p><strong>Estado:</strong> '+esc(d.status==='free'?'Libre':d.status==='occupied'?'Ocupada':'Pendiente')+'</p><p><strong>Servicios:</strong> '+esc((d.amenities||[]).join(', ')||'Sin datos')+'</p><p><strong>Cortesía:</strong> '+esc(d.courtesy||'No especificada')+'</p><p id="vroomLikeCount">Me gusta: consultando…</p><button class="vroom-button vroom-primary" id="vroomLike">'+svg('<path d="M20.8 4.6a5.5 5.5 0 0 0-7.8 0L12 5.7l-1.1-1.1a5.5 5.5 0 0 0-7.8 7.8L12 21l8.8-8.6a5.5 5.5 0 0 0 0-7.8z"/>')+' Me gusta</button>';$('#vroomLike').onclick=like;wrap.classList.add('open');if(fromAdmin){wrap.dataset.raAdminViewer='';wrap.raTrigger=trigger;wrap.querySelector('#vroomDialog').setAttribute('aria-labelledby','vroomTitle');wrap.querySelector('#vroomClose').focus();}/* NUEVO */if($('#vibraReserveOverlay.open'))bindReservationRoomViewer(wrap);paint();counts()}
 function paint(){const image=$('#vroomPhoto');if(!image)return;image.hidden=!photos.length;if(photos.length)image.src=photos[position];$('#vroomCount').textContent=photos.length?((position+1)+' / '+photos.length):'Sin fotografías';$('#vroomPrev').disabled=$('#vroomNext').disabled=photos.length<2}
 // MODIFICADO: recuperar el foco al cerrar el visor desde la reserva.
-function close(){const wrap=$('#vroomOverlay');wrap?.classList.remove('open');const trigger=wrap?.veBookingTrigger;if(wrap){wrap.veBookingTrigger=null;delete wrap.dataset.reservationViewer}if(trigger?.isConnected)trigger.focus({preventScroll:true});else if(trigger&&$('#vibraReserveOverlay.open'))$('#vibraReserveClose')?.focus({preventScroll:true})}
+// MODIFICADO
+function close(){const wrap=$('#vroomOverlay');wrap?.classList.remove('open');const trigger=wrap?.veBookingTrigger||wrap?.raTrigger;if(wrap){wrap.raTrigger=null;delete wrap.dataset.raAdminViewer;}if(wrap){wrap.veBookingTrigger=null;delete wrap.dataset.reservationViewer}if(trigger?.isConnected)trigger.focus({preventScroll:true});else if(trigger&&$('#vibraReserveOverlay.open'))$('#vibraReserveClose')?.focus({preventScroll:true})}
 async function counts(){if(!room)return;const r=await db().from('vibra_room_likes').select('user_id',{count:'exact',head:true}).eq('room_id',room.id);$('#vroomLikeCount').textContent=r.error?'Likes disponibles al configurar SQL':'Me gusta: '+(r.count||0)}
 async function like(){const b=$('#vroomLike');b.disabled=true;try{const c=db(),u=await c.auth.getUser();if(!u.data.user)throw Error('Inicia sesión para dar me gusta');const q=await c.from('vibra_room_likes').select('room_id').eq('room_id',room.id).eq('user_id',u.data.user.id).maybeSingle();if(q.error)throw q.error;const r=q.data?await c.from('vibra_room_likes').delete().eq('room_id',room.id).eq('user_id',u.data.user.id):await c.from('vibra_room_likes').insert({room_id:room.id,user_id:u.data.user.id});if(r.error)throw r.error;await counts()}catch(e){alert(e.message)}finally{b.disabled=false}}
 window.vibraOpenRoomViewer=show;
-document.addEventListener('change',e=>{if(e.target.id==='vibraNewRoomPhotos'){const root=$('#vibraNewRoomPreview');if(!root)return;root.replaceChildren();[...e.target.files].forEach(f=>{const img=document.createElement('img');img.src=URL.createObjectURL(f);img.onload=()=>URL.revokeObjectURL(img.src);root.append(img)})}});
+// NUEVO
+document.addEventListener('keydown',e=>{
+ const viewer=$('#vroomOverlay[data-ra-admin-viewer].open');
+ if(!viewer)return;
+ if(e.key==='Escape'){e.preventDefault();close();return;}
+ if(e.key==='ArrowLeft'||e.key==='ArrowRight'){
+   e.preventDefault();viewer.querySelector(e.key==='ArrowLeft'?'#vroomPrev':'#vroomNext').click();return;
+ }
+ if(e.key==='Tab'){
+   const buttons=[...viewer.querySelectorAll('button:not([disabled])')];
+   if(!buttons.length)return;
+   if(e.shiftKey&&document.activeElement===buttons[0]){e.preventDefault();buttons.at(-1).focus();}
+   else if(!e.shiftKey&&document.activeElement===buttons.at(-1)){e.preventDefault();buttons[0].focus();}
+ }
+});
+
+
 document.addEventListener('click',e=>{const b=e.target.closest('.vibra-room-choice');if(!b||e.target.closest('[data-room-view]'))return;const id=b.dataset.room;if(!id)return;const viewer=document.createElement('button');viewer.type='button';viewer.className='vroom-button';viewer.hidden=true;void viewer;});
 const observer=new MutationObserver(()=>{document.querySelectorAll('.vibra-room-choice[data-room]:not([data-vroom-ready])').forEach(b=>{b.dataset.vroomReady='1';const view=document.createElement('button');view.type='button';view.className='vroom-more vroom-button';view.innerHTML=svg('<circle cx="11" cy="11" r="7"/><path d="m16 16 5 5"/>')+' Ver habitación';view.onclick=e=>{e.stopPropagation();e.preventDefault();show(b.dataset.room)};b.insertAdjacentElement('afterend',view)})});observer.observe(document.body,{subtree:true,childList:true});
 })();
@@ -8425,16 +8783,71 @@ let busy=false,epoch=0;
 async function render(){
  const host=$('#adminContent');if(!host||!document.querySelector('#adminModal.show')||!(typeof activeAdmin!=='undefined'&&activeAdmin==='business'))return;
  if(busy)return;const ticket=++epoch;const db=typeof supabaseClient!=='undefined'?supabaseClient:null;if(!db)return;
- let panel=$('#vibraAssignmentPanel');if(!panel){panel=document.createElement('section');panel.id='vibraAssignmentPanel';panel.innerHTML='<h3>Asignar sedes a profesionales y habitaciones</h3><p class="small muted">Las sedes guardadas en Negocio son las únicas disponibles para asignar. No se crean sedes duplicadas.</p><div data-assign-list></div><p class="vab-status" data-assign-status aria-live="polite"></p><button type="button" data-assign-refresh>Actualizar sedes</button>';host.prepend(panel);panel.querySelector('[data-assign-refresh]').onclick=()=>{const list=panel.querySelector('[data-assign-list]');if(list.hasAttribute('data-biz-dirty')&&!confirm('¿Descartar los cambios de asignación pendientes?'))return;list.removeAttribute('data-biz-dirty');render();};panel.addEventListener('change',e=>{if(e.target.closest('[data-vab]'))panel.querySelector('[data-assign-list]').setAttribute('data-biz-dirty','');});}
+ // MODIFICADO
+ let panel=$('#vibraAssignmentPanel');if(!panel){panel=document.createElement('section');panel.id='vibraAssignmentPanel';panel.innerHTML='<h3>Asignar sedes a profesionales y habitaciones</h3><p class="small muted">Las sedes guardadas en Negocio son las únicas disponibles para asignar. No se crean sedes duplicadas.</p><!-- MODIFICADO --><div class="ra-fields va-filter"><label>Buscar profesional o habitación<input class="input" type="search" data-ra-assignment-search></label><label>Filtrar por sede guardada<select class="select" data-va-site-filter></select></label></div><p data-va-results role="status"></p><p class="small muted" data-va-site-rooms></p><div data-assign-list></div><p class="vab-status" data-assign-status aria-live="polite"></p><button type="button" class="btn secondary" data-assign-refresh>Actualizar sedes</button>';host.prepend(panel);panel.querySelector('[data-assign-refresh]').onclick=()=>{render();};panel.addEventListener('change',e=>{const row=e.target.closest('[data-vab]');if(row){row.setAttribute('data-ra-pending','');panel.querySelector('[data-assign-list]').setAttribute('data-biz-dirty','');}});}
  const [a,b,c]=await Promise.all([db.from('service_locations').select('id,name,address,is_active').order('name'),db.from('practitioners').select('id,display_name,service_location_id').order('display_name'),db.from('rooms').select('id,name,service_location_id').order('name')]);
- if(ticket!==epoch||!panel.isConnected||activeAdmin!=='business'||panel.querySelector('[data-assign-list]').matches('[data-biz-dirty]'))return; /* MODIFICADO */
+ // MODIFICADO
+ if(ticket!==epoch||busy||!panel.isConnected||activeAdmin!=='business')return;
+ const pending=new Map([...panel.querySelectorAll('[data-ra-pending]')].map(row=>[row.dataset.vab+row.dataset.id,row.querySelector('select').value]));
  const status=panel.querySelector('[data-assign-status]');const err=[a,b,c].find(x=>x.error);
  if(err){status.textContent='No se pudo leer las sedes o asignaciones: '+err.error.message;return;}
  const sites=(a.data||[]).filter(x=>x.is_active!==false);
- if(!sites.length){panel.querySelector('[data-assign-list]').innerHTML='<p>No hay sedes activas. Guarda primero un domicilio desde Negocio → Sedes autorizadas.</p>';return;}
- const opt=[{id:'',name:'Sin asignar'},...sites];const row=(table,obj)=>`<div class="vab-row" data-vab="${table}" data-id="${escapeHTML(obj.id)}"><strong>${escapeHTML(obj.display_name||obj.name)}</strong><select aria-label="Sede asignada">${opt.map(x=>`<option value="${escapeHTML(x.id)}" ${String(obj.service_location_id||'')===String(x.id)?'selected':''}>${escapeHTML(x.name)}</option>`).join('')}</select><button type="button">Guardar sede</button></div>`;
- panel.querySelector('[data-assign-list]').innerHTML='<h4>Profesionales</h4>'+(b.data||[]).map(x=>row('practitioners',x)).join('')+'<h4>Habitaciones</h4>'+(c.data||[]).map(x=>row('rooms',x)).join('');
- panel.querySelectorAll('[data-vab] button').forEach(button=>{button.onclick=async()=>{if(busy)return;const line=button.closest('[data-vab]'),id=line.dataset.id,table=line.dataset.vab;busy=true;button.disabled=true;const original=button.textContent;button.textContent='Guardando…';try{const loc=line.querySelector('select').value||null;const {error}=await db.from(table).update({service_location_id:loc}).eq('id',id);if(error)throw error;status.textContent='Asignación guardada en Supabase.';}catch(e){status.textContent='No se guardó: '+e.message;}finally{busy=false;button.disabled=false;button.textContent=original;}}});
+ // MODIFICADO
+ panel.querySelector('[data-assign-status]').textContent=sites.length?'':'No hay sedes activas para nuevas asignaciones.';
+ // MODIFICADO
+ const opt=[{id:'',name:'Sin asignar'},...sites];
+ const row=(table,obj)=>{
+   const current=(a.data||[]).find(site=>String(site.id)===String(obj.service_location_id));
+   const options=[...opt];
+   if(obj.service_location_id&&!options.some(site=>String(site.id)===String(obj.service_location_id)))options.push({id:obj.service_location_id,name:current?.name||'Sede guardada'});
+   return `<div class="vab-row" data-vab="${table}" data-id="${escapeHTML(obj.id)}" data-va-saved-site="${escapeHTML(obj.service_location_id||'')}"><div><strong>${escapeHTML(obj.display_name||obj.name)}</strong><small>${escapeHTML(current?.name||(obj.service_location_id?'Sede guardada':'Sin sede asignada'))}</small></div><select aria-label="Sede asignada a ${escapeHTML(obj.display_name||obj.name)}">${options.map(x=>`<option value="${escapeHTML(x.id)}" ${String(obj.service_location_id||'')===String(x.id)?'selected':''}>${escapeHTML(x.name)}</option>`).join('')}</select><button class="btn secondary" type="button">${UI.save}<span>Guardar sede</span></button></div>`;
+ };
+ // MODIFICADO
+ panel.querySelector('[data-assign-list]').innerHTML=`<div class="ra-stats"><div><span>Sedes activas</span><strong>${sites.length}</strong></div><div><span>Profesionales con sede</span><strong>${(b.data||[]).filter(x=>x.service_location_id).length}</strong></div><div><span>Habitaciones con sede</span><strong>${(c.data||[]).filter(x=>x.service_location_id).length}</strong></div></div><h4>Profesionales</h4>`+(b.data||[]).map(x=>row('practitioners',x)).join('')+'<h4>Habitaciones</h4>'+(c.data||[]).map(x=>row('rooms',x)).join('');
+ // MODIFICADO
+ const search=panel.querySelector('[data-ra-assignment-search]'), siteFilter=panel.querySelector('[data-va-site-filter]');
+ const selectedSite=siteFilter.value;
+ siteFilter.innerHTML='<option value="all">Todas las sedes</option><option value="">Sin asignar</option>'+(a.data||[]).map(site=>`<option value="${escapeHTML(site.id)}">${escapeHTML(site.name)}</option>`).join('');
+ siteFilter.value=[...siteFilter.options].some(option=>option.value===selectedSite)&&siteFilter.dataset.ready?selectedSite:'all';
+ siteFilter.dataset.ready='1';
+ const apply=()=>{
+   const term=search.value.trim().toLowerCase();
+   let count=0;
+   for(const row of panel.querySelectorAll('[data-vab]')){
+     row.hidden=!row.querySelector('strong').textContent.toLowerCase().includes(term)||(siteFilter.value!=='all'&&row.dataset.vaSavedSite!==siteFilter.value);
+     if(!row.hidden)count++;
+   }
+   panel.querySelector('[data-va-results]').textContent=count?count+' registros visibles':'No hay registros que coincidan con los filtros.';
+   // NUEVO
+   const siteId=siteFilter.value, roomSummary=panel.querySelector('[data-va-site-rooms]');
+   const rooms=[...panel.querySelectorAll('[data-vab="rooms"]')].filter(row=>row.dataset.vaSavedSite===siteId);
+   roomSummary.textContent=siteId==='all'||siteId===''?'':rooms.length?'Habitaciones vinculadas a esta sede: '+rooms.length:'Esta sede no tiene habitaciones vinculadas.';
+ };
+ search.oninput=siteFilter.onchange=apply;apply();
+ panel.querySelectorAll('[data-vab]').forEach(row=>{
+   const value=pending.get(row.dataset.vab+row.dataset.id),select=row.querySelector('select');
+   if(value!==undefined&&[...select.options].some(o=>o.value===value)){select.value=value;row.setAttribute('data-ra-pending','');}
+ });
+ if(!panel.querySelector('[data-ra-pending]'))panel.querySelector('[data-assign-list]').removeAttribute('data-biz-dirty');
+ // MODIFICADO
+ panel.querySelectorAll('[data-vab] button').forEach(button=>{button.onclick=async()=>{
+   if(busy)return;
+   const line=button.closest('[data-vab]'),id=line.dataset.id,table=line.dataset.vab,select=line.querySelector('select');
+   busy=true;button.disabled=true;select.disabled=true;
+   try{
+     const loc=select.value||null;
+     const {error,data}=await db.from(table).update({service_location_id:loc}).eq('id',id).select('id');
+     if(error)throw error;
+     if(!data?.length)throw Error('No se pudo confirmar la actualización.');
+     line.querySelector('small').textContent=select.selectedOptions[0]?.textContent||'Sin asignar';
+     line.dataset.vaSavedSite=loc||'';apply(); // NUEVO
+     line.removeAttribute('data-ra-pending');
+     const list=panel.querySelector('[data-assign-list]');
+     if(!list.querySelector('[data-ra-pending]'))list.removeAttribute('data-biz-dirty');
+     status.textContent='Asignación guardada.';
+   }catch(error){status.textContent='No se guardó: '+error.message;}
+   finally{busy=false;button.disabled=false;select.disabled=false;}
+ };});
  }
  const observer=new MutationObserver(()=>{if($('#adminModal.show')&&typeof activeAdmin!=='undefined'&&activeAdmin==='business'&&!$('#vibraAssignmentPanel'))render();});
  const start=()=>{const host=$('#adminContent');if(host)observer.observe(host,{childList:true});document.addEventListener('click',e=>{if(e.target.closest('#adminTabs'))setTimeout(render,250)});setTimeout(render,1200)};
@@ -12879,6 +13292,104 @@ html body #adminModal #adminContent .ve-cat .btn[aria-pressed=true]{background:v
 .ve-business #veBiz-location .ve-geo-layout .field{min-width:0}
 .ve-business #veBiz-location .ve-geo-layout :is(.input,.textarea,.select){width:100%}
 .ve-business #veBiz-location #v15PinColor{width:100%;height:42px;border:1px solid var(--ui-border);border-radius:8px;background:var(--ui-raised,var(--ui-surface));padding:5px}
+/* NUEVO */
+.ve-business :is(#veBiz-rooms,#veBiz-assignments){container-type:inline-size;min-width:0}
+.ve-business :is(#veBiz-rooms,#veBiz-assignments) [hidden]{display:none!important}
+.ve-business #vibraRoomAdminList{display:block}
+.ve-business .ra-card,.ve-business .ra-room,.ve-business .ra-stats>div,.ve-business .ra-mode{min-width:0;border:1px solid var(--ui-border);border-radius:12px;padding:12px;background:var(--ui-surface);color:var(--ui-text)}
+.ve-business .ra-stats{display:grid;grid-template-columns:repeat(auto-fit,minmax(min(100%,122px),1fr));gap:8px;margin:0 0 12px}
+.ve-business .ra-stats>div{display:grid;gap:5px;background:linear-gradient(145deg,var(--ui-surface),color-mix(in srgb,var(--ui-surface),var(--primary) 9%))}
+.ve-business .ra-stats strong{font-size:1.2em}.ve-business .ra-stats span{font-size:.83em;color:var(--ui-muted)}
+.ve-business .ra-room-layout{display:grid;grid-template-columns:minmax(0,1fr) minmax(0,.87fr);gap:12px;align-items:start}
+.ve-business .ra-room-layout:has([data-room-editor][hidden]){grid-template-columns:minmax(0,1fr)}
+.ve-business .ra-head,.ve-business .ra-actions{display:flex;align-items:center;flex-wrap:wrap;gap:8px}
+.ve-business .ra-head{justify-content:space-between}
+.ve-business :is(#veBiz-rooms,#veBiz-assignments) :is(h3,h4,p){margin:0 0 6px}
+.ve-business .ra-fields,.ve-business .ra-mode-grid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:8px;margin-block:8px}
+.ve-business :is(#veBiz-rooms,#veBiz-assignments) label{display:grid;gap:5px;min-width:0}
+.ve-business :is(#veBiz-rooms,#veBiz-assignments) :is(input:not([type=checkbox]),select,textarea){width:100%;max-width:100%;min-width:0;box-sizing:border-box}
+.ve-business .ra-actions>.btn,.ve-business .ra-head>.btn{gap:7px;white-space:normal;max-width:100%}
+.ve-business :is(#veBiz-rooms,#veBiz-assignments) svg{flex:none;width:17px;height:17px}
+.ve-business [data-room-cards]{display:grid;gap:9px}
+.ve-business .ra-room{display:grid;grid-template-columns:minmax(95px,150px) minmax(0,1fr);gap:12px;transition:border-color .18s,box-shadow .18s}
+.ve-business .ra-room:hover{border-color:var(--primary);box-shadow:0 4px 18px color-mix(in srgb,var(--primary) 12%,transparent)}
+.ve-business .ra-room-photo{display:grid;place-items:center;align-self:start;border:1px solid var(--ui-border);border-radius:10px;background:var(--ui-raised,var(--ui-surface));aspect-ratio:4/3}
+.ve-business .ra-room-photo img{width:100%;height:100%;min-height:0;object-fit:contain;border-radius:inherit}
+.ve-business .ra-room-photo>svg{width:26px;height:26px}
+.ve-business .ra-room-info{min-width:0;overflow-wrap:anywhere}
+.ve-business .ra-room-summary{display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;overflow:hidden}
+.ve-business .ra-chips,.ve-business .ra-thumbs{display:flex;gap:6px;flex-wrap:wrap;margin-block:7px}
+.ve-business .ra-chips span{padding:3px 7px;border:1px solid var(--ui-border);border-radius:6px;color:var(--ui-text);font-size:.84em}
+.ve-business [data-room-editor] fieldset{min-width:0;margin:8px 0;padding:9px;border:1px solid var(--ui-border);border-radius:9px;display:grid;gap:7px}
+.ve-business [data-room-editor] legend{font-weight:700;padding-inline:5px}
+.ve-business [data-room-editor] .ra-check{display:flex;align-items:center}
+.ve-business .ra-thumbs figure{width:min(100%,115px);margin:0;display:grid;gap:4px;overflow-wrap:anywhere}
+.ve-business .ra-thumbs img{width:100%;height:70px;object-fit:contain;border:1px solid var(--ui-border);border-radius:8px}
+.ve-business [data-ra-views]{margin-bottom:10px}
+.ve-business .ra-mode-grid{grid-column:1/-1}
+.ve-business #veBiz-assignments .ra-mode{display:grid;grid-template-columns:auto minmax(0,1fr) auto;gap:6px;align-items:center;cursor:pointer;transition:border-color .16s,background .16s}
+.ve-business .ra-mode small{grid-column:2/-1;color:var(--ui-muted)}
+.ve-business .ra-mode input{appearance:auto;accent-color:var(--primary);width:17px;height:17px}
+.ve-business .ra-prof-card{display:flex;gap:10px;align-items:center;grid-column:1/-1}
+.ve-business .ra-initials{padding:8px;border:1px solid var(--ui-border);border-radius:9px;color:var(--ui-text)}
+.ve-business #veBiz-assignments #vibraAssignmentPanel{background:var(--ui-surface);color:var(--ui-text);margin:0}
+.ve-business #veBiz-assignments .vab-row{grid-template-columns:minmax(0,1fr) minmax(0,1fr) auto}
+.ve-business .vab-row small{display:block;color:var(--ui-muted)}
+#adminModal .ve-business :is(#veBiz-rooms,#veBiz-assignments) :is(h3,h4,p,strong,label,input:not([type=checkbox]),select,textarea){color:var(--ui-text)!important}
+#adminModal .ve-business :is(#veBiz-rooms,#veBiz-assignments) :is(.btn.secondary,.vab-row select){background:var(--ui-raised,var(--ui-surface))!important;color:var(--ui-text)!important;border:1px solid var(--ui-border)}
+#adminModal .ve-business :is(#veBiz-rooms,#veBiz-assignments) :is(.btn.secondary:hover,[aria-pressed=true],.ra-mode:has(input:checked),.ra-mode:hover){border-color:var(--primary)!important;background:color-mix(in srgb,var(--ui-surface),var(--primary) 14%)!important}
+#adminModal .ve-business :is(#veBiz-rooms,#veBiz-assignments) :is(button,input,select,textarea):focus-visible,.ve-business .ra-mode:focus-within{outline:2px solid var(--primary);outline-offset:2px}
+#adminModal .ve-business :is(#veBiz-rooms,#veBiz-assignments) :disabled {opacity:1;cursor:wait}
+@container (max-width:760px){.ve-business .ra-room-layout{grid-template-columns:minmax(0,1fr)}.ve-business [data-room-editor]{grid-row:1}}
+@container (max-width:455px){.ve-business .ra-fields,.ve-business .ra-mode-grid,.ve-business #veBiz-assignments .vab-row{grid-template-columns:minmax(0,1fr)}.ve-business .ra-room{grid-template-columns:minmax(0,1fr)}.ve-business .ra-room-photo{width:100%;max-height:175px;aspect-ratio:16/9}}
+@media(prefers-reduced-motion:reduce){.ve-business :is(.ra-room,.ra-mode){transition:none}}
+#vroomOverlay[data-ra-admin-viewer] :is(#vroomDialog,#vroomInfo){background:var(--ui-surface);color:var(--ui-text);border-color:var(--ui-border)}
+#vroomOverlay[data-ra-admin-viewer] .vroom-button:not(.vroom-primary){background:var(--ui-raised,var(--ui-surface));color:var(--ui-text);opacity:1}
+#vroomOverlay[data-ra-admin-viewer] .vroom-button:focus-visible{outline:2px solid var(--primary);outline-offset:2px}
+#adminModal .ve-business :is(#veBiz-rooms,#veBiz-assignments) :is(input,textarea)::placeholder{color:var(--ui-muted);opacity:1}
+/* NUEVO */
+#adminModal #v18HoursAdmin{container-type:inline-size;padding:14px;background:var(--ui-surface);color:var(--ui-text);min-width:0}
+#v18HoursAdmin :is(.vh-head,.vh-actions){display:flex;flex-wrap:wrap;gap:8px;align-items:center}
+#v18HoursAdmin .vh-head{justify-content:space-between}
+#v18HoursAdmin :is(h3,h4,p){margin:0 0 6px}
+#v18HoursAdmin .vh-stats{display:grid;grid-template-columns:repeat(auto-fit,minmax(min(100%,155px),1fr));gap:8px;margin-block:12px}
+#v18HoursAdmin .vh-stats>div,#v18HoursAdmin :is(.vh-quick,.vh-week){padding:12px;border:1px solid var(--ui-border);border-radius:12px;background:var(--ui-raised,var(--ui-surface))}
+#v18HoursAdmin .vh-stats>div{display:grid;gap:4px;position:relative;background:linear-gradient(140deg,var(--ui-surface),color-mix(in srgb,var(--ui-surface),var(--primary) 11%))}
+#v18HoursAdmin .vh-stats svg{position:absolute;right:9px;top:9px;width:17px;height:17px}
+#v18HoursAdmin .vh-stats span{padding-inline-end:20px;color:var(--ui-muted)}
+#v18HoursAdmin .vh-quick{margin-block:10px}
+#v18HoursAdmin summary{cursor:pointer;font-weight:700;padding-block:4px}
+#v18HoursAdmin .vh-copy{display:flex;align-items:end;flex-wrap:wrap;gap:10px;margin-top:10px}
+#v18HoursAdmin .vh-copy fieldset{display:flex;flex-wrap:wrap;gap:7px;min-width:0;border:1px solid var(--ui-border);border-radius:8px}
+#v18HoursAdmin .v18-hours-row{display:grid;align-items:end;grid-template-columns:minmax(92px,1fr) minmax(75px,.7fr) repeat(2,minmax(110px,1fr)) minmax(76px,.7fr);gap:7px 10px;margin:0;padding:9px 3px;border:0;border-bottom:1px solid var(--ui-border);border-radius:0;background:transparent}
+#v18HoursAdmin .vh-day,#v18HoursAdmin .vh-time{display:grid;gap:4px;min-width:0}
+#v18HoursAdmin [data-vh-state],#v18HoursAdmin [data-vh-note]{font-size:.82em;color:var(--ui-muted)}
+#v18HoursAdmin [data-vh-note]{grid-column:1/-1}
+#v18HoursAdmin [data-vh-note]:empty{display:none}
+#v18HoursAdmin :is(.vh-toggle,.vh-copy label){display:flex;gap:6px;align-items:center;min-width:0}
+#v18HoursAdmin input[type=checkbox]{accent-color:var(--primary);flex:none}
+#v18HoursAdmin input[type=time]{width:100%;min-width:0;box-sizing:border-box}
+#v18HoursAdmin input[type=time]::-webkit-calendar-picker-indicator{opacity:1;flex-shrink:0}
+body.dark-mode #v18HoursAdmin input[type=time]{color-scheme:dark}
+body:not(.dark-mode) #v18HoursAdmin input[type=time]{color-scheme:light}
+#adminModal #v18HoursAdmin :is(h3,h4,p,label,input,select){color:var(--ui-text)!important}
+#adminModal #v18HoursAdmin :is(.btn.secondary,input[type=time],select){background:var(--ui-surface)!important;color:var(--ui-text)!important;border:1px solid var(--ui-border)}
+#adminModal #v18HoursAdmin :is(button,input,select):disabled{opacity:1;background:var(--ui-raised,var(--ui-surface));color:var(--ui-muted);cursor:not-allowed}
+#adminModal #v18HoursAdmin :is(button,summary,input,select):focus-visible{outline:2px solid var(--primary);outline-offset:2px}
+#v18HoursAdmin :is(.btn,summary){transition:box-shadow .18s,border-color .18s}
+#v18HoursAdmin :is(.btn:not(:disabled),summary):hover{box-shadow:0 0 12px color-mix(in srgb,var(--primary) 23%,transparent)}
+#v18HoursAdmin .btn:not(:disabled):active{box-shadow:inset 0 0 0 1px var(--primary)}
+#v18HoursAdmin .btn svg{width:17px;height:17px;flex:none}
+@container(max-width:590px){#v18HoursAdmin .v18-hours-row{grid-template-columns:repeat(2,minmax(0,1fr));align-items:center}#v18HoursAdmin .vh-copy{align-items:start}#v18HoursAdmin .vh-copy>label{flex-wrap:wrap}}
+@media(prefers-reduced-motion:reduce){#v18HoursAdmin :is(.btn,summary){transition:none}}
+/* MODIFICADO: apartado de asignaciones */
+#veBiz-assignments .ra-mode small{grid-column:2/-1}
+#veBiz-assignments .ra-mode [data-va-mode-state]{grid-column:2/-1;color:var(--ui-text);font-size:.78em;font-weight:700}
+#veBiz-assignments .ra-mode{background:linear-gradient(135deg,var(--ui-surface),var(--ui-raised,var(--ui-surface)))}
+#veBiz-assignments .ra-mode:active{box-shadow:inset 0 0 0 1px var(--primary)}
+#veBiz-assignments .va-filter{margin-block:10px}
+#veBiz-assignments [data-ra-pending]{border-inline-start:3px solid var(--primary);padding-inline-start:8px}
+#veBiz-assignments [data-assign-refresh]{margin-top:8px}
 .ve-business :is(#vibraVenueAdminList,#vibraRoomAdminList,#vscopeSiteList){display:grid;gap:7px;margin-block:8px}
 .ve-business :is(#vibraVenueAdminList,#vibraRoomAdminList,#vscopeSiteList)>*{min-width:0;overflow-wrap:anywhere}
 .ve-business summary{color:var(--ui-link);cursor:pointer;padding:6px 0}
@@ -13130,6 +13641,19 @@ function mountSiteMap(scope,address,lat,lng){
  }
  scope.addEventListener('ve-remove-map',()=>map.remove(),{once:true});
 }
+// NUEVO
+function mountAssignments(view){
+ const modes=view.querySelector('[data-biz-group="assignments"]'),links=view.querySelector('#vibraAssignmentPanel');
+ if(!modes||!links)return; // MODIFICADO
+ const existing=view.querySelector('[data-ra-views]');
+ if(existing){modes.hidden=existing.dataset.vaView==='1';links.hidden=existing.dataset.vaView!=='1';return;}
+ const nav=document.createElement('div');nav.className='ra-actions';nav.dataset.raViews='';
+ nav.innerHTML='<!-- NUEVO --><button type="button" class="btn secondary" aria-pressed="true">Modalidades por profesional</button><button type="button" class="btn secondary" aria-pressed="false">Sedes y habitaciones</button>';
+ view.querySelector('h2').after(nav);
+ const buttons=[...nav.querySelectorAll('button')];
+ const select=index=>{nav.dataset.vaView=String(index);modes.hidden=index!==0;links.hidden=index!==1;buttons.forEach((b,i)=>b.setAttribute('aria-pressed',String(index===i)));}; // MODIFICADO
+ buttons.forEach((b,i)=>b.onclick=()=>select(i));select(0);
+}
 function mountBusinessGeography(location,sites,delivery){
  const destinations=delivery.querySelector('#veBizDestinations');
  if(destinations&&!destinations.querySelector('[data-ve-destinations-title]')){
@@ -13279,7 +13803,7 @@ function mountBusinessGeography(location,sites,delivery){
      host.prepend(root);
      root.addEventListener('input',event=>{
        const field=event.target.closest('input,select,textarea');
-       if(field&&!['search','hidden'].includes(field.type)){root.dataset.pending='1';field.closest('[data-biz-group]')?.setAttribute('data-biz-draft','');}
+       if(field&&!field.closest('#v18HoursAdmin')&&!['search','hidden'].includes(field.type)){root.dataset.pending='1';field.closest('[data-biz-group]')?.setAttribute('data-biz-draft','');}
      });
      root.querySelector('[role=tablist]').addEventListener('click',e=>{const key=e.target.closest('[data-biz-tab]')?.dataset.bizTab;if(key)select(key);});
      root.querySelector('[role=tablist]').addEventListener('keydown',e=>{
@@ -13319,10 +13843,11 @@ function mountBusinessGeography(location,sites,delivery){
    }
    const delivery=host.querySelector('#deliveryEnabled');
    if(delivery)place(view('delivery'),delivery.closest('label'));
-   for(const id of ['vibraRoomAdminList','vibraVenueAdminList'] /* MODIFICADO */){
+   for(const id of ['vibraVenueAdminList'] /* MODIFICADO */){
      const list=root.querySelector('#'+id);enhanceList(list);list?.veSearch?.();
    }
    mountBusinessGeography(view('location'),view('sites'),view('delivery')); // NUEVO
+   mountAssignments(view('assignments')); // NUEVO
    if(initial)select(active);
    for(const id of ['vibraAdminFeedback','v9AdminStatus']){
      const status=root.querySelector('#'+id);
@@ -13347,7 +13872,7 @@ function mountBusinessGeography(location,sites,delivery){
    if(id!=='business'&&activeAdmin==='business'){
      if(!panelCan(id))return navigate(id);
      const original=host.querySelector('.ve-business');
-     if((original?.dataset.pending||original?.hasAttribute('data-general-pay-draft')||original?.hasAttribute('data-general-logo-draft'))&&!confirm('¿Salir de Negocio? Los cambios que aún no hayas guardado se descartarán.'))return;
+     if((original?.dataset.pending||original?.querySelector('[data-vh-dirty]')||original?.hasAttribute('data-general-pay-draft')||original?.hasAttribute('data-general-logo-draft'))&&!confirm('¿Salir de Negocio? Los cambios que aún no hayas guardado se descartarán.'))return;
      const result=await navigate(id);
      if(original&&!original.isConnected&&sharedAdmin&&original.contains(sharedAdmin)){
        sharedAdmin.append(...original.querySelectorAll('[data-biz-group],#v9AdminStatus'));
