@@ -7170,6 +7170,9 @@ async function saveLocation(){
  try{
    const r=await db().from('service_locations').insert(p);
    if(r.error)throw r.error;
+   // MODIFICADO
+   ['v9LocName','v9LocAddress','v9LocLat','v9LocLng'].forEach(id=>{el('#'+id).value='';});
+   el('#v9LocLat').dispatchEvent(new Event('input'));
    setMsg('Sede guardada.');
    load();window.vibraBusinessViews?.refreshSites();
  }catch(error){setMsg(error.message);}
@@ -8196,8 +8199,10 @@ function renderRoomWorkspace(root){
 
 // MODIFICADO
 function renderAdmin(){const rm=$('#vibraRoomAdminList'),ve=$('#vibraVenueAdminList');if(!rm||!ve)return;renderRoomWorkspace(rm);
-ve.innerHTML=venues.map(v=>'<div class="vibra-manage-item"><div><strong>'+esc(v.name)+'</strong><p>'+esc(v.kind)+' · '+esc(v.address)+'</p></div><div class="vibra-manage-buttons"><button data-edit="'+esc(v.id)+'">Editar</button><button data-pause="'+esc(v.id)+'">'+(v.active?'Pausar':'Publicar')+'</button><button data-delete="'+esc(v.id)+'">Eliminar</button></div></div>').join('')||'<p>Sin destinos registrados.</p>';ve.querySelectorAll('[data-edit]').forEach(b=>b.onclick=()=>{const v=venues.find(x=>x.id===b.dataset.edit);$('#vibraVenueEditing').value=v.id;$('#vibraVenueName').value=v.name;$('#vibraVenueKind').value=v.kind;$('#vibraVenueAddress').value=v.address;$('#vibraVenueLat').value=v.latitude;$('#vibraVenueLng').value=v.longitude;$('#vibraVenueSave').textContent='Actualizar destino';const editor=$('#veBizVenueForm');if(editor){editor.open=true;$('#vibraVenueName').focus()}});ve.querySelectorAll('[data-pause]').forEach(b=>b.onclick=async()=>{const v=venues.find(x=>x.id===b.dataset.pause);const r=await db().from('vibra_destinations').update({active:!v.active}).eq('id',v.id);if(r.error)msg(r.error.message);else hydrate()});ve.querySelectorAll('[data-delete]').forEach(b=>b.onclick=async()=>{if(!confirm('¿Eliminar este destino?'))return;const r=await db().from('vibra_destinations').delete().eq('id',b.dataset.delete);if(r.error)msg(r.error.message);else hydrate()})}
-async function saveVenue(){const b=$('#vibraVenueSave'),id=$('#vibraVenueEditing').value;const v={name:$('#vibraVenueName').value.trim(),kind:$('#vibraVenueKind').value,address:$('#vibraVenueAddress').value.trim(),latitude:Number($('#vibraVenueLat').value),longitude:Number($('#vibraVenueLng').value),verified:false};if(!v.name||!v.address||!$('#vibraVenueLat').value||!$('#vibraVenueLng').value||Math.abs(v.latitude)>90||Math.abs(v.longitude)>180)return msg('Datos incompletos o coordenadas inválidas');b.disabled=true;try{const r=id?await db().from('vibra_destinations').update(v).eq('id',id):await db().from('vibra_destinations').insert(v);if(r.error)throw r.error;$('#vibraVenueEditing').value='';b.textContent='Guardar destino';msg('Destino guardado');await hydrate()}catch(e){msg(e.message)}finally{b.disabled=false}}
+// MODIFICADO
+ve.innerHTML=venues.map(v=>'<div class="vibra-manage-item" data-ve-kind="'+esc(v.kind)+'" data-ve-visibility="'+(v.active?'yes':'no')+'"><div><strong>'+esc(v.name)+'</strong><p>'+(v.kind==='hotel'?'Hotel':v.kind==='motel'?'Motel':esc(v.kind))+' · '+esc(v.address)+' · '+(v.active?'Publicado':'Oculto')+'</p></div><div class="vibra-manage-buttons"><button data-edit="'+esc(v.id)+'">Editar</button><button data-pause="'+esc(v.id)+'">'+(v.active?'Pausar':'Publicar')+'</button><button data-delete="'+esc(v.id)+'">Eliminar</button></div></div>').join('')||'<p>Sin destinos registrados.</p>';ve.querySelectorAll('[data-edit]').forEach(b=>b.onclick=()=>{const v=venues.find(x=>x.id===b.dataset.edit);$('#vibraVenueEditing').value=v.id;$('#vibraVenueName').value=v.name;$('#vibraVenueKind').value=v.kind;$('#vibraVenueAddress').value=v.address;$('#vibraVenueLat').value=v.latitude;$('#vibraVenueLng').value=v.longitude;$('#vibraVenueSave').textContent='Actualizar destino';const editor=$('#veBizVenueForm');if(editor){editor.open=true;$('#vibraVenueName').focus()}});ve.querySelectorAll('[data-pause]').forEach(b=>b.onclick=async()=>{const v=venues.find(x=>x.id===b.dataset.pause);const r=await db().from('vibra_destinations').update({active:!v.active}).eq('id',v.id);if(r.error)msg(r.error.message);else hydrate()});ve.querySelectorAll('[data-delete]').forEach(b=>b.onclick=async()=>{if(!confirm('¿Eliminar este destino?'))return;const r=await db().from('vibra_destinations').delete().eq('id',b.dataset.delete);if(r.error)msg(r.error.message);else hydrate()});ve.dispatchEvent(new Event('ve-destinations-render'));}
+// MODIFICADO
+async function saveVenue(){const b=$('#vibraVenueSave'),id=$('#vibraVenueEditing').value;if(b.disabled)return;const v={name:$('#vibraVenueName').value.trim(),kind:$('#vibraVenueKind').value,address:$('#vibraVenueAddress').value.trim(),latitude:Number($('#vibraVenueLat').value),longitude:Number($('#vibraVenueLng').value),...(!id?{verified:false}:{})};if(!v.name||!v.address||!$('#vibraVenueLat').value||!$('#vibraVenueLng').value||Math.abs(v.latitude)>90||Math.abs(v.longitude)>180)return msg('Datos incompletos o coordenadas inválidas');b.disabled=true;try{const r=id?await db().from('vibra_destinations').update(v).eq('id',id):await db().from('vibra_destinations').insert(v);if(r.error)throw r.error;$('#vibraVenueEditing').value='';b.textContent='Guardar destino';msg('Destino guardado');await hydrate()}catch(e){msg(e.message)}finally{b.disabled=false}}
 function init(){bind();shell();const ob=new MutationObserver(()=>{if(!adminLoaded)adminSection();else if(!$('#vibraAdvancedBookingAdmin')){adminLoaded=false;adminSection()}});ob.observe($('#adminContent')||document.body,{childList:true});setTimeout(()=>hydrate().catch(console.warn),1700)}
 if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',init);else init();
 })();
@@ -8635,7 +8640,7 @@ function region(p){const v=venues.find(v=>String(v.id)===String(p.service_locati
 function filter(){const f=window.vibraMassageFilterValues||{},cat=$('vibraServiceCatalog');if(!cat)return;cat.querySelectorAll('.vibra-service-card').forEach(card=>{const id=card.querySelector('[data-vibra-book]')?.dataset.vibraBook;const p=practitioners.find(x=>String(x.id)===String(id));const r=p?region(p):{state_name:'',municipality:'',category:''};/* MODIFICADO: aplicar tipo y ubicación también a servicios del local */const eq=(a,b)=>String(a||'').normalize('NFD').replace(/[\u0300-\u036f]/g,'').toLowerCase().trim()===String(b||'').normalize('NFD').replace(/[\u0300-\u036f]/g,'').toLowerCase().trim();const match=(f.kind!=='Masajes independientes')&&(!f.state||eq(r.state_name,f.state))&&(!f.city||eq(r.municipality,f.city))&&(!f.category||eq(r.category,f.category))&&(!p||p.active!==false);card.hidden=!match;});}
 const options=(list,value='')=>['',...list].map(x=>`<option value="${esc(x)}" ${x===value?'selected':''}>${esc(x||'Sin seleccionar')}</option>`).join('');
 const states=['Aguascalientes','Baja California','Baja California Sur','Campeche','Coahuila','Colima','Chiapas','Chihuahua','Ciudad de México','Durango','Guanajuato','Guerrero','Hidalgo','Jalisco','México','Michoacán','Morelos','Nayarit','Nuevo León','Oaxaca','Puebla','Querétaro','Quintana Roo','San Luis Potosí','Sinaloa','Sonora','Tabasco','Tamaulipas','Tlaxcala','Veracruz','Yucatán','Zacatecas'];
-function row(type,obj){return `<div class="vla-line" data-vla-type="${type}" data-vla-id="${esc(obj.id)}"><strong>${esc(obj.display_name||obj.name)}</strong><label>Sede<select data-vla-venue>${options(venues.filter(v=>v.is_active!==false).map(v=>v.id),obj.service_location_id||'')}</select></label><label>Estado<select data-vla-state>${options(states,obj.state_name||'')}</select></label><label>Municipio<input data-vla-city value="${esc(obj.municipality||'')}" placeholder="Municipio"></label>${type==='practitioners'?`<label>Tipo<select data-vla-category>${options(['Mujer','Gay','Trans'],obj.service_category||'')}</select></label>`:''}<button type="button" class="btn" data-vla-save>Guardar</button></div>`}
+function row(type,obj){return `<div class="vla-line" data-vla-type="${type}" data-vla-id="${esc(obj.id)}"><strong>${esc(obj.display_name||obj.name)}</strong><label>Sede<select data-vla-venue>${options(venues.filter(v=>v.is_active!==false).map(v=>v.id),obj.service_location_id||'')}</select></label><label>Estado<select data-vla-state>${options(type==='service_locations'&&obj.state_name&&!states.includes(obj.state_name)?[...states,obj.state_name]:states,obj.state_name||'')}</select></label><label>Municipio<input data-vla-city value="${esc(obj.municipality||'')}" placeholder="Municipio"></label>${type==='practitioners'?`<label>Tipo<select data-vla-category>${options(['Mujer','Gay','Trans'],obj.service_category||'')}</select></label>`:''}<button type="button" class="btn" data-vla-save>Guardar</button></div>`}
 function renderAdmin(){if(!adminAllowed()||!$('adminModal')?.classList.contains('show')||typeof activeAdmin==='undefined'||!['products','business'].includes(activeAdmin))return;const host=$('adminContent');if(!host)return;const section=activeAdmin;let panel=$('vibraLocalAdmin');if(panel&&panel.dataset.module!==section)panel.remove();panel=$('vibraLocalAdmin');if(!panel){panel=document.createElement('section');panel.id='vibraLocalAdmin';panel.className='vibra-location-admin';panel.dataset.module=section;host.prepend(panel)}const signature=section+JSON.stringify(practitioners)+JSON.stringify(venues);if(panel.dataset.locationDraft==='true'||panel.dataset.locationSignature===signature)return;panel.dataset.locationSignature=signature;lastAdmin=signature; // MODIFICADO
  const rows=section==='business'?venues.map(v=>row('service_locations',v)):practitioners.map(p=>row('practitioners',p));
  panel.innerHTML=`<h3>${section==='business'?'Estado y municipio de las sedes':'Ubicación de masajistas del local'}</h3><p class="small muted">${section==='business'?'La sede suministra la ubicación a sus profesionales cuando no tienen una ubicación específica.':'Asigna una sede o un estado y municipio para aplicar los filtros públicos.'}</p>${rows.join('')||'<p>Sin registros disponibles.</p>'}<p class="vla-message" id="vlaMessage" aria-live="polite"></p>`;
@@ -9224,9 +9229,10 @@ document.addEventListener('DOMContentLoaded',registerBusinessSites,{once:true});
 async function showAdmin(key){const content=one('#adminContent');if(!content)return;all('#adminTabs .tab-btn').forEach(x=>x.classList.remove('active'));one('#vscope'+key+'AdminTab')?.classList.add('active');all('#adminContent>.admin-pane').forEach(x=>x.classList.remove('active'));let host=one('#vscopeAdminStandalone');if(!host){host=document.createElement('section');host.id='vscopeAdminStandalone';host.className='section-card vscope-admin-box';content.prepend(host)}host.style.display='block';host.innerHTML='<h3>'+ (key==='Rooms'?'Gestión de habitaciones':'Gestión de sedes')+'</h3><p class="vscope-status">Cargando registros de Supabase…</p>';const db=client();if(!db){host.querySelector('p').textContent='No hay conexión a Supabase.';return;}if(key==='Rooms')await roomsAdmin(host,db);else await sitesAdmin(host,db);content.scrollTop=0;}
 async function roomsAdmin(host,db){const r=await db.from('rooms').select('id,name,description,active').order('name');if(!host.isConnected)return;if(r.error){host.querySelector('p').textContent=r.error.message;return;}roomItems=r.data||[];host.innerHTML='<h3>Habitaciones</h3><div id="vscopeRoomsList"></div><details><summary>Crear habitación</summary><label>Nombre<input id="vscopeNewRoom"></label><label>Descripción<textarea id="vscopeNewRoomDesc"></textarea></label><button id="vscopeCreateRoom">Guardar habitación</button></details><p id="vscopeRoomMsg" class="vscope-status"></p>';const list=one('#vscopeRoomsList');list.innerHTML=roomItems.map(x=>'<article class="vscope-admin-entry" data-id="'+esc(x.id)+'"><strong>'+esc(x.name)+'</strong><div class="vscope-admin-fields"><label>Nombre<input data-name value="'+esc(x.name)+'"></label><label>Descripción<textarea data-desc>'+esc(x.description||'')+'</textarea></label></div><div class="vscope-admin-toolbar"><button data-action="save">Guardar</button><button data-action="pause">'+(x.active?'Pausar':'Publicar')+'</button><button data-action="delete">Eliminar</button></div></article>').join('')||'<p>No hay habitaciones registradas.</p>';list.onclick=async e=>{const btn=e.target.closest('[data-action]'),card=btn?.closest('[data-id]');if(!card||adminBusy)return;const id=card.dataset.id;let op;const action=btn.dataset.action;if(action==='delete'&&!confirm('¿Eliminar definitivamente esta habitación?'))return;adminBusy=true;btn.disabled=true;try{if(action==='save')op=await db.from('rooms').update({name:card.querySelector('[data-name]').value.trim(),description:card.querySelector('[data-desc]').value.trim()}).eq('id',id);else if(action==='pause'){const item=roomItems.find(x=>x.id===id);op=await db.from('rooms').update({active:!item.active}).eq('id',id)}else op=await db.from('rooms').delete().eq('id',id);if(op.error)throw op.error;await roomsAdmin(host,db)}catch(err){one('#vscopeRoomMsg').textContent=err.message}finally{adminBusy=false;if(btn.isConnected)btn.disabled=false}};one('#vscopeCreateRoom').onclick=async()=>{if(adminBusy)return;const name=one('#vscopeNewRoom').value.trim();if(!name)return;adminBusy=true;try{const r=await db.from('rooms').insert({name,description:one('#vscopeNewRoomDesc').value.trim(),active:true});if(r.error)throw r.error;await roomsAdmin(host,db)}catch(err){one('#vscopeRoomMsg').textContent=err.message}finally{adminBusy=false}};}
 // MODIFICADO
+// MODIFICADO
 async function sitesAdmin(host,db){
   const revision=(host.veSiteRevision||0)+1;host.veSiteRevision=revision;
-  const response=await db.from('service_locations').select('id,name,address,latitude,longitude,is_active');
+  const response=await db.from('service_locations').select('id,name,address,latitude,longitude,is_active,state_name,municipality');
   if(response.error)throw response.error;
   if(revision!==host.veSiteRevision||!host.isConnected||activeAdmin!=='business')return;
   const records=response.data||[];
@@ -9234,7 +9240,7 @@ async function sitesAdmin(host,db){
   if(!host.querySelector('#vscopeSiteList')){
     host.innerHTML=`<!-- MODIFICADO --><div class="ve-geo-heading"><div><h3>Sedes oficiales registradas</h3><p class="small">Consulta y administra las ubicaciones del negocio.</p></div><button type="button" class="btn" data-ve-add-site>${UI.plus}<span>Registrar nueva sede</span></button></div>
       <div class="ve-geo-stats" data-ve-sites-stats></div>
-      <div class="ve-geo-fields"><label class="field">Buscar por nombre o dirección<input class="input" type="search" data-ve-site-search></label><label class="field">Estado operativo<select class="input" data-ve-site-filter><option value="">Todos</option><option value="active">Activas</option><option value="paused">Pausadas</option></select></label></div>
+      <div class="ve-geo-fields"><label class="field">Buscar por nombre o dirección<input class="input" type="search" data-ve-site-search></label><label class="field">Publicación<select class="input" data-ve-site-filter><option value="">Todos</option><option value="active">Visibles</option><option value="paused">Ocultas</option></select></label><label class="field">Municipio<select class="input" data-ve-municipality></select></label></div><p data-ve-site-count role="status"></p>
       <div id="vscopeSiteList"></div><button type="button" class="btn secondary" data-ve-site-more>Mostrar más</button><p id="vscopeSiteMsg" role="status"></p>`;
   }
   const q=sel=>host.querySelector(sel), list=q('#vscopeSiteList'), message=q('#vscopeSiteMsg');
@@ -9243,24 +9249,32 @@ async function sitesAdmin(host,db){
     const create=document.querySelector('#veBiz-sites [data-ve-site-create]');
     if(create){create.open=true;create.querySelector('#v9LocName').focus();}
   };
-  q('[data-ve-sites-stats]').innerHTML=`<div><span>Total de sedes</span><strong>${sites.length}</strong></div><div><span>Activas</span><strong>${sites.filter(x=>x.is_active).length}</strong></div><div><span>Pausadas</span><strong>${sites.filter(x=>!x.is_active).length}</strong></div>`;
+  // NUEVO
+  const municipality=q('[data-ve-municipality]'), selected=municipality.value;
+  const municipalities=[...new Set(sites.filter(site=>site.municipality).map(site=>[site.municipality,site.state_name].filter(Boolean).join(', ')))].sort((a,b)=>a.localeCompare(b,'es'));
+  municipality.innerHTML='<option value="">Todos</option>'+municipalities.map(value=>`<option value="${esc(value)}">${esc(value)}</option>`).join('');
+  if(municipalities.includes(selected))municipality.value=selected;
+  q('[data-ve-sites-stats]').innerHTML=`<div><span>Total de sedes</span><strong>${sites.length}</strong></div><div><span>Visibles al público</span><strong>${sites.filter(x=>x.is_active).length}</strong></div><div><span>Ocultas al público</span><strong>${sites.filter(x=>!x.is_active).length}</strong></div><div><span>Municipios registrados</span><strong>${municipalities.length}</strong></div>`;
   const normalize=value=>String(value??'').normalize('NFD').replace(/[\u0300-\u036f]/g,'').toLowerCase().trim();
   const existing=new Map([...list.querySelectorAll('[data-id]')].map(row=>[row.dataset.id,row]));
   const styleAction=(action,label,icon,style='secondary')=>`<button type="button" class="btn ${style}" data-action="${action}">${icon}<span>${label}</span></button>`;
   for(const site of sites){
     const id=String(site.id), old=existing.get(id), signature=JSON.stringify(site);
     existing.delete(id);
-    if(old?.dataset.signature===signature)continue;
+    if(old&&(old.dataset.signature===signature||old.hasAttribute('data-ve-site-draft')))continue;
     const row=document.createElement('details');
     row.className='vscope-admin-entry ve-geo-site';
     row.dataset.id=id;row.dataset.signature=signature;
-    row.innerHTML=`<summary><span class="ve-geo-site-symbol">${UI.map}</span><span><strong>${esc(site.name)}</strong><span class="ve-geo-site-address">${esc(site.address)}</span><small>${esc(site.latitude)}, ${esc(site.longitude)}</small></span><span class="ve-geo-state">${site.is_active?'Activa':'Pausada'}</span></summary>
+    row.innerHTML=`<summary><span class="ve-geo-site-symbol">${UI.map}</span><span><strong>${esc(site.name)}</strong><span class="ve-geo-site-address">${esc(site.address)}</span><small>${esc([site.municipality,site.state_name].filter(Boolean).join(', '))} · ${esc(site.latitude)}, ${esc(site.longitude)}</small></span><span class="ve-geo-state">${site.is_active?'Visible':'Oculta'}</span></summary>
       <div class="ve-geo-fields"><label class="field">Nombre<input class="input" data-name value="${esc(site.name)}"></label><label class="field">Dirección<input class="input" data-address value="${esc(site.address)}"></label><label class="field">Latitud<input class="input" data-lat type="number" min="-90" max="90" step="any" value="${esc(site.latitude)}"></label><label class="field">Longitud<input class="input" data-lon type="number" min="-180" max="180" step="any" value="${esc(site.longitude)}"></label></div>
       <div class="ve-geo-site-map" data-ve-location-map></div>
-      <div class="toolbar">${styleAction('save','Guardar sede',UI.save,'')}${styleAction('pause',site.is_active?'Pausar':'Activar',UI.clock||UI.refresh)}${styleAction('delete','Eliminar',UI.trash)}</div>`;
+      <div class="toolbar">${styleAction('save','Guardar sede',UI.save,'')}${styleAction('discard','Descartar',UI.refresh)}${styleAction('pause',site.is_active?'Ocultar':'Mostrar',UI.clock||UI.refresh)}${styleAction('delete','Eliminar',UI.trash)}</div>`;
     if(old){old.dispatchEvent(new Event('ve-remove-map'));old.replaceWith(row);}else list.append(row);
+    row.addEventListener('input',()=>row.setAttribute('data-ve-site-draft',''));
     row.addEventListener('toggle',()=>{
-      if(row.open)mountSiteMap(row,row.querySelector('[data-address]'),row.querySelector('[data-lat]'),row.querySelector('[data-lon]'));
+      if(!row.open)return;
+      list.querySelectorAll('details[open]').forEach(other=>{if(other!==row)other.open=false;});
+      mountSiteMap(row,row.querySelector('[data-address]'),row.querySelector('[data-lat]'),row.querySelector('[data-lon]'));
     });
   }
   existing.forEach(row=>{row.dispatchEvent(new Event('ve-remove-map'));row.remove();});
@@ -9272,13 +9286,14 @@ async function sitesAdmin(host,db){
     let count=0;
     for(const row of list.querySelectorAll('[data-id]')){
       const site=sites.find(x=>String(x.id)===row.dataset.id);
-      const match=site&&normalize(site.name+' '+site.address).includes(term)&&(!stateFilter||(site.is_active?'active':'paused')===stateFilter);
+      const match=site&&normalize(site.name+' '+site.address).includes(term)&&(!municipality.value||[site.municipality,site.state_name].filter(Boolean).join(', ')===municipality.value)&&(!stateFilter||(site.is_active?'active':'paused')===stateFilter);
       row.hidden=!match||++count>limit;
     }
+    q('[data-ve-site-count]').textContent=count+' sedes encontradas';
     more.hidden=count<=limit;empty.hidden=count>0;empty.textContent=sites.length?'No hay sedes que coincidan con estos filtros.':'No hay sedes registradas.';
     list.dataset.limit=limit;
   };
-  search.oninput=filter.onchange=()=>{limit=8;update();};
+  search.oninput=filter.onchange=municipality.onchange=()=>{limit=8;update();};
   more.onclick=()=>{limit+=8;update();};update();
   list.onclick=async e=>{
     const button=e.target.closest('[data-action]'),card=button?.closest('[data-id]');
@@ -9286,7 +9301,13 @@ async function sitesAdmin(host,db){
     const site=sites.find(x=>String(x.id)===card.dataset.id);
     if(!site)return;
     const action=button.dataset.action;
-    if(action==='delete'&&!confirm(`¿Eliminar «${site.name}»? La operación está sujeta a las relaciones y restricciones de esta sede.`))return;
+    // NUEVO
+    if(action==='discard'){
+      if(!confirm('¿Descartar cambios de esta sede?'))return;
+      card.removeAttribute('data-ve-site-draft');delete card.dataset.signature;
+      await sitesAdmin(host,db).catch(error=>message.textContent=error.message);
+      return;
+    }
     adminBusy=true;button.disabled=true;message.textContent='Procesando…';
     try{
       const query=db.from('service_locations');
@@ -9297,10 +9318,19 @@ async function sitesAdmin(host,db){
         if(!data.name||!data.address||!coords(data))throw Error('Completa los datos y coordenadas válidas.');
         result=await query.update(data).eq('id',site.id).select('id');
       }else if(action==='pause')result=await query.update({is_active:!site.is_active}).eq('id',site.id).select('id');
-      else result=await query.delete().eq('id',site.id).select('id');
+      else {
+        // NUEVO: consultar vínculos que ya utiliza el apartado Asignaciones.
+        const checks=await Promise.all(['practitioners','rooms'].map(table=>db.from(table).select('id',{head:true,count:'exact'}).eq('service_location_id',site.id)));
+        if(checks.some(check=>check.error||check.count===null))throw Error('No se pudieron comprobar las relaciones de la sede.');
+        const [professionals,rooms]=checks.map(check=>check.count);
+        if(professionals||rooms)throw Error(`La sede tiene ${professionals} profesionales y ${rooms} habitaciones vinculados. Consulta Asignaciones antes de eliminarla.`);
+        if(!confirm(`¿Eliminar «${site.name}»? Tiene 0 profesionales y 0 habitaciones vinculados. El servidor comprobará sus demás restricciones.`)){message.textContent='Eliminación cancelada.';return;}
+        result=await query.delete().eq('id',site.id).select('id');
+      }
       if(result.error)throw result.error;
       if(!result.data?.length)throw Error('No se pudo confirmar la operación. Comprueba los permisos.');
-      await sitesAdmin(host,db);
+      if(action==='save')card.removeAttribute('data-ve-site-draft');
+      try{await sitesAdmin(host,db);}catch{message.textContent='Operación guardada. No se pudo actualizar el listado.';return;}
       message.textContent=action==='delete'?'Sede eliminada.':'Cambios guardados.';
     }catch(error){message.textContent=error.message;}
     finally{adminBusy=false;if(button.isConnected)button.disabled=false;}
@@ -13430,6 +13460,23 @@ body:not(.dark-mode) #v18HoursAdmin input[type=time]{color-scheme:light}
 #veBiz-assignments .va-filter{margin-block:10px}
 #veBiz-assignments [data-ra-pending]{border-inline-start:3px solid var(--primary);padding-inline-start:8px}
 #veBiz-assignments [data-assign-refresh]{margin-top:8px}
+/* NUEVO */
+#veBiz-sites [data-biz-site-editor]{container-type:inline-size}
+#veBiz-sites .ve-geo-site-layout{grid-template-columns:minmax(0,1.2fr) minmax(0,.8fr)}
+#veBiz-sites [data-ve-coverage]{border:1px solid var(--ui-border);border-radius:12px;padding:12px;margin-top:12px;background:var(--ui-surface)}
+#veBiz-sites [data-ve-coverage]>summary{cursor:pointer;font-weight:700;color:var(--ui-text)}
+#veBiz-sites .ve-geo-site{transition:border-color .16s,box-shadow .16s;background:linear-gradient(145deg,var(--ui-surface),color-mix(in srgb,var(--ui-surface),var(--primary) 8%))}
+#veBiz-sites .ve-geo-site:is(:hover,[open]){border-color:var(--primary);box-shadow:0 0 15px color-mix(in srgb,var(--primary) 14%,transparent)}
+#veBiz-sites .ve-geo-site[open]>summary{border-bottom:1px solid var(--ui-border)}
+#veBiz-sites .ve-geo-site[data-ve-site-draft] .ve-geo-site-symbol{border-color:var(--primary)}
+#veBiz-sites [data-ve-site-count]{color:var(--ui-muted);font-size:.84em}
+#veBiz-sites [data-ve-site-create] .v9fields{grid-template-columns:repeat(2,minmax(0,1fr))}
+#veBiz-sites [data-ve-site-create] :is(input,select),#veBizDestinations #veBizVenueForm :is(input,select){width:100%;min-width:0;box-sizing:border-box}
+#adminModal :is(#veBiz-sites,#veBizDestinations) .leaflet-bar a{color:var(--ui-text)!important;background:var(--ui-surface)!important}
+@container(max-width:720px){#veBiz-sites .ve-geo-site-layout{grid-template-columns:minmax(0,1fr)}}
+@media(prefers-reduced-motion:reduce){#veBiz-sites .ve-geo-site{transition:none}}
+#veBizDestinations [hidden]{display:none!important}
+#veBizDestinations .ve-geo-fields{grid-template-columns:repeat(auto-fit,minmax(min(100%,150px),1fr))}
 .ve-business :is(#vibraVenueAdminList,#vibraRoomAdminList,#vscopeSiteList){display:grid;gap:7px;margin-block:8px}
 .ve-business :is(#vibraVenueAdminList,#vibraRoomAdminList,#vscopeSiteList)>*{min-width:0;overflow-wrap:anywhere}
 .ve-business summary{color:var(--ui-link);cursor:pointer;padding:6px 0}
@@ -13657,6 +13704,7 @@ function mountSiteMap(scope,address,lat,lng){
  };
  const set=position=>{
    revision++;lat.value=position.lat;lng.value=position.lng;draw(point());
+   lat.dispatchEvent(new Event('input',{bubbles:true})); // NUEVO
  };
  draw(saved);map.on('click',event=>set(event.latlng));
  [lat,lng,address].forEach(field=>field.addEventListener('input',()=>{revision++;draw(point());}));
@@ -13700,6 +13748,38 @@ function mountBusinessGeography(location,sites,delivery){
    const title=document.createElement('h3');title.dataset.veDestinationsTitle='';title.textContent='Hoteles y establecimientos';
    const note=document.createElement('p');note.className='small muted';note.textContent='Destinos externos para las reservas y entregas del negocio.';
    destinations.prepend(title,note);
+   // NUEVO
+   const form=destinations.querySelector('#veBizVenueForm');
+   const map=document.createElement('div');map.dataset.veLocationMap='';map.className='ve-geo-site-map';map.id='veVenueAdminMap';
+   form.querySelector('#vibraVenueSave').before(map);
+   const [address,lat,lng]=['vibraVenueAddress','vibraVenueLat','vibraVenueLng'].map(id=>form.querySelector('#'+id));
+   const list=destinations.querySelector('#vibraVenueAdminList');
+   const filters=document.createElement('div');filters.className='ve-geo-fields';
+   filters.innerHTML='<!-- NUEVO --><label>Buscar por nombre o dirección<input class="input" type="search"></label><label>Tipo<select class="input"><option value="">Todos</option><option value="hotel">Hotel</option><option value="motel">Motel</option></select></label><label>Publicación<select class="input"><option value="">Todas</option><option value="yes">Publicados</option><option value="no">Ocultos</option></select></label>';
+   const count=document.createElement('p');count.setAttribute('role','status');
+   const more=document.createElement('button');more.type='button';more.className='btn secondary';more.textContent='Mostrar más destinos';
+   list.before(filters,count);list.after(more);
+   const [search,kind,visibility]=filters.querySelectorAll('input,select');
+   const normalize=value=>value.normalize('NFD').replace(/[\u0300-\u036f]/g,'').toLowerCase().trim();
+   let limit=8;
+   const update=()=>{
+     let total=0;
+     for(const row of list.querySelectorAll('[data-ve-kind]')){
+       const matches=normalize(row.firstElementChild.textContent).includes(normalize(search.value))&&(!kind.value||kind.value===row.dataset.veKind)&&(!visibility.value||visibility.value===row.dataset.veVisibility);
+       row.hidden=!matches||++total>limit;
+     }
+     count.textContent=total?total+' destinos encontrados':'No hay destinos que coincidan.';
+     more.hidden=total<=limit;
+   };
+   search.oninput=kind.onchange=visibility.onchange=()=>{limit=8;update();};
+   more.onclick=()=>{limit+=8;update();};
+   list.addEventListener('ve-destinations-render',update);update();
+   const mount=()=>mountSiteMap(form,address,lat,lng);
+   form.addEventListener('toggle',mount);
+   destinations.addEventListener('click',event=>{
+     if(event.target.closest('[data-edit]'))requestAnimationFrame(()=>{mount();lat.dispatchEvent(new Event('input'));});
+   });
+
  }
 
  const mapCard=location.querySelector('#originMap')?.closest('.section-card');
@@ -13765,13 +13845,34 @@ function mountBusinessGeography(location,sites,delivery){
    const map=document.createElement('div');map.dataset.veLocationMap='';map.className='ve-geo-site-map';map.id='veNewSiteMap';
    const fields=group.querySelector('.v9fields'),save=group.querySelector('#v9SaveLoc');
    create.append(summary,fields,map,save);group.querySelector('h3').replaceWith(create);
+   // NUEVO
+   const discard=document.createElement('button');discard.type='button';discard.className='btn secondary';discard.textContent='Descartar alta';
+   save.after(discard);
+   discard.onclick=()=>{
+     if(!confirm('¿Descartar el borrador de la nueva sede?'))return;
+     fields.querySelectorAll('input').forEach(input=>{input.value='';});
+     fields.querySelector('select').selectedIndex=0;
+     create.querySelector('#v9LocLat').dispatchEvent(new Event('input'));
+     create.open=false;
+     sites.querySelector('[data-ve-add-site]')?.focus();
+   };
+
    create.addEventListener('toggle',()=>{if(create.open)mountSiteMap(create,create.querySelector('#v9LocAddress'),create.querySelector('#v9LocLat'),create.querySelector('#v9LocLng'));});
  }
  if(group&&editor.parentElement===sites){
    const grid=document.createElement('div');grid.className='ve-geo-layout ve-geo-site-layout';
    editor.before(grid);grid.append(editor,group);
  }
- if(coverage&&coverage.parentElement===sites&&sites.lastElementChild!==coverage)sites.append(coverage);
+ // MODIFICADO
+ if(coverage&&coverage.parentElement===sites){
+   let section=sites.querySelector('[data-ve-coverage]');
+   if(!section){
+     section=document.createElement('details');section.dataset.veCoverage='';
+     section.innerHTML='<!-- NUEVO --><summary>Cobertura geográfica · estado y municipio</summary>';
+     sites.append(section);
+   }
+   section.append(coverage);
+ }
 }
 // NUEVO: vistas internas de Negocio que conservan los formularios y sus eventos.
 (()=>{
@@ -13780,7 +13881,7 @@ function mountBusinessGeography(location,sites,delivery){
   ['general','Información general','M4 21V7l8-4 8 4v14M2 21h20M9 21v-6h6v6'],
   ['location','Ubicación y pin','M12 22s7-7 7-13a7 7 0 1 0-14 0c0 6 7 13 7 13Zm0-10a3 3 0 1 0 0-6 3 3 0 0 0 0 6Z'],
   ['hours','Horarios','M12 22a10 10 0 1 0 0-20 10 10 0 0 0 0 20Zm0-16v6l4 2'],
-  ['sites','Sedes','M3 21V9h8v12m2 0V3h8v18M1 21h22M6 13h2m8-6h2m-2 5h2'],
+  ['sites','Sedes y hoteles','M3 21V9h8v12m2 0V3h8v18M1 21h22M6 13h2m8-6h2m-2 5h2'],
   ['rooms','Habitaciones','M3 20V5m18 15v-8H3m0 5h18M6 12V8h6v4m0 0V8h5a4 4 0 0 1 4 4'],
   ['assignments','Asignaciones','M9 15l6-6m-7 8-2 2a4 4 0 0 1-6-6l5-5a4 4 0 0 1 6 0m2 8a4 4 0 0 0 6 0l5-5a4 4 0 0 0-6-6l-2 2'],
   ['delivery','Destinos y entregas','M2 5h12v12H2Zm12 5h4l4 4v3h-8M8 20a2 2 0 1 0-4 0 2 2 0 0 0 4 0Zm12 0a2 2 0 1 0-4 0 2 2 0 0 0 4 0Z'],
