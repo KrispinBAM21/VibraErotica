@@ -6474,9 +6474,9 @@ renderBusinessAdmin=function(c){
   const days=['mon','tue','wed','thu','fri','sat','sun'];
   const clock='<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" aria-hidden="true"><circle cx="12" cy="12" r="9"/><path d="M12 7v5l3 2"/></svg>';
   sec.innerHTML=`<!-- MODIFICADO --><header class="vh-head"><div><h3>Horarios comerciales</h3><p>Horario semanal del negocio que se muestra en el perfil público.</p></div><div class="vh-actions"><button type="button" class="btn secondary" data-vh-reset>Descartar cambios</button><button type="button" class="btn" id="v18SaveHours">${UI.save}<span>Guardar horarios</span></button></div></header>
-    <div class="vh-stats"><div>${clock}<span>Días activos</span><strong data-vh-active></strong></div><div><span>Jornadas de 24 horas</span><strong data-vh-all></strong></div><div><span>Configuración del editor</span><strong data-vh-pending></strong></div></div>
-    <details class="vh-quick"><summary>Acciones rápidas</summary><p>Los cambios se aplican al borrador. Revísalos antes de guardar.</p><div class="vh-actions"><button type="button" class="btn secondary" data-vh-open="all">Abrir todos los días</button><button type="button" class="btn secondary" data-vh-open="weekend">Abrir sábado y domingo</button></div>
-    <div class="vh-copy"><label>Día de origen<select class="select" data-vh-source>${days.map(key=>`<option value="${key}">${DAY_NAMES[key]}</option>`).join('')}</select></label><fieldset><legend>Días que se reemplazarán</legend>${days.map(key=>`<label><input type="checkbox" data-vh-destination="${key}"> ${DAY_NAMES[key]}</label>`).join('')}</fieldset><button type="button" class="btn secondary" data-vh-copy>Copiar al borrador</button></div></details>
+    <div class="vh-stats"><div>${clock}<span>Días activos del borrador</span><strong data-vh-active></strong></div><!-- NUEVO --><div><span>Horas semanales del borrador</span><strong data-vh-total></strong></div><div><span>Jornadas de 24 horas</span><strong data-vh-all></strong></div><div><span>Configuración del editor</span><strong data-vh-pending></strong></div></div>
+    <!-- MODIFICADO --><section class="vh-quick"><div class="vh-head"><h4>Acciones rápidas</h4><div class="vh-actions"><button type="button" class="btn secondary" data-vh-open="all">Abrir todos los días</button><button type="button" class="btn secondary" data-vh-open="weekend">Abrir sábado y domingo</button></div></div><details><summary>Copiar horario entre días</summary>
+    <div class="vh-copy"><label>Día de origen<select class="select" data-vh-source>${days.map(key=>`<option value="${key}">${DAY_NAMES[key]}</option>`).join('')}</select></label><fieldset><legend>Días que se reemplazarán</legend>${days.map(key=>`<label><input type="checkbox" data-vh-destination="${key}"> ${DAY_NAMES[key]}</label>`).join('')}</fieldset><button type="button" class="btn secondary" data-vh-copy>Copiar al borrador</button></div></details></section>
     <div class="vh-week"><h4>Horario semanal</h4><p>Los intervalos nocturnos se muestran con el cierre al día siguiente.</p><div class="v18-hours-admin">${days.map(key=>`<div class="v18-hours-row" data-day="${key}">
       <div class="vh-day"><strong>${DAY_NAMES[key]}</strong><span data-vh-state></span></div>
       <label class="vh-toggle"><input type="checkbox" data-open aria-label="Abrir el ${DAY_NAMES[key]}"> Abierto</label>
@@ -6494,6 +6494,26 @@ renderBusinessAdmin=function(c){
     const r=hours[key];return [key,{open:!!r.open,allDay:!!r.allDay,start:r.start||'09:00',end:r.end||'20:00'}];
   }));
   const problem=r=>r.open&&!r.allDay&&(!r.start||!r.end)?'Completa apertura y cierre.':'';
+  // NUEVO: contar solamente la unión de los intervalos del editor.
+  const weeklyMinutes=()=>{
+    const week=7*1440, intervals=[];
+    for(const [index,key] of days.entries()){
+      const row=draft[key];
+      if(!row.open)continue;
+      if(problem(row)||(!row.allDay&&row.start===row.end))return null;
+      const offset=index*1440;
+      const start=offset+(row.allDay?0:v18TimeToMinutes(row.start));
+      const end=offset+(row.allDay?1440:v18TimeToMinutes(row.end)+(row.end<row.start?1440:0));
+      intervals.push([start,Math.min(end,week)]);
+      if(end>week)intervals.push([0,end-week]);
+    }
+    let total=0, through=0;
+    for(const [start,end] of intervals.sort((a,b)=>a[0]-b[0])){
+      total+=Math.max(0,end-Math.max(start,through));
+      through=Math.max(end,through);
+    }
+    return total;
+  };
   const sync=()=>{
     const dirty=JSON.stringify(saved)!==JSON.stringify(draft);
     let invalid=false;
@@ -6506,6 +6526,9 @@ renderBusinessAdmin=function(c){
       row.querySelector('[data-vh-note]').textContent=error||(r.open&&!r.allDay&&r.end<r.start?'Cierre al día siguiente':r.open&&!r.allDay&&r.end===r.start?'Apertura y cierre coinciden. Para atención continua usa «24 horas».':'');
       invalid ||= !!error;
     }
+    // NUEVO
+    const minutes=weeklyMinutes();
+    q('[data-vh-total]').textContent=minutes===null?'Por definir':Math.floor(minutes/60)+' h'+(minutes%60?' '+minutes%60+' min':'');
     q('[data-vh-active]').textContent=days.filter(key=>draft[key].open).length+' de 7';
     q('[data-vh-all]').textContent=days.filter(key=>draft[key].open&&draft[key].allDay).length;
     q('[data-vh-pending]').textContent=saving?'Guardando…':dirty?'Cambios pendientes':'Valores guardados';
@@ -6538,7 +6561,9 @@ renderBusinessAdmin=function(c){
     if(event.target.closest('[data-vh-copy]')){
       const keys=destinations.filter(input=>input.checked&&!input.disabled).map(input=>input.dataset.vhDestination);
       const r=draft[source.value];
-      if(!keys.length||problem(r))return changed(!keys.length?'Selecciona al menos un día de destino.':'Completa el horario del día de origen.');
+      // MODIFICADO
+      if(!keys.length)return changed('Selecciona al menos un día de destino.');
+      if(problem(r)||(r.open&&!r.allDay&&r.start===r.end))return changed('Revisa la apertura y el cierre del día de origen antes de copiar.');
       if(!confirm(`¿Copiar el horario de ${DAY_NAMES[source.value]} a ${keys.map(key=>DAY_NAMES[key]).join(', ')}?`))return;
       keys.forEach(key=>{draft[key]={...r};});changed('Horario copiado al borrador.');
     }
@@ -6548,7 +6573,9 @@ renderBusinessAdmin=function(c){
     if(save.disabled)return;
     saving=true;sync();status.textContent='Guardando horario semanal…';
     try{
-      const next=Object.fromEntries(days.map(key=>[key,{...draft[key],allDay:draft[key].open&&draft[key].allDay}]));
+      // MODIFICADO: conservar propiedades del horario que este editor no modifica.
+      const current=state.config.businessHours;
+      const next={...current,...Object.fromEntries(days.map(key=>[key,{...current[key],...draft[key],allDay:draft[key].open&&draft[key].allDay}]))};
       await saveBusinessMapSetting('businessHours',next);
       restore();status.textContent='Horarios guardados.';
     }catch(error){status.textContent='No se guardó: '+error.message;}
@@ -13357,7 +13384,19 @@ html body #adminModal #adminContent .ve-cat .btn[aria-pressed=true]{background:v
 #v18HoursAdmin .vh-stats>div{display:grid;gap:4px;position:relative;background:linear-gradient(140deg,var(--ui-surface),color-mix(in srgb,var(--ui-surface),var(--primary) 11%))}
 #v18HoursAdmin .vh-stats svg{position:absolute;right:9px;top:9px;width:17px;height:17px}
 #v18HoursAdmin .vh-stats span{padding-inline-end:20px;color:var(--ui-muted)}
+/* MODIFICADO */
 #v18HoursAdmin .vh-quick{margin-block:10px}
+#v18HoursAdmin .vh-quick details{margin-top:8px}
+#v18HoursAdmin .vh-week{padding-block-end:4px}
+#v18HoursAdmin .vh-week .v18-hours-row:last-child{border-bottom:0}
+#v18HoursAdmin [data-vh-state]{width:fit-content;border:1px solid var(--ui-border);border-radius:6px;padding:1px 6px}
+#v18HoursAdmin .v18-hours-row:has([data-open]:checked) [data-vh-state]{background:color-mix(in srgb,var(--ui-surface),var(--primary) 12%);color:var(--ui-text)}
+#v18HoursAdmin .v18-hours-row:focus-within{background:color-mix(in srgb,var(--ui-surface),var(--primary) 7%)}
+#v18HoursAdmin .vh-toggle>input[data-open]{appearance:none;width:32px;height:19px;border-radius:20px;border:1px solid var(--ui-border);background:var(--ui-surface);display:inline-grid;align-items:center;padding:2px;box-sizing:border-box}
+#v18HoursAdmin .vh-toggle>input[data-open]::before{content:"";display:block;width:11px;height:11px;background:var(--ui-muted);border-radius:50%}
+#v18HoursAdmin .vh-toggle>input[data-open]:checked{background:var(--primary);border-color:var(--primary)}
+#v18HoursAdmin .vh-toggle>input[data-open]:checked::before{justify-self:end;background:white}
+#v18HoursAdmin input[aria-invalid=true]{outline:2px solid var(--primary);outline-offset:1px}
 #v18HoursAdmin summary{cursor:pointer;font-weight:700;padding-block:4px}
 #v18HoursAdmin .vh-copy{display:flex;align-items:end;flex-wrap:wrap;gap:10px;margin-top:10px}
 #v18HoursAdmin .vh-copy fieldset{display:flex;flex-wrap:wrap;gap:7px;min-width:0;border:1px solid var(--ui-border);border-radius:8px}
@@ -13380,7 +13419,8 @@ body:not(.dark-mode) #v18HoursAdmin input[type=time]{color-scheme:light}
 #v18HoursAdmin :is(.btn:not(:disabled),summary):hover{box-shadow:0 0 12px color-mix(in srgb,var(--primary) 23%,transparent)}
 #v18HoursAdmin .btn:not(:disabled):active{box-shadow:inset 0 0 0 1px var(--primary)}
 #v18HoursAdmin .btn svg{width:17px;height:17px;flex:none}
-@container(max-width:590px){#v18HoursAdmin .v18-hours-row{grid-template-columns:repeat(2,minmax(0,1fr));align-items:center}#v18HoursAdmin .vh-copy{align-items:start}#v18HoursAdmin .vh-copy>label{flex-wrap:wrap}}
+/* MODIFICADO */
+@container(max-width:590px){#v18HoursAdmin .v18-hours-row{grid-template-columns:repeat(2,minmax(0,1fr));align-items:center;border:1px solid var(--ui-border);border-radius:9px;margin-block:7px;padding:8px}#v18HoursAdmin .vh-week .v18-hours-row:last-child{border-bottom:1px solid var(--ui-border)}#v18HoursAdmin .vh-copy{align-items:start}#v18HoursAdmin .vh-copy>label{flex-wrap:wrap}}
 @media(prefers-reduced-motion:reduce){#v18HoursAdmin :is(.btn,summary){transition:none}}
 /* MODIFICADO: apartado de asignaciones */
 #veBiz-assignments .ra-mode small{grid-column:2/-1}
