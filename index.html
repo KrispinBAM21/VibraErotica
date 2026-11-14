@@ -12663,8 +12663,191 @@ html body #adminModal #adminContent .ve-cat .btn[aria-pressed=true]{background:v
 .ve-business :is(.vibra-inline-admin,.vibra-manage-item){color:var(--ui-text);border-color:var(--ui-border)}
 html body #adminModal .ve-business :is(.vibra-manage-buttons button,.vibra-section-action,.vscope-admin-toolbar button,summary){color:var(--ui-link)}
 .ve-business :is(#vibraAdminFeedback,#v9AdminStatus):empty{display:none}
+/* NUEVO: composición de Información general, delimitada al apartado. */
+#veBiz-general{container:ve-general / inline-size}
+.ve-general,.ve-general-grid,.ve-general-identity,.ve-general-pay{display:grid;gap:12px;min-width:0;align-content:start}
+.ve-general-grid{align-items:start}
+.ve-general-summary{display:grid;grid-template-columns:repeat(auto-fit,minmax(min(100%,160px),1fr));gap:8px}
+.ve-general-summary>div{padding:8px 12px;border:1px solid var(--ui-border);border-inline-start:3px solid var(--ui-link);border-radius:10px;background:var(--ui-surface);overflow-wrap:anywhere}
+.ve-general-summary strong{display:block;color:var(--ui-text)}
+html body #adminModal #adminContent .ve-general .section-card{margin:0;padding:12px;border-radius:12px}
+.ve-general .section-card>h3{display:flex;align-items:center;gap:8px;margin:0 0 10px;padding-bottom:8px;border-bottom:1px solid var(--ui-border);font-size:1rem}
+.ve-general :is(h3,button,.btn)>svg{width:17px;height:17px;flex:0 0 17px}
+.ve-general h3>svg{color:var(--ui-link)}
+.ve-general small,.ve-general-status{color:var(--ui-muted)}
+.ve-general .faithful-logo-preview img{width:72px;height:72px;object-fit:contain}
+.ve-general-methods{display:flex;gap:6px;flex-wrap:wrap;margin-block:8px}
+.ve-general-methods .btn{max-width:100%;white-space:normal}
+html body #adminModal #adminContent .ve-general-methods .btn[aria-pressed=true]{background:var(--ui-action)!important;color:var(--ui-on-action)!important;border-color:var(--ui-focus)!important}
+.ve-general-methods .btn small{color:inherit}
+.ve-general-payment-form,.ve-general-preview{border:1px solid var(--ui-border);border-radius:10px;padding:10px;background:var(--ui-field);min-width:0;overflow-wrap:anywhere}
+.ve-general-payment-form{display:grid;gap:6px}
+.ve-general-payment-form .field{margin:0}
+.ve-general-preview{margin-block:9px}
+.ve-general-preview :is(h4,p){margin:0 0 6px}
+.ve-general .ve-general-footer{display:flex;flex-wrap:wrap;gap:6px}
+.ve-general .btn{white-space:normal;min-height:36px}
+.ve-general .btn:disabled{opacity:1;border-style:dashed}
+.ve-general :is(button,input,select):focus-visible{outline:2px solid var(--ui-focus);outline-offset:2px}
+@container ve-general (min-width:665px){.ve-general-grid{grid-template-columns:minmax(0,5fr) minmax(0,7fr)}}
+@media(hover:hover){.ve-general .btn:hover:not(:disabled){box-shadow:0 0 8px var(--ui-glow);border-color:var(--ui-focus)!important}}
+@media(prefers-reduced-motion:no-preference){.ve-general .btn{transition:border-color .2s,box-shadow .2s}.ve-general .btn:active:not(:disabled){translate:0 1px}}
 </style>
 <script>
+// NUEVO: editor de Información general sobre los formularios originales de Negocio.
+function mountBusinessGeneral(view){
+ if(!view||view.querySelector('.ve-general'))return;
+ const get=id=>view.querySelector('#'+id);
+ const card=id=>get(id)?.closest('.section-card');
+ const identity=card('bizName'), whatsapp=card('bizWhatsapp'), security=card('changePassword'), payment=card('paymentAdmin');
+ if(!identity||!whatsapp||!security||!payment)return;
+ const root=document.createElement('div');root.className='ve-general';
+ root.innerHTML='<!-- NUEVO --><div class="ve-general-summary"></div><div class="ve-general-grid"><div class="ve-general-identity"></div><div class="ve-general-pay"></div></div>';
+ view.append(root);
+ const side=root.querySelector('.ve-general-identity');
+ for(const el of [identity,whatsapp,security,card('foodSaveSocials'),card('retrySupabase')])if(el)side.append(el);
+ root.querySelector('.ve-general-pay').append(payment);
+ const heading=(el,label,svg)=>{el.querySelector('h3').innerHTML=svg+'<span>'+label+'</span>';};
+ heading(identity,'Identidad del negocio',UI.business);
+ heading(whatsapp,'WhatsApp de atención',UI.whatsapp);
+ heading(security,'Seguridad de la cuenta',UI.lock);
+ heading(payment,'Métodos de pago',UI.receipt);
+ const socialCard=card('foodSaveSocials');
+ if(socialCard){
+   heading(socialCard,'Enlaces generales del sitio',UI.link||UI.map);
+   socialCard.querySelector('h3').insertAdjacentHTML('afterend','<p>Estos enlaces pertenecen a la configuración general del sitio.</p>');
+   if(panelCan('profile')){
+     const link=document.createElement('button');link.type='button';link.className='btn secondary';
+     link.innerHTML=UI.business+'<span>Abrir Perfil y redes</span>';link.onclick=()=>renderAdminPane('profile');
+     socialCard.append(link);
+   }
+ }
+ get('bizWhatsapp').setAttribute('inputmode','tel');
+ get('bizWhatsapp').insertAdjacentHTML('afterend','<small>Incluye el código de país. Este número se usa al abrir el enlace de contacto.</small>');
+ const pay=get('paymentAdmin'), initial=()=>state.config.payments.map(p=>({...p}));
+ let methods=initial(), selected=methods[0]?.id||null, logo=state.config.logo||'', logoRevision=0, busy=false;
+ 
+ const picker=document.createElement('div');picker.className='ve-general-methods';pay.before(picker);
+ const preview=document.createElement('section');preview.className='ve-general-preview';
+ preview.innerHTML='<h4>Vista previa del cliente</h4><p></p><div></div>';pay.after(preview);
+ const controls=document.createElement('div');controls.className='toolbar ve-general-footer';get('savePayments').after(controls);
+ controls.append(get('savePayments'),get('addPayment'));
+ const reset=document.createElement('button');reset.type='button';reset.className='btn secondary';reset.innerHTML=UI.refresh+'<span>Descartar métodos</span>';controls.append(reset);
+ const status=document.createElement('p');status.className='ve-general-status';status.setAttribute('role','status');controls.after(status);
+ const q=s=>pay.querySelector(s);
+ const sync=()=>{
+   const p=methods.find(p=>p.id===selected);
+   if(!p||!q('[data-payment-type]'))return;
+   Object.assign(p,{title:get('pt_'+p.id).value.trim(),data:get('pd_'+p.id).value.trim(),beneficiary:get('pb_'+p.id).value.trim(),visible:q('[data-panel-visible]').checked,type:q('[data-payment-type]').value,generateReference:q('[data-payment-reference]').checked,allowProof:q('[data-payment-proof]').checked});
+ };
+ const comparable=list=>list.map(p=>[p.id,p.title,p.data||'',p.beneficiary||'',p.visible!==false,paymentType(p),p.generateReference!==false,p.allowProof!==false]);
+ const dirty=()=>JSON.stringify(comparable(methods))!==JSON.stringify(comparable(initial()));
+ const stats=()=>{
+   const summary=root.querySelector('.ve-general-summary');
+   summary.innerHTML='<div><small>Métodos visibles guardados</small><strong>'+state.config.payments.filter(p=>p.visible!==false).length+'</strong></div><div><small>WhatsApp guardado</small><strong>'+esc(state.config.whatsapp||'Sin configurar')+'</strong></div>';
+ };
+ function paintPreview(){
+   const pending=dirty(), p=methods.find(x=>x.id===selected);
+   preview.querySelector('p').textContent=pending?'Cambios de métodos pendientes de guardar':'Configuración guardada';
+   const body=preview.querySelector('div');
+   body.innerHTML=p?.visible!==false&&p?paymentDetailsHtml(p):'<p>El método seleccionado no se muestra al cliente.</p>';
+   body.querySelectorAll('button').forEach(b=>b.disabled=true);
+   reset.disabled=!pending;
+   root.closest('.ve-business')?.toggleAttribute('data-general-pay-draft',pending);
+   const current=picker.querySelector('[aria-pressed=true]');
+   if(current&&p){current.querySelector('span').textContent=p.title||'Sin nombre';current.querySelector('small').textContent=p.visible===false?'Oculto':'Visible';}
+ }
+ function draw(){
+   picker.replaceChildren();
+   for(const p of methods){
+     const b=document.createElement('button');b.type='button';b.className='btn secondary';b.setAttribute('aria-pressed',String(p.id===selected));
+     b.innerHTML=UI.receipt+'<span>'+esc(p.title||'Sin nombre')+'</span><small>'+(p.visible===false?'Oculto':'Visible')+'</small>';
+     b.onclick=()=>{sync();selected=p.id;draw();picker.querySelector('[aria-pressed=true]')?.focus();};picker.append(b);
+   }
+   const p=methods.find(x=>x.id===selected);
+   pay.replaceChildren();
+   if(p){
+     const row=document.createElement('div');
+     row.className='ve-general-payment-form';
+     row.innerHTML=`<div class="admin-grid two">${panelField('pt_'+p.id,'Nombre visible',p.title)}${panelField('pb_'+p.id,'Beneficiario',p.beneficiary)}${panelField('pd_'+p.id,'Cuenta / CLABE / instrucciones',p.data)}</div>
+     <label class="field">Tipo de método<select class="select" data-payment-type="${esc(p.id)}"><option value="transfer">Transferencia</option><option value="cash">Efectivo</option><option value="card">Tarjeta</option><option value="other">Otro</option></select></label>
+     <label class="row"><input type="checkbox" data-panel-visible="${esc(p.id)}" ${p.visible!==false?'checked':''}> Mostrar al cliente</label>
+     <label class="row"><input type="checkbox" data-payment-reference="${esc(p.id)}" ${p.generateReference!==false?'checked':''}> Generar referencia para transferencias</label>
+     <label class="row"><input type="checkbox" data-payment-proof="${esc(p.id)}" ${p.allowProof!==false?'checked':''}> Permitir adjuntar comprobante</label>
+     <button type="button" class="btn danger" data-panel-delete="${esc(p.id)}">${UI.trash}<span>Retirar método</span></button>`;
+     pay.append(row);q('[data-payment-type]').value=paymentType(p);
+     q('[data-panel-delete]').onclick=()=>{if(!confirm('¿Retirar este método? Se aplicará al guardar métodos.'))return;methods=methods.filter(x=>x.id!==p.id);selected=methods[0]?.id||null;draw();};
+   }else pay.textContent='Sin métodos seleccionados.';
+   root.closest('.ve-business')?.toggleAttribute('data-general-pay-draft',dirty());
+   paintPreview();
+ }
+ pay.oninput=pay.onchange=()=>{sync();paintPreview();};
+ get('addPayment').onclick=()=>{sync();selected=uid('pay');methods.push({id:selected,title:'Nuevo método',data:'',beneficiary:'',visible:true});draw();get('pt_'+selected).focus();};
+ reset.onclick=()=>{if(confirm('¿Descartar los cambios de métodos de pago?')){methods=initial();selected=methods[0]?.id||null;draw();}};
+ const saveSection=async(button,patch,message)=>{
+   if(busy)return;
+   busy=true;root.inert=true;button.disabled=true;status.textContent='Guardando…';
+   try{
+     if(!supabaseClient||!panelCan('business'))throw Error('Se requiere permiso de Negocio.');
+     if(cloudSaving)await cloudSaving;
+     if(pendingCloudModules.size){clearTimeout(cloudSyncTimer);await syncAdminStateToCloud();}
+     if('payments' in patch){
+       const {error}=await supabaseClient.rpc('vibra_config_save_safe',{p_module:'business',p_data:patch});
+       if(error)throw error;
+     }else await vibraSaveConfig({...state.config,...patch},'business');
+     Object.assign(state.config,patch);saveLocal();
+     if('payments' in patch){methods=initial();draw();}
+     else {renderHeader();if('logo' in patch)paintLogo();}
+     stats();status.textContent=message;toast(message,'ok');
+   }catch(error){status.textContent='Cambios sin guardar. '+(error.message||'No se confirmó el guardado.');toast(status.textContent,'error');}
+   finally{busy=false;root.inert=false;button.disabled=false;}
+ };
+ get('savePayments').onclick=e=>{
+   sync();
+   if(methods.some(p=>!p.title)||new Set(methods.map(p=>p.title)).size!==methods.length)return toast('Usa un nombre distinto para cada método de pago.','error');
+   saveSection(e.currentTarget,{payments:methods.map(p=>({...p}))},'Métodos de pago guardados.');
+ };
+ const logoInput=get('bizLogo'), logoPreview=identity.querySelector('.faithful-logo-preview'), remove=get('panelDeleteLogo');
+ let readingLogo=false;
+ const logoNote=document.createElement('small');logoPreview.after(logoNote);
+ const paintLogo=()=>{
+   logoPreview.querySelector('img')?.remove();
+   if(logo){const img=document.createElement('img');img.src=logo;img.alt='Logotipo del negocio';logoPreview.prepend(img);}
+   root.closest('.ve-business')?.toggleAttribute('data-general-logo-draft',logo!==(state.config.logo||''));
+   remove.disabled=!logo;logoNote.textContent=logo===state.config.logo?'':'El cambio de logotipo se aplica al guardar identidad.';
+ };
+ logoInput.onchange=async()=>{
+   const revision=++logoRevision,file=logoInput.files[0];
+   if(!file){readingLogo=false;return;}
+   readingLogo=true;
+   try{
+     if(!['image/png','image/jpeg','image/webp'].includes(file.type))throw Error('Usa PNG, JPEG o WebP.');
+     const image=await panelReadImage(file);
+     if(revision===logoRevision&&root.isConnected){logo=image;paintLogo();}
+   }catch(error){if(revision===logoRevision)toast(error.message,'error');}
+   finally{if(revision===logoRevision)readingLogo=false;}
+ };
+ remove.onclick=()=>{++logoRevision;readingLogo=false;logo='';logoInput.value='';paintLogo();};
+ get('saveIdentity').onclick=e=>{
+   if(readingLogo)return toast('Espera a que termine la lectura del logotipo.','info');
+   const businessName=get('bizName').value.trim();
+   if(!businessName)return toast('Escribe el nombre del negocio.','error');
+   saveSection(e.currentTarget,{businessName,tagline:get('bizTagline').value.trim(),logo},'Identidad guardada.');
+ };
+ get('saveAccess').onclick=e=>{
+   const whatsapp=get('bizWhatsapp').value.replace(/\D/g,'');
+   if(!whatsapp)return toast('Escribe el número de WhatsApp.','error');
+   saveSection(e.currentTarget,{whatsapp},'WhatsApp guardado.');
+ };
+ for(const [el,label,restore] of [
+   [identity,'Descartar identidad',()=>{++logoRevision;readingLogo=false;get('bizName').value=state.config.businessName;get('bizTagline').value=state.config.tagline;logo=state.config.logo||'';logoInput.value='';paintLogo();}],
+   [whatsapp,'Descartar número',()=>{get('bizWhatsapp').value=state.config.whatsapp||'';}]
+ ]){
+   const b=document.createElement('button');b.type='button';b.className='btn secondary';b.textContent=label;
+   b.onclick=()=>{if(confirm('¿Descartar los cambios de este bloque?'))restore();};el.append(b);
+ }
+ stats();paintLogo();draw();
+}
 // NUEVO: vistas internas de Negocio que conservan los formularios y sus eventos.
 (()=>{
  const host=document.getElementById('adminContent'), modal=document.getElementById('adminModal');
@@ -12758,6 +12941,7 @@ html body #adminModal .ve-business :is(.vibra-manage-buttons button,.vibra-secti
        place(view([card('originMap'),card('cartoApiKey'),card('v15PinSection')].includes(child)?'location':'general'),child);
      }
    }
+   mountBusinessGeneral(view('general')); // NUEVO: organizar solo Información general.
    const booking=host.querySelector('#vibraAdvancedBookingAdmin');
    if(booking){
      const rooms=booking.querySelector('#veBizRooms'), destinations=booking.querySelector('#veBizDestinations');
@@ -12800,7 +12984,7 @@ html body #adminModal .ve-business :is(.vibra-manage-buttons button,.vibra-secti
    if(id!=='business'&&activeAdmin==='business'){
      if(!panelCan(id))return navigate(id);
      const original=host.querySelector('.ve-business');
-     if(original?.dataset.pending&&!confirm('¿Salir de Negocio? Los cambios que aún no hayas guardado se descartarán.'))return;
+     if((original?.dataset.pending||original?.hasAttribute('data-general-pay-draft')||original?.hasAttribute('data-general-logo-draft'))&&!confirm('¿Salir de Negocio? Los cambios que aún no hayas guardado se descartarán.'))return;
      const result=await navigate(id);
      if(original&&!original.isConnected&&sharedAdmin&&original.contains(sharedAdmin)){
        sharedAdmin.append(...original.querySelectorAll('[data-biz-group],#v9AdminStatus'));
