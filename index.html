@@ -7155,9 +7155,10 @@ function displayModeForm(){
  const discard=group.querySelector('[data-ra-discard-modes]');if(discard)discard.hidden=!draft;
  const info=group.querySelector('[data-ra-professional]');
  if(!info)return;
+ // MODIFICADO
  const initials=String(person?.display_name||'').split(/\s+/).slice(0,2).map(word=>word[0]||'').join('');
  const names=links.filter(link=>String(link.practitioner_id)===id).map(link=>services.find(service=>String(service.id)===String(link.service_id))?.name).filter(Boolean);
- info.innerHTML=person?`<div class="ra-initials">${esc(initials)}</div><div><strong>${esc(person.display_name)}</strong>${names.length?`<p>${esc(names.join(' · '))}</p>`:''}<small>${fields.filter(c=>c.checked).length} de ${fields.length} modalidades habilitadas${draft?' · Cambios pendientes':''}</small></div>`:'<p>No hay profesionales para la búsqueda.</p>';
+ info.innerHTML=person?`<div class="ra-initials">${esc(initials)}</div><div><strong>${esc(person.display_name)}</strong>${names.length?`<p>${esc(names.join(' · '))}</p>`:''}<small>${fields.filter(c=>c.checked).length} de ${fields.length} modalidades habilitadas${draft?' · Cambios pendientes':''} · La disponibilidad se comprueba al reservar</small></div>`:'<p>No hay profesionales para la búsqueda.</p>';
 }
 
 // MODIFICADO
@@ -8040,7 +8041,7 @@ function renderRoomWorkspace(root){
  const opts=()=>siteList.map(site=>`<option value="${esc(site.id)}">${esc(site.name)}${site.is_active===false?' (pausada)':''}</option>`).join('');
  const norm=text=>String(text??'').normalize('NFD').replace(/[\u0300-\u036f]/g,'').toLowerCase();
  let draft,trigger,busy=false;
- const statusText=(details)=>roomStatus[details?.status]||(!details?'Libre':'Sin estado');
+ const statusText=(details)=>roomStatus[details?.status]||'Sin estado registrado'; // MODIFICADO
  const buttons=(action,icon,label)=>`<button type="button" class="btn secondary" data-room-action="${action}">${icon||''}<span>${label}</span></button>`;
  const stat=(label,value)=>`<div><span>${label}</span><strong>${value}</strong></div>`;
  function draw(){
@@ -8064,7 +8065,7 @@ function renderRoomWorkspace(root){
      return `<article class="ra-room" data-room-id="${esc(r.id)}">
       <div class="ra-room-photo">${image?`<img src="${esc(image)}" alt="Portada de ${esc(r.name)}" loading="lazy">`:UI.image||UI.camera||UI.map}</div>
       <div class="ra-room-info"><h4>${esc(r.name)}</h4><p>${esc(site?.name||(r.service_location_id?'Sede no disponible':'Sin sede asignada'))}</p>
-      <div class="ra-chips"><span>${r.active!==false?'Publicada':'Oculta'}</span><span>${statusText(d)}</span></div>
+      <!-- MODIFICADO --><div class="ra-chips"><span data-room-published="${r.active!==false}">${r.active!==false?'Publicada':'Oculta'}</span><span data-room-state-chip="${esc(d?.status||'')}">${statusText(d)}</span></div>
       ${r.description?`<p class="ra-room-summary">${esc(r.description)}</p>`:''}
       ${d?.amenities?.length?`<p class="ra-room-summary"><strong>Servicios</strong> · ${esc(d.amenities.join(', '))}</p>`:''}
       ${d?.courtesy?`<p class="ra-room-summary"><strong>Cortesía</strong> · ${esc(d.courtesy)}</p>`:''}
@@ -8075,7 +8076,7 @@ function renderRoomWorkspace(root){
  function close(){
    const id=draft?.room?.id;
    const scroll=draft?.scroll;
-   draft?.files.forEach(item=>URL.revokeObjectURL(item.url));
+   draft?.photos.filter(item=>item.file).forEach(item=>URL.revokeObjectURL(item.url)); // MODIFICADO
    draft=null;editor.hidden=true;editor.replaceChildren();
    const fallback=id&&[...list.querySelectorAll('[data-room-id]')].find(el=>el.dataset.roomId===String(id))?.querySelector('[data-room-action=edit]');
    (trigger?.isConnected?trigger:fallback||q('[data-room-new]')).focus({preventScroll:true});
@@ -8087,7 +8088,7 @@ function renderRoomWorkspace(root){
    if(draft)close();
    trigger=source;
    const d=room?detail(room.id):null;
-   draft={room,id:room?.id,photos:[...(d?.photos||[])],files:[],dirty:false,scroll:root.closest('#adminContent')?.scrollTop};
+   draft={room,id:room?.id,photos:(d?.photos||[]).map(url=>({url})),replacement:null,dirty:false,scroll:root.closest('#adminContent')?.scrollTop};
    editor.hidden=false;
    editor.innerHTML=`<!-- NUEVO --><div class="ra-head"><h3>${room?'Editar habitación':'Añadir habitación'}</h3><button type="button" class="btn secondary" data-room-cancel aria-label="Cerrar editor">${UI.close}</button></div>
     <form>
@@ -8097,8 +8098,8 @@ function renderRoomWorkspace(root){
     <label>Estado operativo<select class="select" name="status">${Object.entries(roomStatus).map(([key,label])=>`<option value="${key}">${label}</option>`).join('')}</select></label></div>
     <label class="ra-check"><input type="checkbox" name="published" ${room?.active!==false?'checked':''}> Publicar en el catálogo</label>
     <p class="small">La disponibilidad por fecha y hora se comprueba al reservar.</p></fieldset>
-    <fieldset><legend>Servicios y cortesías</legend><label>Servicios incluidos (separados por comas)<input class="input" name="amenities" value="${esc(d?.amenities?.join(', '))}"></label><label>Cortesía<input class="input" name="courtesy" value="${esc(d?.courtesy)}"></label></fieldset>
-    <fieldset><legend>Fotografías</legend><div class="ra-thumbs" data-room-thumbs></div><label>Añadir fotografías<input type="file" name="photos" accept="image/*" multiple></label></fieldset>
+    <!-- MODIFICADO --><fieldset><legend>Servicios y cortesías</legend><div data-room-suggestions class="ra-chips"></div><label>Servicios incluidos (separados por comas)<input class="input" name="amenities" value="${esc(d?.amenities?.join(', '))}"></label><label>Cortesía<input class="input" name="courtesy" value="${esc(d?.courtesy)}"></label></fieldset>
+    <!-- MODIFICADO --><fieldset><legend>Fotografías</legend><p class="small">La primera imagen es la portada. Los cambios se aplican al guardar.</p><div class="ra-thumbs" data-room-thumbs></div><label>Añadir fotografías<input type="file" name="photos" accept="image/*" multiple></label></fieldset>
     <p data-room-feedback role="status"></p>
     <div class="ra-actions"><button class="btn" type="submit">${UI.save}<span>${room?'Guardar cambios':'Guardar habitación'}</span></button>
     <button class="btn secondary" type="button" data-room-discard>Descartar</button>
@@ -8112,25 +8113,50 @@ function renderRoomWorkspace(root){
    editor.onkeydown=e=>{if(e.key==='Escape'){e.stopPropagation();cancel();}};
    form.oninput=e=>{if(e.target!==fields.photos)changed();};
    const thumbs=editor.querySelector('[data-room-thumbs]');
+   // NUEVO: sugerencias a partir de servicios ya guardados.
+   const suggestions=editor.querySelector('[data-room-suggestions]');
+   for(const amenity of [...new Set(roomDetails.flatMap(row=>row.amenities||[]))]){
+     if(!amenity)continue;
+     const button=document.createElement('button');button.type='button';button.className='btn secondary';button.textContent=amenity;
+     button.onclick=()=>{
+       const values=fields.amenities.value.split(',').map(x=>x.trim()).filter(Boolean);
+       fields.amenities.value=(values.includes(amenity)?values.filter(x=>x!==amenity):[...values,amenity]).join(', ');
+       fields.amenities.dispatchEvent(new Event('input',{bubbles:true}));
+     };
+     const sync=()=>button.setAttribute('aria-pressed',String(fields.amenities.value.split(',').some(x=>x.trim()===amenity)));
+     fields.amenities.addEventListener('input',sync);sync();suggestions.append(button);
+   }
+   // MODIFICADO
    const gallery=()=>{
-     const combined=[...draft.photos.map(url=>({url})),...draft.files];
-     thumbs.innerHTML=combined.map((item,i)=>`<figure><img src="${esc(item.url)}" alt="Fotografía ${i+1}"><figcaption>${i===0?'Portada':'Foto '+(i+1)}${item.file?' · Pendiente':''}</figcaption><button type="button" class="btn secondary" data-room-photo-index="${i}">Retirar</button></figure>`).join('')||'<p>Sin fotografías.</p>';
+     thumbs.innerHTML=draft.photos.map((item,i)=>`<figure><img src="${esc(item.url)}" alt="Fotografía ${i+1}"><figcaption>${i===0?'Portada':'Foto '+(i+1)}${item.file?' · Pendiente':''}</figcaption><div class="ra-photo-actions">
+     ${i?`<button type="button" class="btn secondary" data-photo-op="cover" data-room-photo-index="${i}">Hacer portada</button>`:''}
+     <button type="button" class="btn secondary" data-photo-op="replace" data-room-photo-index="${i}">Sustituir</button>
+     <button type="button" class="btn secondary" data-photo-op="remove" data-room-photo-index="${i}">Retirar</button></div></figure>`).join('')||'<p>Sin fotografías.</p>';
    };
    thumbs.onclick=e=>{
      const button=e.target.closest('[data-room-photo-index]');if(!button||busy)return;
      const i=Number(button.dataset.roomPhotoIndex);
-     if(i<draft.photos.length)draft.photos.splice(i,1);
-     else URL.revokeObjectURL(draft.files.splice(i-draft.photos.length,1)[0].url);
+     if(button.dataset.photoOp==='replace'){
+       draft.replacement=i;fields.photos.multiple=false;fields.photos.click();return;
+     }
+     const [item]=draft.photos.splice(i,1);
+     if(button.dataset.photoOp==='cover')draft.photos.unshift(item);
+     else if(item.file)URL.revokeObjectURL(item.url);
      changed();gallery();
    };
+   fields.photos.addEventListener('click',()=>{if(fields.photos.multiple)draft.replacement=null;});
+   fields.photos.oncancel=()=>{fields.photos.multiple=true;draft.replacement=null;};
    fields.photos.onchange=()=>{
-     const errors=[];
+     const errors=[],replacement=draft.replacement;
      for(const file of fields.photos.files){
        if(!file.type.startsWith('image/')||(!room&&file.size>8*1024*1024)){errors.push(file.name);continue;}
-       if(draft.files.some(x=>x.file.name===file.name&&x.file.size===file.size&&x.file.lastModified===file.lastModified))continue;
-       draft.files.push({file,url:URL.createObjectURL(file)});changed();
+       if(draft.photos.some(x=>x.file?.name===file.name&&x.file.size===file.size&&x.file.lastModified===file.lastModified))continue;
+       const item={file,url:URL.createObjectURL(file)};
+       if(replacement===null)draft.photos.push(item);
+       else{const previous=draft.photos[replacement];if(previous.file)URL.revokeObjectURL(previous.url);draft.photos[replacement]=item;}
+       changed();
      }
-     fields.photos.value='';gallery();
+     fields.photos.value='';fields.photos.multiple=true;draft.replacement=null;gallery();
      if(errors.length)feedback.textContent='Fotografías rechazadas por formato o tamaño: '+errors.join(', ');
    };
    gallery();
@@ -8150,17 +8176,18 @@ function renderRoomWorkspace(root){
        if(!name)throw Error('Introduce el nombre.');
        const client=db(), base={name,description:fields.description.value,active:fields.published.checked};
        if(fields.site.value||(draft.id&&draft.siteWasWritten)||draft.room?.service_location_id)base.service_location_id=fields.site.value||null;
-       const photoUrls=[...draft.photos];
-       for(const item of draft.files){
-         const file=item.file;
-         feedback.textContent='Subiendo '+file.name+'…';
-         if(!item.uploaded){
+       // MODIFICADO: preservar el orden del borrador y reutilizar cargas confirmadas.
+       const photoUrls=[];
+       for(const [index,item] of draft.photos.entries()){
+         if(item.file&&!item.uploaded){
+           const file=item.file;
+           feedback.textContent=`Subiendo foto ${index+1} de ${draft.photos.length}: ${file.name}…`;
            const path='room-media/'+crypto.randomUUID()+'-'+file.name.replace(/[^\w.\-]/g,'_');
            const result=await client.storage.from('catalog-media').upload(path,file,{contentType:file.type});
            if(result.error)throw Error(file.name+': '+result.error.message);
            item.uploaded=client.storage.from('catalog-media').getPublicUrl(path).data.publicUrl;
          }
-         photoUrls.push(item.uploaded);
+         photoUrls.push(item.uploaded||item.url);
        }
        feedback.textContent='Guardando habitación…';
        const result=draft.id?await client.from('rooms').update(base).eq('id',draft.id).select('id').single():await client.from('rooms').insert(base).select('id').single();
@@ -8816,7 +8843,9 @@ async function render(){
  const host=$('#adminContent');if(!host||!document.querySelector('#adminModal.show')||!(typeof activeAdmin!=='undefined'&&activeAdmin==='business'))return;
  if(busy)return;const ticket=++epoch;const db=typeof supabaseClient!=='undefined'?supabaseClient:null;if(!db)return;
  // MODIFICADO
- let panel=$('#vibraAssignmentPanel');if(!panel){panel=document.createElement('section');panel.id='vibraAssignmentPanel';panel.innerHTML='<h3>Asignar sedes a profesionales y habitaciones</h3><p class="small muted">Las sedes guardadas en Negocio son las únicas disponibles para asignar. No se crean sedes duplicadas.</p><!-- MODIFICADO --><div class="ra-fields va-filter"><label>Buscar profesional o habitación<input class="input" type="search" data-ra-assignment-search></label><label>Filtrar por sede guardada<select class="select" data-va-site-filter></select></label></div><p data-va-results role="status"></p><p class="small muted" data-va-site-rooms></p><div data-assign-list></div><p class="vab-status" data-assign-status aria-live="polite"></p><button type="button" class="btn secondary" data-assign-refresh>Actualizar sedes</button>';host.prepend(panel);panel.querySelector('[data-assign-refresh]').onclick=()=>{render();};panel.addEventListener('change',e=>{const row=e.target.closest('[data-vab]');if(row){row.setAttribute('data-ra-pending','');panel.querySelector('[data-assign-list]').setAttribute('data-biz-dirty','');}});}
+ let panel=$('#vibraAssignmentPanel');if(!panel){panel=document.createElement('section');panel.id='vibraAssignmentPanel';panel.innerHTML='<!-- MODIFICADO --><div class="ra-head"><div><h3>Sedes y habitaciones</h3><p class="small muted">Edita la sede de cada profesional o habitación. «Sin asignar» desvincula el registro de su sede.</p></div><button type="button" class="btn secondary" data-assign-refresh>Actualizar sedes</button></div><!-- MODIFICADO --><div class="ra-fields va-filter"><label>Buscar profesional o habitación<input class="input" type="search" data-ra-assignment-search></label><label>Filtrar por sede guardada<select class="select" data-va-site-filter></select></label></div><p data-va-results role="status"></p><p class="small muted" data-va-site-rooms></p><div data-assign-list></div><p class="vab-status" data-assign-status aria-live="polite"></p>';host.prepend(panel);panel.querySelector('[data-assign-refresh]').onclick=()=>{render();};panel.addEventListener('change',e=>{const row=e.target.closest('[data-vab]');if(row){row.setAttribute('data-ra-pending','');panel.querySelector('[data-assign-list]').setAttribute('data-biz-dirty','');}});}
+ // NUEVO
+ panel.querySelector('[data-assign-status]').textContent='Cargando sedes y vínculos…';
  const [a,b,c]=await Promise.all([db.from('service_locations').select('id,name,address,is_active').order('name'),db.from('practitioners').select('id,display_name,service_location_id').order('display_name'),db.from('rooms').select('id,name,service_location_id').order('name')]);
  // MODIFICADO
  if(ticket!==epoch||busy||!panel.isConnected||activeAdmin!=='business')return;
@@ -8858,7 +8887,9 @@ async function render(){
  search.oninput=siteFilter.onchange=apply;apply();
  panel.querySelectorAll('[data-vab]').forEach(row=>{
    const value=pending.get(row.dataset.vab+row.dataset.id),select=row.querySelector('select');
+   // MODIFICADO
    if(value!==undefined&&[...select.options].some(o=>o.value===value)){select.value=value;row.setAttribute('data-ra-pending','');}
+   else if(value!==undefined){status.textContent='Una sede del borrador dejó de estar disponible. Revisa el vínculo antes de guardar.';}
  });
  if(!panel.querySelector('[data-ra-pending]'))panel.querySelector('[data-assign-list]').removeAttribute('data-biz-dirty');
  // MODIFICADO
@@ -8868,11 +8899,18 @@ async function render(){
    busy=true;button.disabled=true;select.disabled=true;
    try{
      const loc=select.value||null;
+     // NUEVO
+     if((loc||'')===line.dataset.vaSavedSite){status.textContent='Este vínculo ya está guardado.';return;}
      const {error,data}=await db.from(table).update({service_location_id:loc}).eq('id',id).select('id');
      if(error)throw error;
      if(!data?.length)throw Error('No se pudo confirmar la actualización.');
      line.querySelector('small').textContent=select.selectedOptions[0]?.textContent||'Sin asignar';
-     line.dataset.vaSavedSite=loc||'';apply(); // NUEVO
+     line.dataset.vaSavedSite=loc||'';
+     // MODIFICADO: actualizar recuentos sin reconstruir otros borradores.
+     const stats=panel.querySelector('.ra-stats').querySelectorAll('strong');
+     stats[1].textContent=panel.querySelectorAll('[data-vab="practitioners"][data-va-saved-site]:not([data-va-saved-site=""])').length;
+     stats[2].textContent=panel.querySelectorAll('[data-vab="rooms"][data-va-saved-site]:not([data-va-saved-site=""])').length;
+     apply();
      line.removeAttribute('data-ra-pending');
      const list=panel.querySelector('[data-assign-list]');
      if(!list.querySelector('[data-ra-pending]'))list.removeAttribute('data-biz-dirty');
@@ -13405,6 +13443,17 @@ html body #adminModal #adminContent .ve-cat .btn[aria-pressed=true]{background:v
 #vroomOverlay[data-ra-admin-viewer] .vroom-button:focus-visible{outline:2px solid var(--primary);outline-offset:2px}
 #adminModal .ve-business :is(#veBiz-rooms,#veBiz-assignments) :is(input,textarea)::placeholder{color:var(--ui-muted);opacity:1}
 /* NUEVO */
+#veBiz-rooms .ra-room-photo{aspect-ratio:4/3;overflow:hidden}
+#veBiz-rooms .ra-room-photo img{display:block;max-height:150px}
+#veBiz-rooms .ra-room:focus-within,#veBiz-assignments .vab-row:focus-within{border-color:var(--primary)}
+#veBiz-rooms [data-room-published=true],#veBiz-rooms [data-room-state-chip=free]{background:color-mix(in srgb,var(--ui-surface),var(--primary) 16%)}
+#veBiz-rooms .ra-thumbs figure{border:1px solid var(--ui-border);border-radius:10px;padding:5px}
+#veBiz-rooms .ra-photo-actions{display:grid;gap:4px}
+#veBiz-rooms .ra-photo-actions button{min-height:30px;padding:4px;font-size:.78em}
+#veBiz-assignments .ra-mode-grid{grid-template-columns:minmax(0,1fr)}
+#veBiz-assignments .vab-row{padding:10px;border:1px solid var(--ui-border);border-radius:9px;margin-block:6px;background:var(--ui-surface)}
+#veBiz-assignments .vab-row:hover{border-color:var(--primary)}
+/* NUEVO */
 #adminModal #v18HoursAdmin{container-type:inline-size;padding:14px;background:var(--ui-surface);color:var(--ui-text);min-width:0}
 #v18HoursAdmin :is(.vh-head,.vh-actions){display:flex;flex-wrap:wrap;gap:8px;align-items:center}
 #v18HoursAdmin .vh-head{justify-content:space-between}
@@ -13739,6 +13788,9 @@ function mountAssignments(view){
  nav.innerHTML='<!-- NUEVO --><button type="button" class="btn secondary" aria-pressed="true">Modalidades por profesional</button><button type="button" class="btn secondary" aria-pressed="false">Sedes y habitaciones</button>';
  view.querySelector('h2').after(nav);
  const buttons=[...nav.querySelectorAll('button')];
+ // NUEVO
+ buttons[0].setAttribute('aria-controls','veAssignmentModes');modes.id='veAssignmentModes';
+ buttons[1].setAttribute('aria-controls',links.id);
  const select=index=>{nav.dataset.vaView=String(index);modes.hidden=index!==0;links.hidden=index!==1;buttons.forEach((b,i)=>b.setAttribute('aria-pressed',String(index===i)));}; // MODIFICADO
  buttons.forEach((b,i)=>b.onclick=()=>select(i));select(0);
 }
