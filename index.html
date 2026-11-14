@@ -7180,17 +7180,24 @@ async function saveLocation(){
  const button=el('#v9SaveLoc');
  if(!admin||!button||button.disabled)return;
  const p={name:el('#v9LocName').value.trim(),address:el('#v9LocAddress').value.trim(),latitude:el('#v9LocLat').valueAsNumber,longitude:el('#v9LocLng').valueAsNumber,is_active:el('#v9LocActive').value==='true'};
- if(!p.name||!p.address||!Number.isFinite(p.latitude)||!Number.isFinite(p.longitude)||Math.abs(p.latitude)>90||Math.abs(p.longitude)>180)return setMsg('Completa nombre, dirección y coordenadas válidas.');
+ // MODIFICADO
+ const form=button.closest('[data-ve-site-create]'), id=form?.dataset.siteId;
+ const feedback=form?.querySelector('[data-ve-site-form-status]');
+ const notify=text=>{if(feedback)feedback.textContent=text;else setMsg(text);};
+ if(!p.name||!p.address||!Number.isFinite(p.latitude)||!Number.isFinite(p.longitude)||Math.abs(p.latitude)>90||Math.abs(p.longitude)>180||(id&&p.latitude===0&&p.longitude===0))return notify('Completa nombre, dirección y coordenadas válidas.');
+ if(form){p.state_name=el('#veSiteState').value.trim()||null;p.municipality=el('#veSiteCity').value.trim()||null;}
  button.disabled=true;
  try{
-   const r=await db().from('service_locations').insert(p);
+   // MODIFICADO
+   const table=db().from('service_locations');
+   const r=id?await table.update(p).eq('id',id).select('id').single():await table.insert(p);
    if(r.error)throw r.error;
    // MODIFICADO
    ['v9LocName','v9LocAddress','v9LocLat','v9LocLng'].forEach(id=>{el('#'+id).value='';});
    el('#v9LocLat').dispatchEvent(new Event('input'));
-   setMsg('Sede guardada.');
+   button.disabled=false;form?.veSetSite?.(null);notify('Sede guardada.');
    load();window.vibraBusinessViews?.refreshSites();
- }catch(error){setMsg(error.message);}
+ }catch(error){notify(error.message);}
  finally{button.disabled=false;}
 }
 // MODIFICADO
@@ -9313,11 +9320,6 @@ async function roomsAdmin(host,db){const r=await db.from('rooms').select('id,nam
 // MODIFICADO
 async function sitesAdmin(host,db){
   const revision=(host.veSiteRevision||0)+1;host.veSiteRevision=revision;
-  const response=await db.from('service_locations').select('id,name,address,latitude,longitude,is_active,state_name,municipality');
-  if(response.error)throw response.error;
-  if(revision!==host.veSiteRevision||!host.isConnected||activeAdmin!=='business')return;
-  const records=response.data||[];
-  sites=records;
   if(!host.querySelector('#vscopeSiteList')){
     host.innerHTML=`<!-- MODIFICADO --><header class="ve-geo-heading ve-site-header"><div><h3>Sedes oficiales</h3><p class="small">Ubicaciones propias y su publicación en el catálogo.</p></div><button type="button" class="btn" data-ve-add-site>${UI.plus}<span>Registrar nueva sede</span></button></header>
       <div class="ve-geo-stats" data-ve-sites-stats></div>
@@ -9329,9 +9331,21 @@ async function sitesAdmin(host,db){
   const search=q('[data-ve-site-search]'), filter=q('[data-ve-site-filter]'), more=q('[data-ve-site-more]');
   q('[data-ve-add-site]').onclick=()=>{
     const create=document.querySelector('#veBiz-sites [data-ve-site-create]');
-    if(create){create.open=true;create.querySelector('#v9LocName').focus();}
+    create?.veBegin?.(null); // MODIFICADO
   };
-  // NUEVO
+  // MODIFICADO
+  message.textContent='Cargando sedes…';
+  more.hidden=true;
+  try{
+    const response=await db.from('service_locations').select('id,name,address,latitude,longitude,is_active,state_name,municipality');
+    if(revision!==host.veSiteRevision||!host.isConnected||activeAdmin!=='business')return;
+    if(response.error)throw response.error;
+    sites=response.data||[];
+  }catch(error){
+    if(revision===host.veSiteRevision&&host.isConnected)message.textContent='No se pudieron cargar las sedes: '+error.message;
+    throw error;
+  }
+  message.textContent='';
   const municipality=q('[data-ve-municipality]'), selected=municipality.value;
   const municipalities=[...new Set(sites.filter(site=>site.municipality).map(site=>[site.municipality,site.state_name].filter(Boolean).join(', ')))].sort((a,b)=>a.localeCompare(b,'es'));
   municipality.innerHTML='<option value="">Todos</option>'+municipalities.map(value=>`<option value="${esc(value)}">${esc(value)}</option>`).join('');
@@ -9347,21 +9361,11 @@ async function sitesAdmin(host,db){
     const row=document.createElement('details');
     row.className='vscope-admin-entry ve-geo-site';
     row.dataset.id=id;row.dataset.signature=signature;
-    row.innerHTML=`<summary><span class="ve-geo-site-symbol">${UI.map}</span><span><strong>${esc(site.name)}</strong><span class="ve-geo-site-address">${esc(site.address)}</span><small>${esc([site.municipality,site.state_name].filter(Boolean).join(', '))} · ${esc(site.latitude)}, ${esc(site.longitude)}</small></span><span class="ve-geo-state">${site.is_active?'Visible':'Oculta'}</span></summary>
-      <div class="ve-geo-fields"><label class="field">Nombre<input class="input" data-name value="${esc(site.name)}"></label><label class="field">Dirección<input class="input" data-address value="${esc(site.address)}"></label><label class="field">Latitud<input class="input" data-lat type="number" min="-90" max="90" step="any" value="${esc(site.latitude)}"></label><label class="field">Longitud<input class="input" data-lon type="number" min="-180" max="180" step="any" value="${esc(site.longitude)}"></label></div>
-      <div class="ve-geo-site-map" data-ve-location-map></div><p class="ve-site-feedback" data-ve-site-pending role="status"></p>
-      <div class="toolbar">${styleAction('save','Guardar sede',UI.save,'')}${styleAction('discard','Descartar',UI.refresh)}${styleAction('pause',site.is_active?'Ocultar':'Mostrar',UI.clock||UI.refresh)}${styleAction('delete','Eliminar',UI.trash)}</div>`;
-    if(old){old.dispatchEvent(new Event('ve-remove-map'));old.replaceWith(row);}else list.append(row);
     // MODIFICADO
-    row.addEventListener('input',()=>{
-      row.setAttribute('data-ve-site-draft','');
-      row.querySelector('[data-ve-site-pending]').textContent='Cambios pendientes';
-    });
-    row.addEventListener('toggle',()=>{
-      if(!row.open)return;
-      list.querySelectorAll('details[open]').forEach(other=>{if(other!==row)other.open=false;});
-      mountSiteMap(row,row.querySelector('[data-address]'),row.querySelector('[data-lat]'),row.querySelector('[data-lon]'));
-    });
+    const coordinates=site.latitude!=null&&site.longitude!=null&&Number.isFinite(Number(site.latitude))&&Number.isFinite(Number(site.longitude))?site.latitude+', '+site.longitude:'Sin coordenadas registradas';
+    row.innerHTML=`<summary><span class="ve-geo-site-symbol">${UI.map}</span><span><strong>${esc(site.name)}</strong><span class="ve-geo-site-address">${esc(site.address)}</span><small>${esc([site.municipality,site.state_name,coordinates].filter(Boolean).join(' · '))}</small></span><span class="ve-geo-state">${site.is_active?'Visible':'Oculta'}</span></summary>
+      <div class="toolbar">${styleAction('edit','Editar sede',`<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" aria-hidden="true"><path d="m4 16 11-11 4 4L8 20H4zm9-9 4 4"/></svg>`)}${styleAction('pause',site.is_active?'Ocultar':'Mostrar',UI.refresh)}${styleAction('delete','Eliminar',UI.trash)}</div>`;
+    if(old)old.replaceWith(row);else list.append(row);
   }
   existing.forEach(row=>{row.dispatchEvent(new Event('ve-remove-map'));row.remove();});
   const empty=document.createElement('p');empty.setAttribute('data-ve-site-empty','');
@@ -9387,24 +9391,16 @@ async function sitesAdmin(host,db){
     const site=sites.find(x=>String(x.id)===card.dataset.id);
     if(!site)return;
     const action=button.dataset.action;
-    const feedback=card.querySelector('[data-ve-site-pending]'); // NUEVO
-    // NUEVO
-    if(action==='discard'){
-      if(!confirm('¿Descartar cambios de esta sede?'))return;
-      card.removeAttribute('data-ve-site-draft');delete card.dataset.signature;
-      await sitesAdmin(host,db).catch(error=>message.textContent=error.message);
+    // MODIFICADO
+    if(action==='edit'){
+      document.querySelector('#veBiz-sites [data-ve-site-create]')?.veBegin?.(site);
       return;
     }
     adminBusy=true;button.disabled=true;message.textContent='Procesando…';
     try{
       const query=db.from('service_locations');
       let result;
-      if(action==='save'){
-        const field=sel=>card.querySelector(sel);
-        const data={name:field('[data-name]').value.trim(),address:field('[data-address]').value.trim(),latitude:field('[data-lat]').valueAsNumber,longitude:field('[data-lon]').valueAsNumber};
-        if(!data.name||!data.address||!coords(data))throw Error('Completa los datos y coordenadas válidas.');
-        result=await query.update(data).eq('id',site.id).select('id');
-      }else if(action==='pause')result=await query.update({is_active:!site.is_active}).eq('id',site.id).select('id');
+      if(action==='pause')result=await query.update({is_active:!site.is_active}).eq('id',site.id).select('id');
       else {
         // NUEVO: consultar vínculos que ya utiliza el apartado Asignaciones.
         const checks=await Promise.all(['practitioners','rooms'].map(table=>db.from(table).select('id',{head:true,count:'exact'}).eq('service_location_id',site.id)));
@@ -9416,10 +9412,9 @@ async function sitesAdmin(host,db){
       }
       if(result.error)throw result.error;
       if(!result.data?.length)throw Error('No se pudo confirmar la operación. Comprueba los permisos.');
-      if(action==='save')card.removeAttribute('data-ve-site-draft');
       try{await sitesAdmin(host,db);}catch{message.textContent='Operación guardada. No se pudo actualizar el listado.';return;}
       message.textContent=action==='delete'?'Sede eliminada.':'Cambios guardados.';
-    }catch(error){message.textContent='';feedback.textContent=error.message;}
+    }catch(error){message.textContent=error.message;}
     finally{adminBusy=false;if(button.isConnected)button.disabled=false;}
   };
 }
@@ -13586,7 +13581,16 @@ body:not(.dark-mode) #v18HoursAdmin input[type=time]{color-scheme:light}
 #veBiz-sites :is(.ve-site-header,.ve-site-filters,.ve-geo-stats){grid-column:1/-1}
 #veBiz-sites .ve-geo-stats{margin:0}
 #veBiz-sites .ve-site-filters,#veBiz-sites .ve-site-results{padding:12px;border:1px solid var(--ui-border);border-radius:12px;background:var(--ui-surface);min-width:0;margin:0}
-#veBiz-sites .ve-site-filters{grid-template-columns:repeat(auto-fit,minmax(min(100%,150px),1fr))}
+/* MODIFICADO */
+#veBiz-sites .ve-site-filters{grid-template-columns:minmax(0,1.5fr) repeat(2,minmax(0,1fr))}
+#veBiz-sites [data-ve-sites-links]{justify-content:flex-end;margin-block:0 8px}
+#veBiz-sites [data-ve-sites-links] button{min-height:32px;padding:5px 9px;font-size:.82em}
+#veBiz-sites [data-ve-site-create] h3{border-bottom:1px solid var(--ui-border);padding:0 0 8px}
+#veBiz-sites [data-ve-site-create] .ve-geo-site-map{min-height:200px}
+#veBiz-sites [data-ve-site-empty]{padding:24px 12px;border:1px dashed var(--ui-border);border-radius:9px;text-align:center;color:var(--ui-muted)}
+#veBiz-sites .ve-geo-site>summary:focus-visible{outline:2px solid var(--primary);outline-offset:-2px}
+#veBiz-sites .ve-geo-site :is(button,summary):active{box-shadow:inset 0 0 0 1px var(--primary)}
+@container(max-width:510px){#veBiz-sites .ve-site-filters{grid-template-columns:minmax(0,1fr)}}
 #veBiz-sites .ve-site-results h4{margin:0}
 #veBiz-sites .ve-site-feedback{padding-inline:12px}
 #veBiz-sites [data-biz-group="sites"]{box-shadow:0 8px 20px color-mix(in srgb,var(--primary) 10%,transparent)}
@@ -13811,9 +13815,10 @@ function mountBusinessGeneral(view){
  stats();paintLogo();draw();
 }
 // NUEVO
+// MODIFICADO
 function mountSiteMap(scope,address,lat,lng){
  const container=scope.querySelector('[data-ve-location-map]');
- if(!container||!scope.open||!container.clientWidth)return;
+ if(!container||(scope.matches('details')&&!scope.open)||!container.clientWidth)return;
  if(container.veMap){container.veMap.invalidateSize();return;}
  if(typeof L==='undefined'){container.textContent='El mapa no está disponible.';return;}
  const point=()=>{
@@ -13981,49 +13986,65 @@ function mountBusinessGeography(location,sites,delivery){
  }
  if(!sites.querySelector('[data-ve-sites-links]')){
    const links=document.createElement('div');links.dataset.veSitesLinks='';links.className='toolbar';
-   links.innerHTML=`<!-- NUEVO --><button type="button" class="btn secondary" data-ve-delivery>${UI.map}<span>Hoteles y establecimientos en Destinos</span></button><button type="button" class="btn secondary" data-ve-assignments>${UI.users||UI.user}<span>Asignaciones</span></button>`;
+   links.innerHTML=`<!-- NUEVO --><button type="button" class="btn secondary" data-ve-delivery>${UI.map}<span>Hoteles y establecimientos en Destinos</span></button><button type="button" class="btn secondary" data-ve-assignments><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" aria-hidden="true"><path d="M10 13a4 4 0 0 0 6 0l4-4a4 4 0 0 0-6-6l-2 2m2 6a4 4 0 0 0-6 0l-4 4a4 4 0 0 0 6 6l2-2"/></svg><span>Asignaciones</span></button>`;
    links.querySelector('[data-ve-delivery]').onclick=()=>window.vibraBusinessViews.open('delivery');
    links.querySelector('[data-ve-assignments]').onclick=()=>window.vibraBusinessViews.open('assignments');
    sites.querySelector('h2').after(links);
  }
  const group=sites.querySelector('[data-biz-group="sites"]'), editor=sites.querySelector('[data-biz-site-editor]'), coverage=sites.querySelector('#vibraLocalAdmin');
  if(group&&!group.querySelector('[data-ve-site-create]')){
-   const create=document.createElement('details');create.dataset.veSiteCreate='';
-   const summary=document.createElement('summary');summary.textContent='Registrar nueva sede';
+   const create=document.createElement('section');create.dataset.veSiteCreate='';
+   const summary=document.createElement('h3');summary.textContent='Registrar nueva sede';
    const map=document.createElement('div');map.dataset.veLocationMap='';map.className='ve-geo-site-map';map.id='veNewSiteMap';
    const fields=group.querySelector('.v9fields'),save=group.querySelector('#v9SaveLoc');
    // MODIFICADO
    create.append(summary,fields,map,save);group.querySelector('h3').replaceWith(create);
+   // NUEVO: conservar el formulario y sus identificadores para ambas operaciones.
+   fields.insertAdjacentHTML('beforeend','<!-- NUEVO --><label>Estado<input class="input" id="veSiteState"></label><label>Municipio<input class="input" id="veSiteCity"></label>');
+   const feedback=document.createElement('p');feedback.dataset.veSiteFormStatus='';feedback.setAttribute('role','status');save.after(feedback);
+   const lat=create.querySelector('#v9LocLat'), lng=create.querySelector('#v9LocLng'), address=create.querySelector('#v9LocAddress');
+   create.veMountMap=()=>mountSiteMap(create,address,lat,lng);
+   create.veSetSite=site=>{
+     if(save.disabled)return;
+     create.dataset.siteId=site?.id??'';
+     summary.textContent=site?'Editar sede':'Registrar nueva sede';
+     save.textContent=site?'Guardar cambios':'Guardar nueva sede';
+     for(const [id,value] of Object.entries({v9LocName:site?.name,v9LocAddress:site?.address,v9LocLat:site?.latitude,v9LocLng:site?.longitude,veSiteState:site?.state_name,veSiteCity:site?.municipality})){
+       create.querySelector('#'+id).value=value??'';
+     }
+     create.querySelector('#v9LocActive').value=String(site?.is_active??true);
+     feedback.textContent='';lat.dispatchEvent(new Event('input'));create.dataset.dirty='';
+     create.veMountMap();
+     if(map.veMap&&lat.value&&lng.value)map.veMap.setView([lat.valueAsNumber,lng.valueAsNumber],15);
+   };
+   create.addEventListener('input',()=>{create.dataset.dirty='1';});
+   create.veBegin=site=>{
+     if(save.disabled)return;
+     if(create.dataset.dirty&&!confirm('¿Descartar los cambios de la sede que estás editando?'))return;
+     create.veSetSite(site);create.querySelector('#v9LocName').focus();
+   };
    const help=document.createElement('p');help.className='small muted';help.textContent='Revisa el punto en el mapa antes de guardar. Estado y municipio se editan en Cobertura geográfica.';
    summary.after(help);
    // NUEVO
    const discard=document.createElement('button');discard.type='button';discard.className='btn secondary';discard.textContent='Descartar alta';
    save.after(discard);
-   discard.onclick=()=>{
-     if(!confirm('¿Descartar el borrador de la nueva sede?'))return;
-     fields.querySelectorAll('input').forEach(input=>{input.value='';});
-     fields.querySelector('select').selectedIndex=0;
-     create.querySelector('#v9LocLat').dispatchEvent(new Event('input'));
-     create.open=false;
-     sites.querySelector('[data-ve-add-site]')?.focus();
-   };
-
-   create.addEventListener('toggle',()=>{if(create.open)mountSiteMap(create,create.querySelector('#v9LocAddress'),create.querySelector('#v9LocLat'),create.querySelector('#v9LocLng'));});
+   discard.textContent='Descartar cambios';
+   discard.onclick=()=>{if(!save.disabled&&confirm('¿Descartar los cambios de la sede?'))create.veSetSite(null);};
  }
  if(group&&editor.parentElement===sites){
    const grid=document.createElement('div');grid.className='ve-geo-layout ve-geo-site-layout';
    editor.before(grid);grid.append(editor,group);
  }
  // MODIFICADO
- if(coverage&&coverage.parentElement===sites){
+ if(coverage){
    let section=sites.querySelector('[data-ve-coverage]');
    if(!section){
-     section=document.createElement('details');section.dataset.veCoverage='';
-     section.innerHTML='<!-- NUEVO --><summary>Cobertura geográfica · estado y municipio</summary>';
+     section=document.createElement('section');section.dataset.veCoverage='';
+     section.innerHTML='<!-- NUEVO --><h3>Cobertura geográfica</h3><p>Consulta el estado y municipio de cada sede. Las profesionales sin ubicación propia heredan la de su sede según la configuración existente.</p>';
      sites.append(section);
    }
    // MODIFICADO
-   section.append(coverage);
+   if(coverage.parentElement!==section)section.append(coverage);
    const grid=sites.querySelector('.ve-geo-site-layout');
    if(grid&&grid.nextElementSibling!==section)grid.after(section);
  }
@@ -14059,11 +14080,13 @@ function mountBusinessGeography(location,sites,delivery){
      else initOriginMap();
    });
    if(key==='sites'){
+     // NUEVO
+     requestAnimationFrame(()=>root.querySelector('[data-ve-site-create]')?.veMountMap?.());
      const target=root.querySelector('[data-biz-site-editor]');
      if(target&&!target.dataset.requested&&requestSites){
        target.dataset.requested='1';
-       target.innerHTML='<p role="status">Cargando sedes…</p>';
-       requestSites(target).catch(error=>{if(target.isConnected){target.textContent=error.message;delete target.dataset.requested;}});
+       if(!target.querySelector('#vscopeSiteMsg'))target.innerHTML='<p role="status">Cargando sedes…</p>';
+       requestSites(target).catch(error=>{if(target.isConnected){if(!target.querySelector('#vscopeSiteMsg'))target.textContent='No se pudieron cargar las sedes: '+error.message;delete target.dataset.requested;}});
      }
    }
  }
